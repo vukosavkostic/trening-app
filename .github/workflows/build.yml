@@ -1,0 +1,52 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Unit testovi
+        run: gradle testDebugUnitTest --no-daemon
+
+      # Kljuc za potpisivanje dolazi iz GitHub Secrets (nikad iz repoa).
+      # Ako secreti nisu podeseni, APK se potpisuje debug kljucem.
+      - name: Kljuc za potpisivanje
+        env:
+          KEYSTORE_B64: ${{ secrets.TRENING_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ORG_GRADLE_PROJECT_TRENING_STORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Nema TRENING_KEYSTORE_B64 / TRENING_STORE_PASSWORD - APK ce biti potpisan debug kljucem"
+          fi
+
+      - name: Release APK
+        env:
+          ORG_GRADLE_PROJECT_TRENING_STORE_PASSWORD: ${{ secrets.TRENING_STORE_PASSWORD }}
+        run: gradle assembleRelease --no-daemon
+
+      - name: Obrisi kljuc
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Trening-apk
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
