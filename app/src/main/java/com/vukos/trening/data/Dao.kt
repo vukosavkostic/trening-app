@@ -79,11 +79,20 @@ interface BodyDao {
     )
     suspend fun photoCountBetween(from: Long, to: Long): Int
 
+    @Query("SELECT * FROM body_entry WHERE deleted = 0 AND epochDay = :day LIMIT 1")
+    suspend fun getByDay(day: Long): BodyEntry?
+
     @Upsert
     suspend fun upsert(item: BodyEntry)
 
     @Query("SELECT * FROM body_photo WHERE bodyEntryId = :entryId AND deleted = 0")
     fun observePhotos(entryId: String): Flow<List<BodyPhoto>>
+
+    @Query("SELECT * FROM body_photo WHERE bodyEntryId = :entryId AND deleted = 0")
+    suspend fun photosFor(entryId: String): List<BodyPhoto>
+
+    @Query("SELECT * FROM body_photo WHERE deleted = 0")
+    fun observeAllPhotos(): Flow<List<BodyPhoto>>
 
     @Upsert
     suspend fun upsertPhoto(item: BodyPhoto)

@@ -1,9 +1,16 @@
 package com.vukos.trening
 
+import android.Manifest
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -16,7 +23,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -24,7 +34,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vukos.trening.data.BodyRepo
+import com.vukos.trening.reminders.Reminders
+import com.vukos.trening.ui.body.BodyDayScreen
+import com.vukos.trening.ui.body.BodyScreen
+import com.vukos.trening.ui.body.WeightChartScreen
+import com.vukos.trening.ui.body.CheckInBanner
+import com.vukos.trening.ui.body.CheckInScreen
 import com.vukos.trening.ui.common.ComingSoon
+import java.time.LocalDate
 import com.vukos.trening.ui.exercises.ExerciseDetailScreen
 import com.vukos.trening.ui.exercises.ExerciseListScreen
 import com.vukos.trening.ui.exercises.NewExerciseScreen
@@ -38,21 +57,44 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
 }
 
 class MainActivity : ComponentActivity() {
+    /** Notifikacija moze traziti otvaranje ekrana za merenje. */
+    private val openRequest = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { TreningTheme { AppRoot() } }
+        openRequest.value = intent?.getStringExtra(Reminders.EXTRA_OPEN)
+        setContent { TreningTheme { AppRoot(openRequest.value) { openRequest.value = null } } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openRequest.value = intent.getStringExtra(Reminders.EXTRA_OPEN)
     }
 }
 
 @Composable
-private fun AppRoot() {
+private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     val showBar = Tab.entries.any { it.route == route }
+    val due by remember { BodyRepo.observeDue() }.collectAsStateWithLifecycle(null)
+    fun openCheckIn(day: LocalDate = LocalDate.now()) = nav.navigate("checkin/${day.toEpochDay()}")
 
-    Scaffold(bottomBar = {
+    // Dozvola za notifikacije (Android 13+), trazi se jednom pri pokretanju.
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+    LaunchedEffect(openRequest) {
+        if (openRequest == Reminders.OPEN_CHECKIN) { openCheckIn(); onOpenHandled() }
+    }
+
+    Scaffold(topBar = {
+        // Crvena / narandzasta traka za merenje, na svim glavnim tabovima.
+        if (showBar) Column { CheckInBanner(due) { openCheckIn() } }
+    }, bottomBar = {
         if (showBar) NavigationBar {
             Tab.entries.forEach { tab ->
                 NavigationBarItem(
@@ -70,7 +112,7 @@ private fun AppRoot() {
             }
         }
     }) { pad ->
-        NavHost(nav, startDestination = Tab.JOURNAL.route, modifier = Modifier.padding(pad)) {
+        NavHost(nav, startDestination = Tab.JOURNAL.route, modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
             composable(Tab.JOURNAL.route) {
                 ComingSoon("Dnevnik", "Kalendar treninga, ishrana po danima i uvidi.\nStiže u sledećim fazama.")
             }
@@ -78,7 +120,27 @@ private fun AppRoot() {
                 ComingSoon("Planovi", "Rutine po danima u nedelji i \"Započni trening\".\nStiže u sledećoj fazi.")
             }
             composable(Tab.BODY.route) {
-                ComingSoon("Telo", "Kilaža svake nedelje, slike na svake dve nedelje,\npodsetnici i grafikon.")
+                BodyScreen(
+                    onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },
+                    onNew = { openCheckIn() },
+                    onOpenChart = { nav.navigate("body_chart") },
+                )
+            }
+            composable("body_day/{day}") { e ->
+                val day = LocalDate.ofEpochDay(e.arguments!!.getString("day")!!.toLong())
+                BodyDayScreen(day, onBack = { nav.popBackStack() }, onEdit = { openCheckIn(day) })
+            }
+            composable("body_chart") {
+                WeightChartScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },
+                )
+            }
+            composable("checkin/{day}") { e ->
+                CheckInScreen(
+                    LocalDate.ofEpochDay(e.arguments!!.getString("day")!!.toLong()),
+                    onDone = { nav.popBackStack() },
+                )
             }
             composable(Tab.EXERCISES.route) {
                 ExerciseListScreen(

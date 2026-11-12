@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Samo privremeni folder za slikanje kamerom; posle uvoza se fajl sifruje i brise. -->
+<paths>
+    <cache-path name="capture" path="capture/" />
+</paths>

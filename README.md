@@ -24,11 +24,15 @@ Svaka baza ima `AppId` (ID reda u aplikaciji) za uparivanje.
 |---|---|---|
 | 0 | Notion baze + Kalendar prikaz | ✅ |
 | 1 | Kostur, Room (ceo model), 876 vežbi, pretraga + filteri, detalji, nova vežba | ✅ |
-| 2 | Telo: kilaža jednom sedmično (termin nedelja), slike svake druge sedmice (od 15.11.2026), crveno ako se propusti, notifikacije | ⏳ sledeće |
-| 3 | Planovi po danima + Notion treninzi (uvoz) + Notion token u podešavanjima | |
+| 2 | Telo: kilaža jednom sedmično (termin nedelja), slike svake druge sedmice (od 15.11.2026), crveno ako se propusti, notifikacije, 3 šifrovane slike (spreda/bok/leđa) | ✅ |
+| 3 | ⏳ Planovi po danima + Notion treninzi (uvoz) + Notion token u podešavanjima | |
 | 4 | Logovanje treninga (Prethodno / kg / reps / ✓) | |
 | 5 | Dnevnik: kalendar treninga + ishrana po danima + uvidi | |
 | 6 | Statistika: grafovi po vežbi (težina, 1RM, volumen) + grafikon kilaže | |
 | 7 | Puna sinhronizacija sa Notionom (slanje, povlačenje, restore, upload slika) | |
 
 Pravila za podsetnike su u `data/CheckInSchedule.kt`: merenje jednom sedmično, termin je nedelja (kilaža), a svake druge sedmice i slike (15.11, 29.11, ...). U nedelju je to običan podsetnik, a ako se propusti, od ponedeljka je crveno dok se ne unese.
+
+## Privatnost slika tela
+
+Slike (spreda, bok, leđa) se čuvaju samo u internom skladištu aplikacije (`files/body_photos`), šifrovane AES-256-GCM ključem iz Android Keystore-a. Ne idu u galeriju, Android backup (`allowBackup=false`) ni Notion (tamo je samo oznaka „Photos taken"). Ekran merenja ima FLAG_SECURE (bez screenshota i pregleda u nedavnim aplikacijama). Posledica: ako se aplikacija deinstalira ili se telefon izgubi, slike se ne mogu vratiti.

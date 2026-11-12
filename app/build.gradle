@@ -10,7 +10,7 @@ android {
     compileSdk 34
     defaultConfig {
         applicationId 'com.vukos.trening'
-        minSdk 26
+        minSdk 28   // ImageDecoder (EXIF rotacija slika)
         targetSdk 34
         versionCode 1
         versionName '0.1'
