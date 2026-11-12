@@ -47,7 +47,7 @@ import com.vukos.trening.data.WorkoutRepo
 import com.vukos.trening.ui.workout.ActiveWorkoutBanner
 import com.vukos.trening.ui.workout.ActiveWorkoutScreen
 import com.vukos.trening.ui.workout.WorkoutDetailScreen
-import com.vukos.trening.ui.workout.WorkoutHistoryScreen
+import com.vukos.trening.ui.journal.JournalScreen
 import kotlinx.coroutines.launch
 import com.vukos.trening.ui.routines.NotionRoutinesScreen
 import com.vukos.trening.ui.routines.RoutineEditScreen
@@ -137,7 +137,10 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
     }) { pad ->
         NavHost(nav, startDestination = Tab.JOURNAL.route, modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
             composable(Tab.JOURNAL.route) {
-                WorkoutHistoryScreen(onOpen = { nav.navigate("workout_detail/$it") })
+                JournalScreen(
+                    onOpenWorkout = { nav.navigate("workout_detail/$it") },
+                    onOpenBodyDay = { nav.navigate("body_day/${it.toEpochDay()}") },
+                )
             }
             composable("workout/{id}") { e ->
                 ActiveWorkoutScreen(
@@ -213,7 +216,11 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 )
             }
             composable("exercise/{id}") { e ->
-                ExerciseDetailScreen(e.arguments?.getString("id")!!, onBack = { nav.popBackStack() })
+                ExerciseDetailScreen(
+                    e.arguments?.getString("id")!!,
+                    onBack = { nav.popBackStack() },
+                    onOpenWorkout = { nav.navigate("workout_detail/$it") },
+                )
             }
             composable("exercise_new") {
                 NewExerciseScreen(onDone = { nav.popBackStack() })

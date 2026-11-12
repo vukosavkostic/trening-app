@@ -169,31 +169,3 @@ private fun Info(label: String, value: String, modifier: Modifier) {
         Text(value, fontWeight = FontWeight.SemiBold)
     }
 }
-
-/** Privremeni Dnevnik (faza 4): lista zavrsenih treninga. Kalendar i ishrana dolaze u fazi 5. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun WorkoutHistoryScreen(onOpen: (String) -> Unit) {
-    val db = TreningApp.instance.db
-    val workouts by remember { db.workouts().observeFinished() }.collectAsStateWithLifecycle(emptyList())
-    val sets by remember { db.workouts().observeAllDoneSets() }.collectAsStateWithLifecycle(emptyList())
-    val exercises by remember { db.exercises().observeAll() }.collectAsStateWithLifecycle(emptyList())
-    val names = remember(exercises) { exercises.associate { it.id to it.name } }
-    val byWorkout = remember(sets) { sets.groupBy { it.workoutId } }
-
-    Scaffold(topBar = { TopAppBar(title = { Text("Dnevnik") }) }) { pad ->
-        LazyColumn(
-            Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (workouts.isEmpty()) item {
-                Text("Još nema završenih treninga. Započni trening iz tab-a Planovi.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            items(workouts, key = { it.id }) { w ->
-                WorkoutCard(w, byWorkout[w.id].orEmpty(), names) { onOpen(w.id) }
-            }
-        }
-    }
-}

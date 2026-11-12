@@ -52,9 +52,14 @@ fun MonthCalendar(
     markers: Map<LocalDate, DayMarker>,
     onDayClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
-    initialMonth: YearMonth = YearMonth.now(),
+    selected: LocalDate? = null,
+    allClickable: Boolean = false,
+    month: YearMonth? = null,
+    onMonthChange: ((YearMonth) -> Unit)? = null,
 ) {
-    var month by remember { mutableStateOf(initialMonth) }
+    var localMonth by remember { mutableStateOf(month ?: YearMonth.now()) }
+    val shown = month ?: localMonth
+    fun go(m: YearMonth) { localMonth = m; onMonthChange?.invoke(m) }
     val today = LocalDate.now()
     Column(
         modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
@@ -62,11 +67,11 @@ fun MonthCalendar(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "${MONTHS[month.monthValue - 1]} ${month.year}",
+                "${MONTHS[shown.monthValue - 1]} ${shown.year}",
                 fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp),
             )
-            IconButton(onClick = { month = month.minusMonths(1) }) { Icon(Icons.Filled.ChevronLeft, "Prethodni mesec") }
-            IconButton(onClick = { month = month.plusMonths(1) }) { Icon(Icons.Filled.ChevronRight, "Sledeći mesec") }
+            IconButton(onClick = { go(shown.minusMonths(1)) }) { Icon(Icons.Filled.ChevronLeft, "Prethodni mesec") }
+            IconButton(onClick = { go(shown.plusMonths(1)) }) { Icon(Icons.Filled.ChevronRight, "Sledeći mesec") }
         }
         Row(Modifier.fillMaxWidth()) {
             WEEKDAYS.forEach {
@@ -78,21 +83,22 @@ fun MonthCalendar(
             }
         }
         Spacer(Modifier.height(4.dp))
-        val first = month.atDay(1)
+        val first = shown.atDay(1)
         val offset = first.dayOfWeek.value - 1
-        val cells = offset + month.lengthOfMonth()
+        val cells = offset + shown.lengthOfMonth()
         val rows = (cells + 6) / 7
         for (r in 0 until rows) {
             Row(Modifier.fillMaxWidth()) {
                 for (c in 0 until 7) {
                     val dayNum = r * 7 + c - offset + 1
                     Box(Modifier.weight(1f).height(44.dp), contentAlignment = Alignment.Center) {
-                        if (dayNum in 1..month.lengthOfMonth()) {
-                            val date = month.atDay(dayNum)
+                        if (dayNum in 1..shown.lengthOfMonth()) {
+                            val date = shown.atDay(dayNum)
                             val marker = markers[date]
                             Column(
                                 Modifier.clip(RoundedCornerShape(8.dp))
-                                    .then(if (marker != null) Modifier.clickable { onDayClick(date) } else Modifier)
+                                    .then(if (date == selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
+                                    .then(if (marker != null || allClickable) Modifier.clickable { onDayClick(date) } else Modifier)
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {

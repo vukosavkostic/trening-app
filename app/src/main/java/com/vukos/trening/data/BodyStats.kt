@@ -48,4 +48,7 @@ enum class ChartRange(val label: String, val days: Long?) {
 
     fun filter(entries: List<BodyEntry>, today: LocalDate): List<BodyEntry> =
         if (days == null) entries else entries.filter { it.epochDay >= today.toEpochDay() - days }
+
+    fun includes(date: LocalDate, today: LocalDate): Boolean =
+        days == null || date.toEpochDay() >= today.toEpochDay() - days
 }
