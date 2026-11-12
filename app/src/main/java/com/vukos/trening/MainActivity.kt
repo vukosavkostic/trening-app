@@ -43,6 +43,10 @@ import com.vukos.trening.ui.body.WeightChartScreen
 import com.vukos.trening.ui.body.CheckInBanner
 import com.vukos.trening.ui.body.CheckInScreen
 import com.vukos.trening.ui.common.ComingSoon
+import com.vukos.trening.ui.routines.NotionRoutinesScreen
+import com.vukos.trening.ui.routines.RoutineEditScreen
+import com.vukos.trening.ui.routines.RoutinesScreen
+import com.vukos.trening.ui.settings.SettingsScreen
 import java.time.LocalDate
 import com.vukos.trening.ui.exercises.ExerciseDetailScreen
 import com.vukos.trening.ui.exercises.ExerciseListScreen
@@ -117,8 +121,30 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 ComingSoon("Dnevnik", "Kalendar treninga, ishrana po danima i uvidi.\nStiže u sledećim fazama.")
             }
             composable(Tab.ROUTINES.route) {
-                ComingSoon("Planovi", "Rutine po danima u nedelji i \"Započni trening\".\nStiže u sledećoj fazi.")
+                RoutinesScreen(
+                    onOpen = { nav.navigate("routine/$it") },
+                    onNew = { nav.navigate("routine/new") },
+                    onNotion = { nav.navigate("notion_routines") },
+                    onSettings = { nav.navigate("settings") },
+                )
             }
+            composable("routine/{id}") { e ->
+                val id = e.arguments!!.getString("id")!!.takeIf { it != "new" }
+                RoutineEditScreen(
+                    routineId = id,
+                    savedState = e.savedStateHandle,
+                    onPickExercises = { nav.navigate("picker") },
+                    onDone = { nav.popBackStack() },
+                )
+            }
+            composable("notion_routines") {
+                NotionRoutinesScreen(
+                    onBack = { nav.popBackStack() },
+                    onSettings = { nav.navigate("settings") },
+                    onOpenRoutine = { nav.navigate("routine/$it") },
+                )
+            }
+            composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }) }
             composable(Tab.BODY.route) {
                 BodyScreen(
                     onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },

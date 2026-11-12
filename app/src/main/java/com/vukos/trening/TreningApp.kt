@@ -3,6 +3,7 @@ package com.vukos.trening
 import android.app.Application
 import com.vukos.trening.data.AppDatabase
 import com.vukos.trening.data.ExerciseSeed
+import com.vukos.trening.data.Settings
 import com.vukos.trening.reminders.Reminders
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -12,6 +13,7 @@ import kotlinx.coroutines.launch
 
 class TreningApp : Application() {
     val db: AppDatabase by lazy { AppDatabase.create(this) }
+    val settings: Settings by lazy { Settings(this) }
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {

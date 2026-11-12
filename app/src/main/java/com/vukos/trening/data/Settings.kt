@@ -1,0 +1,33 @@
+package com.vukos.trening.data
+
+import android.content.Context
+import android.util.Base64
+
+/**
+ * Podesavanja. Notion token se cuva sifrovan (Keystore), nikad u cistom tekstu,
+ * i nije ugradjen u APK - unosi se jednom u aplikaciji.
+ * ID-jevi Notion baza se ne upisuju rucno: aplikacija ih sama pronalazi na stranici "Trening".
+ */
+class Settings(context: Context) {
+    private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val crypto = KeystoreCrypto("trening_settings")
+
+    var notionToken: String?
+        get() = prefs.getString("notion_token", null)?.let {
+            runCatching { String(crypto.decrypt(Base64.decode(it, Base64.NO_WRAP))) }.getOrNull()
+        }
+        set(value) {
+            prefs.edit().apply {
+                if (value.isNullOrBlank()) remove("notion_token")
+                else putString("notion_token", Base64.encodeToString(crypto.encrypt(value.trim().toByteArray()), Base64.NO_WRAP))
+            }.apply()
+        }
+
+    /** Naziv baze -> ID (Exercises, Routines, Workouts, Sets, Body, Food). */
+    var notionDatabases: Map<String, String>
+        get() = prefs.getString("notion_dbs", "")!!.split(';').filter { '=' in it }
+            .associate { it.substringBefore('=') to it.substringAfter('=') }
+        set(value) { prefs.edit().putString("notion_dbs", value.entries.joinToString(";") { "${it.key}=${it.value}" }).apply() }
+
+    val notionConfigured get() = notionToken != null && notionDatabases.containsKey("Routines")
+}

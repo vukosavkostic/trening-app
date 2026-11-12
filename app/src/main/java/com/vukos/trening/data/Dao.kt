@@ -18,6 +18,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise WHERE id = :id")
     suspend fun get(id: String): Exercise?
 
+    @Query("SELECT * FROM exercise WHERE deleted = 0")
+    suspend fun getAll(): List<Exercise>
+
     @Query("SELECT COUNT(*) FROM exercise WHERE isCustom = 0")
     suspend fun builtInCount(): Int
 
@@ -37,11 +40,23 @@ interface RoutineDao {
     @Query("SELECT * FROM routine WHERE deleted = 0 ORDER BY sortOrder, name")
     fun observeAll(): Flow<List<Routine>>
 
+    @Query("SELECT * FROM routine WHERE id = :id")
+    suspend fun get(id: String): Routine?
+
     @Upsert
     suspend fun upsert(item: Routine)
 
+    @Query("UPDATE routine SET deleted = 1, dirty = 1, updatedAt = :now WHERE id = :id")
+    suspend fun softDelete(id: String, now: Long = System.currentTimeMillis())
+
     @Query("SELECT * FROM routine_exercise WHERE routineId = :routineId ORDER BY position")
     fun observeExercises(routineId: String): Flow<List<RoutineExercise>>
+
+    @Query("SELECT * FROM routine_exercise WHERE routineId = :routineId ORDER BY position")
+    suspend fun getExercises(routineId: String): List<RoutineExercise>
+
+    @Query("SELECT * FROM routine_exercise ORDER BY routineId, position")
+    fun observeAllExercises(): Flow<List<RoutineExercise>>
 
     @Upsert
     suspend fun upsertExercises(items: List<RoutineExercise>)
