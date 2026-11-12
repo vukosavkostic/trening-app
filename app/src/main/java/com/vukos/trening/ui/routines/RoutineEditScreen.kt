@@ -162,7 +162,7 @@ fun RoutineEditScreen(
         ) {
             item {
                 OutlinedTextField(
-                    value = vm.name, onValueChange = { vm.name = it }, label = { Text("Naziv (npr. Push, Noge)") },
+                    value = vm.name, onValueChange = { vm.name = it }, label = { Text("Naziv plana") }, placeholder = { Text("npr. Push, Pull, Noge, Full Body") },
                     singleLine = true, modifier = Modifier.fillMaxWidth(),
                 )
             }

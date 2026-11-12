@@ -15,8 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -44,7 +43,6 @@ import com.vukos.trening.ui.body.WeightChartScreen
 import com.vukos.trening.ui.body.CheckInBanner
 import com.vukos.trening.ui.body.CheckInScreen
 import com.vukos.trening.data.WorkoutRepo
-import com.vukos.trening.ui.workout.ActiveWorkoutBanner
 import com.vukos.trening.ui.workout.ActiveWorkoutScreen
 import com.vukos.trening.ui.workout.WorkoutDetailScreen
 import com.vukos.trening.ui.journal.JournalScreen
@@ -61,9 +59,8 @@ import com.vukos.trening.ui.theme.TreningTheme
 
 private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
     JOURNAL("journal", "Dnevnik", Icons.Filled.MenuBook),
-    ROUTINES("routines", "Planovi", Icons.Filled.ViewList),
-    EXERCISES("exercises", "Vežbe", Icons.Filled.FitnessCenter),
-    BODY("body", "Telo", Icons.Filled.MonitorWeight),
+    ROUTINES("routines", "Trening", Icons.Filled.FitnessCenter),
+    BODY("body", "Profil", Icons.Filled.Person),
 }
 
 class MainActivity : ComponentActivity() {
@@ -92,13 +89,10 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
     val due by remember { BodyRepo.observeDue() }.collectAsStateWithLifecycle(null)
     val db = TreningApp.instance.db
     val active by remember { db.workouts().observeActive() }.collectAsStateWithLifecycle(null)
-    val activeSets by remember(active?.id) {
-        active?.let { db.workouts().observeSets(it.id) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
-    }.collectAsStateWithLifecycle(emptyList())
     val scope = rememberCoroutineScope()
     fun startWorkout(routineId: String?) = scope.launch {
         val id = if (routineId != null) WorkoutRepo.startFromRoutine(routineId) else WorkoutRepo.startEmpty()
-        nav.navigate("workout/$id")
+        if (nav.currentDestination?.route != "workout/{id}") nav.navigate("workout/$id")
     }
     fun openCheckIn(day: LocalDate = LocalDate.now()) = nav.navigate("checkin/${day.toEpochDay()}")
 
@@ -107,16 +101,18 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
+    // Trening u toku se uvek otvara preko celog ekrana dok se ne zavrsi (npr. posle zatvaranja aplikacije).
+    LaunchedEffect(active?.id) {
+        val a = active ?: return@LaunchedEffect
+        if (nav.currentDestination?.route != "workout/{id}") nav.navigate("workout/${a.id}")
+    }
     LaunchedEffect(openRequest) {
         if (openRequest == Reminders.OPEN_CHECKIN) { openCheckIn(); onOpenHandled() }
     }
 
     Scaffold(topBar = {
         // Crvena / narandzasta traka za merenje, na svim glavnim tabovima.
-        if (showBar) Column {
-            ActiveWorkoutBanner(active, activeSets) { active?.let { nav.navigate("workout/${it.id}") } }
-            CheckInBanner(due, topInset = active == null) { openCheckIn() }
-        }
+        if (showBar) CheckInBanner(due) { openCheckIn() }
     }, bottomBar = {
         if (showBar) NavigationBar {
             Tab.entries.forEach { tab ->
@@ -135,7 +131,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
             }
         }
     }) { pad ->
-        NavHost(nav, startDestination = Tab.JOURNAL.route, modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
+        NavHost(nav, startDestination = Tab.ROUTINES.route, modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
             composable(Tab.JOURNAL.route) {
                 JournalScreen(
                     onOpenWorkout = { nav.navigate("workout_detail/$it") },
@@ -190,6 +186,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },
                     onNew = { openCheckIn() },
                     onOpenChart = { nav.navigate("body_chart") },
+                    onSettings = { nav.navigate("settings") },
                 )
             }
             composable("body_day/{day}") { e ->
@@ -206,13 +203,6 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 CheckInScreen(
                     LocalDate.ofEpochDay(e.arguments!!.getString("day")!!.toLong()),
                     onDone = { nav.popBackStack() },
-                )
-            }
-            composable(Tab.EXERCISES.route) {
-                ExerciseListScreen(
-                    selectionMode = false,
-                    onOpen = { nav.navigate("exercise/$it") },
-                    onNew = { nav.navigate("exercise_new") },
                 )
             }
             composable("exercise/{id}") { e ->

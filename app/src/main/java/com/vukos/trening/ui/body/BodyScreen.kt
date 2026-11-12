@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -51,7 +52,7 @@ private val PhotoBlue = Color(0xFF4F8DF7)
 /** Tab Telo: statistika, grafikon (otvara se), kalendar merenja i lista dana. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: () -> Unit) {
+fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: () -> Unit, onSettings: () -> Unit) {
     val dao = TreningApp.instance.db.body()
     val entries by remember { dao.observeAll() }.collectAsStateWithLifecycle(emptyList())
     val photos by remember { dao.observeAllPhotos() }.collectAsStateWithLifecycle(emptyList())
@@ -70,8 +71,11 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Telo") },
-                actions = { IconButton(onClick = onOpenChart) { Icon(Icons.Filled.ShowChart, "Grafikon") } },
+                title = { Text("Profil") },
+                actions = {
+                    IconButton(onClick = onOpenChart) { Icon(Icons.Filled.ShowChart, "Grafikon") }
+                    IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
+                },
             )
         },
         floatingActionButton = {

@@ -22,7 +22,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -111,6 +110,9 @@ fun ActiveWorkoutScreen(
     // Trening je zavrsen ili odbacen negde drugde.
     LaunchedEffect(workout) { if (workout?.deleted == true) onClose() }
 
+    // Ekran treninga se ne napusta dok se trening ne zavrsi ili odbaci.
+    androidx.activity.compose.BackHandler { dialog = "leave" }
+
     val groups = sets.groupBy { it.exercisePosition }.toSortedMap()
     val start = workout?.startedAt?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalTime() }
 
@@ -125,7 +127,6 @@ fun ActiveWorkoutScreen(
                     )
                 }
             },
-            navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.KeyboardArrowDown, "Smanji") } },
             actions = {
                 Button(onClick = { dialog = "finish" }, modifier = Modifier.padding(end = 4.dp)) { Text("Završi") }
                 Box {
@@ -180,11 +181,11 @@ fun ActiveWorkoutScreen(
             val notDone = sets.size - done
             AlertDialog(
                 onDismissRequest = { dialog = null },
-                title = { Text(if (done == 0) "Nema urađenih setova" else "Završi trening?") },
+                title = { Text(if (done == 0) "Nema unetih setova" else "Završi trening?") },
                 text = {
                     Text(
-                        if (done == 0) "Označi bar jedan set kvačicom ✓ ili odbaci trening."
-                        else "Urađeno setova: $done." + if (notDone > 0) "\nNeurađeni setovi ($notDone) se brišu." else ""
+                        if (done == 0) "Upiši kilažu i ponavljanja bar za jedan set, ili odbaci trening."
+                        else "Čuva se $done setova." + if (notDone > 0) "\nPrazni setovi ($notDone) se ne čuvaju." else ""
                     )
                 },
                 confirmButton = {
@@ -197,6 +198,18 @@ fun ActiveWorkoutScreen(
                 dismissButton = { TextButton(onClick = { dialog = null }) { Text("Nazad") } },
             )
         }
+        "leave" -> AlertDialog(
+            onDismissRequest = { dialog = null },
+            title = { Text("Trening je u toku") },
+            text = { Text("Sve što si uneo je sačuvano. Završi trening kad budeš gotov, ili ga odbaci.") },
+            confirmButton = { TextButton(onClick = { dialog = "finish" }) { Text("Završi") } },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { dialog = "discard" }) { Text("Odbaci", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { dialog = null }) { Text("Nastavi") }
+                }
+            },
+        )
         "discard" -> AlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text("Odbaci trening?") },

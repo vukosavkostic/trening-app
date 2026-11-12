@@ -6,10 +6,13 @@ import java.util.Locale
 
 /** Pomocne cisto-Kotlin funkcije za trening (testiraju se bez Androida). */
 object WorkoutMath {
-    fun volume(sets: List<WorkoutSet>): Double =
-        sets.filter { it.done && !it.deleted }.sumOf { (it.weightKg ?: 0.0) * (it.reps ?: 0) }
+    /** Set se racuna kao unet ako je oznacen kvacicom ili su upisana ponavljanja. */
+    fun isLogged(s: WorkoutSet) = !s.deleted && (s.done || s.reps != null)
 
-    fun doneCount(sets: List<WorkoutSet>) = sets.count { it.done && !it.deleted }
+    fun volume(sets: List<WorkoutSet>): Double =
+        sets.filter(::isLogged).sumOf { (it.weightKg ?: 0.0) * (it.reps ?: 0) }
+
+    fun doneCount(sets: List<WorkoutSet>) = sets.count(::isLogged)
 
     /** Predlog za set: prvo isti set iz proslog treninga, pa poslednji prosli set, pa cilj iz plana. */
     fun hint(setIndex: Int, previous: List<WorkoutSet>, target: RoutineExercise?): Pair<Double?, Int?> {
@@ -91,14 +94,20 @@ object WorkoutRepo {
             .map { it.copy(deleted = true, dirty = true, updatedAt = now) })
     }
 
-    /** Zavrsava trening: neuradjeni setovi se brisu. Vraca false ako nema nijednog uradjenog seta. */
+    /**
+     * Zavrsava trening: cuva se svaki set sa upisanim ponavljanjima (sa ili bez kvacice),
+     * a potpuno prazni setovi se brisu. Vraca false ako nije unet nijedan set.
+     */
     suspend fun finish(workoutId: String): Boolean {
         val w = dao.get(workoutId) ?: return false
         val sets = dao.getSets(workoutId)
-        if (sets.none { it.done }) return false
+        if (sets.none(WorkoutMath::isLogged)) return false
         val now = System.currentTimeMillis()
         db.withTransaction {
-            dao.upsertSets(sets.filter { !it.done }.map { it.copy(deleted = true, dirty = true, updatedAt = now) })
+            dao.upsertSets(sets.map {
+                if (WorkoutMath.isLogged(it)) it.copy(done = true, updatedAt = now, dirty = true)
+                else it.copy(deleted = true, dirty = true, updatedAt = now)
+            })
             dao.upsert(w.copy(finishedAt = now, updatedAt = now, dirty = true))
         }
         return true

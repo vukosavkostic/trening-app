@@ -11,10 +11,15 @@ class WorkoutMathTest {
     private fun s(i: Int, kg: Double?, reps: Int?, done: Boolean = true) =
         WorkoutSet(workoutId = "w", exerciseId = "e", exercisePosition = 0, setIndex = i, weightKg = kg, reps = reps, done = done)
 
-    @Test fun volumeCountsOnlyDoneSets() {
-        val sets = listOf(s(1, 60.0, 10), s(2, 60.0, 8), s(3, 70.0, 5, done = false), s(4, null, 12))
-        assertEquals(1080.0, WorkoutMath.volume(sets), 1e-9)
-        assertEquals(3, WorkoutMath.doneCount(sets))
+    @Test fun volumeCountsEnteredSetsWithOrWithoutCheck() {
+        val sets = listOf(
+            s(1, 60.0, 10), s(2, 60.0, 8),
+            s(3, 70.0, 5, done = false),        // upisano bez kvacice -> racuna se
+            s(4, null, 12),                     // bez kilaze (npr. zgibovi)
+            s(5, 80.0, null, done = false),     // samo kilaza, bez ponavljanja -> ne racuna se
+        )
+        assertEquals(1430.0, WorkoutMath.volume(sets), 1e-9)
+        assertEquals(4, WorkoutMath.doneCount(sets))
     }
 
     @Test fun hintPrefersSameSetFromLastTime() {

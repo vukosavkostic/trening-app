@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +44,7 @@ import com.vukos.trening.data.Routine
 import com.vukos.trening.data.Weekdays
 import java.time.LocalDate
 
-/** Tab Planovi: danas, nedeljni raspored, svi planovi. */
+/** Tab Trening: danas, nedeljni raspored, planovi sa dugmetom Zapocni trening. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutinesScreen(
@@ -67,7 +66,7 @@ fun RoutinesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Planovi") },
+                title = { Text("Trening") },
                 actions = {
                     IconButton(onClick = onNotion) { Icon(Icons.Filled.CloudDownload, "Notion treninzi") }
                     IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
@@ -153,9 +152,6 @@ private fun RoutineCard(r: Routine, exerciseNames: List<String>, onStart: () -> 
             Text(r.name, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             if (r.notionPageId != null) Text("Notion  ", style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            IconButton(onClick = onStart, enabled = exerciseNames.isNotEmpty()) {
-                Icon(Icons.Filled.PlayArrow, "Započni", tint = MaterialTheme.colorScheme.primary)
-            }
         }
         Text(
             "${Weekdays.describe(r.weekdays)} · ${exerciseNames.size} vežbi",
@@ -165,6 +161,10 @@ private fun RoutineCard(r: Routine, exerciseNames: List<String>, onStart: () -> 
             exerciseNames.joinToString(", "), maxLines = 2, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp),
         )
+        Spacer(Modifier.height(10.dp))
+        Button(onClick = onStart, enabled = exerciseNames.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+            Text("Započni trening")
+        }
     }
 }
 
