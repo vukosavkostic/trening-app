@@ -76,8 +76,45 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_set WHERE workoutId = :workoutId AND deleted = 0 ORDER BY exercisePosition, setIndex")
     fun observeSets(workoutId: String): Flow<List<WorkoutSet>>
 
+    @Query("SELECT * FROM workout_set WHERE workoutId = :workoutId AND deleted = 0 ORDER BY exercisePosition, setIndex")
+    suspend fun getSets(workoutId: String): List<WorkoutSet>
+
     @Upsert
     suspend fun upsertSets(items: List<WorkoutSet>)
+
+    @Upsert
+    suspend fun upsertSet(item: WorkoutSet)
+
+    @Query("SELECT * FROM workout WHERE id = :id")
+    suspend fun get(id: String): Workout?
+
+    @Query("SELECT * FROM workout WHERE id = :id")
+    fun observe(id: String): Flow<Workout?>
+
+    /** Trening u toku (najvise jedan). */
+    @Query("SELECT * FROM workout WHERE finishedAt IS NULL AND deleted = 0 ORDER BY startedAt DESC LIMIT 1")
+    fun observeActive(): Flow<Workout?>
+
+    @Query("SELECT * FROM workout WHERE finishedAt IS NULL AND deleted = 0 ORDER BY startedAt DESC LIMIT 1")
+    suspend fun getActive(): Workout?
+
+    @Query("SELECT * FROM workout WHERE finishedAt IS NOT NULL AND deleted = 0 ORDER BY startedAt DESC")
+    fun observeFinished(): Flow<List<Workout>>
+
+    @Query("SELECT * FROM workout_set WHERE deleted = 0 AND done = 1")
+    fun observeAllDoneSets(): Flow<List<WorkoutSet>>
+
+    /** Uradjeni setovi vezbe iz poslednjeg zavrsenog treninga (osim tekuceg) - kolona "Prethodno". */
+    @Query(
+        """SELECT s.* FROM workout_set s WHERE s.exerciseId = :exerciseId AND s.deleted = 0 AND s.done = 1
+           AND s.workoutId = (
+             SELECT w.id FROM workout w JOIN workout_set s2 ON s2.workoutId = w.id
+             WHERE s2.exerciseId = :exerciseId AND s2.done = 1 AND s2.deleted = 0
+               AND w.finishedAt IS NOT NULL AND w.deleted = 0 AND w.id != :currentWorkoutId
+             ORDER BY w.startedAt DESC LIMIT 1)
+           ORDER BY s.setIndex"""
+    )
+    suspend fun previousSets(exerciseId: String, currentWorkoutId: String): List<WorkoutSet>
 }
 
 @Dao

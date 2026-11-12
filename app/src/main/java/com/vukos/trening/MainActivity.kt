@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -42,7 +43,12 @@ import com.vukos.trening.ui.body.BodyScreen
 import com.vukos.trening.ui.body.WeightChartScreen
 import com.vukos.trening.ui.body.CheckInBanner
 import com.vukos.trening.ui.body.CheckInScreen
-import com.vukos.trening.ui.common.ComingSoon
+import com.vukos.trening.data.WorkoutRepo
+import com.vukos.trening.ui.workout.ActiveWorkoutBanner
+import com.vukos.trening.ui.workout.ActiveWorkoutScreen
+import com.vukos.trening.ui.workout.WorkoutDetailScreen
+import com.vukos.trening.ui.workout.WorkoutHistoryScreen
+import kotlinx.coroutines.launch
 import com.vukos.trening.ui.routines.NotionRoutinesScreen
 import com.vukos.trening.ui.routines.RoutineEditScreen
 import com.vukos.trening.ui.routines.RoutinesScreen
@@ -84,6 +90,16 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
     val route = entry?.destination?.route
     val showBar = Tab.entries.any { it.route == route }
     val due by remember { BodyRepo.observeDue() }.collectAsStateWithLifecycle(null)
+    val db = TreningApp.instance.db
+    val active by remember { db.workouts().observeActive() }.collectAsStateWithLifecycle(null)
+    val activeSets by remember(active?.id) {
+        active?.let { db.workouts().observeSets(it.id) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsStateWithLifecycle(emptyList())
+    val scope = rememberCoroutineScope()
+    fun startWorkout(routineId: String?) = scope.launch {
+        val id = if (routineId != null) WorkoutRepo.startFromRoutine(routineId) else WorkoutRepo.startEmpty()
+        nav.navigate("workout/$id")
+    }
     fun openCheckIn(day: LocalDate = LocalDate.now()) = nav.navigate("checkin/${day.toEpochDay()}")
 
     // Dozvola za notifikacije (Android 13+), trazi se jednom pri pokretanju.
@@ -97,7 +113,10 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
 
     Scaffold(topBar = {
         // Crvena / narandzasta traka za merenje, na svim glavnim tabovima.
-        if (showBar) Column { CheckInBanner(due) { openCheckIn() } }
+        if (showBar) Column {
+            ActiveWorkoutBanner(active, activeSets) { active?.let { nav.navigate("workout/${it.id}") } }
+            CheckInBanner(due, topInset = active == null) { openCheckIn() }
+        }
     }, bottomBar = {
         if (showBar) NavigationBar {
             Tab.entries.forEach { tab ->
@@ -118,7 +137,24 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
     }) { pad ->
         NavHost(nav, startDestination = Tab.JOURNAL.route, modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
             composable(Tab.JOURNAL.route) {
-                ComingSoon("Dnevnik", "Kalendar treninga, ishrana po danima i uvidi.\nStiže u sledećim fazama.")
+                WorkoutHistoryScreen(onOpen = { nav.navigate("workout_detail/$it") })
+            }
+            composable("workout/{id}") { e ->
+                ActiveWorkoutScreen(
+                    workoutId = e.arguments!!.getString("id")!!,
+                    savedState = e.savedStateHandle,
+                    onPickExercises = { nav.navigate("picker") },
+                    onOpenExercise = { nav.navigate("exercise/$it") },
+                    onFinished = { id -> nav.popBackStack(); nav.navigate("workout_detail/$id") },
+                    onClose = { nav.popBackStack() },
+                )
+            }
+            composable("workout_detail/{id}") { e ->
+                WorkoutDetailScreen(
+                    e.arguments!!.getString("id")!!,
+                    onBack = { nav.popBackStack() },
+                    onOpenExercise = { nav.navigate("exercise/$it") },
+                )
             }
             composable(Tab.ROUTINES.route) {
                 RoutinesScreen(
@@ -126,6 +162,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onNew = { nav.navigate("routine/new") },
                     onNotion = { nav.navigate("notion_routines") },
                     onSettings = { nav.navigate("settings") },
+                    onStart = { startWorkout(it) },
                 )
             }
             composable("routine/{id}") { e ->

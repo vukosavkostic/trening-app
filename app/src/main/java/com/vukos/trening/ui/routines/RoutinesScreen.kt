@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +53,7 @@ fun RoutinesScreen(
     onNew: () -> Unit,
     onNotion: () -> Unit,
     onSettings: () -> Unit,
+    onStart: (String?) -> Unit,
 ) {
     val db = TreningApp.instance.db
     val routines by remember { db.routines().observeAll() }.collectAsStateWithLifecycle(emptyList())
@@ -96,9 +98,13 @@ fun RoutinesScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                         )
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                            Text("Započni trening (faza 4)")
+                        Button(onClick = { onStart(r.id) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Započni trening")
                         }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = { onStart(null) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Prazan trening (bez plana)")
                     }
                 }
             }
@@ -130,21 +136,26 @@ fun RoutinesScreen(
             } else item {
                 Text("Svi planovi", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
             }
-            items(routines, key = { it.id }) { r -> RoutineCard(r, byRoutine[r.id].orEmpty().map { names[it.exerciseId] ?: "?" }) { onOpen(r.id) } }
+            items(routines, key = { it.id }) { r ->
+                RoutineCard(r, byRoutine[r.id].orEmpty().map { names[it.exerciseId] ?: "?" }, onStart = { onStart(r.id) }) { onOpen(r.id) }
+            }
         }
     }
 }
 
 @Composable
-private fun RoutineCard(r: Routine, exerciseNames: List<String>, onClick: () -> Unit) {
+private fun RoutineCard(r: Routine, exerciseNames: List<String>, onStart: () -> Unit, onClick: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick).padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(r.name, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            if (r.notionPageId != null) Text("Notion", style = MaterialTheme.typography.labelSmall,
+            if (r.notionPageId != null) Text("Notion  ", style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            IconButton(onClick = onStart, enabled = exerciseNames.isNotEmpty()) {
+                Icon(Icons.Filled.PlayArrow, "Započni", tint = MaterialTheme.colorScheme.primary)
+            }
         }
         Text(
             "${Weekdays.describe(r.weekdays)} · ${exerciseNames.size} vežbi",

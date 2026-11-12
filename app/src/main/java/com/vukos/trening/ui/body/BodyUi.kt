@@ -55,12 +55,12 @@ fun CheckInSchedule.Due.whatMissing(): String = when {
  * Propusteno (od ponedeljka): crvena dok se ne unese.
  */
 @Composable
-fun CheckInBanner(due: CheckInSchedule.Due?, onClick: () -> Unit) {
+fun CheckInBanner(due: CheckInSchedule.Due?, topInset: Boolean = true, onClick: () -> Unit) {
     if (due == null || !due.anythingMissing) return
     val bg = if (due.overdue) Danger else MaterialTheme.colorScheme.primaryContainer
     val fg = if (due.overdue) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
     Row(
-        Modifier.fillMaxWidth().background(bg).statusBarsPadding().clickable(onClick = onClick)
+        Modifier.fillMaxWidth().background(bg).then(if (topInset) Modifier.statusBarsPadding() else Modifier).clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
