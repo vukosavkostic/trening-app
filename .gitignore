@@ -1,0 +1,14 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+# Lokalni/poverljivi fajlovi - nikad na GitHub
+notion.local.md
+secrets.properties
+keystore.properties
+*.jks
+*.keystore
+*.apk
+*.aab
+dist/
