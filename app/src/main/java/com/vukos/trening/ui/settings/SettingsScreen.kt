@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vukos.trening.TreningApp
 import com.vukos.trening.notion.NotionRoutines
 import kotlinx.coroutines.launch
@@ -44,6 +45,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val settings = TreningApp.instance.settings
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     var configured by remember { mutableStateOf(settings.notionConfigured) }
     var dbs by remember { mutableStateOf(settings.notionDatabases.keys.sorted()) }
@@ -74,6 +76,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Text("Baze: ${dbs.joinToString(", ")}", color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
                 }
+                SyncSection()
                 OutlinedButton(onClick = {
                     settings.notionToken = null
                     settings.notionDatabases = emptyMap()
@@ -97,7 +100,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                         busy = true; message = null
                         scope.launch {
                             runCatching { NotionRoutines.connect(settings, token) }
-                                .onSuccess { configured = true; dbs = it.keys.sorted(); token = ""; message = null }
+                                .onSuccess {
+                                    configured = true; dbs = it.keys.sorted(); token = ""; message = null
+                                    com.vukos.trening.notion.SyncWorker.request(ctx, 0)   // posalji sve sto je vec uneto
+                                }
                                 .onFailure { message = "Neuspešno: ${it.message}" }
                             busy = false
                         }
@@ -112,4 +118,88 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
         }
     }
+}
+
+
+/** Status sinhronizacije, rucno slanje i vracanje podataka iz Notiona. */
+@Composable
+private fun SyncSection() {
+    val app = TreningApp.instance
+    val settings = app.settings
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    val pending by remember { app.db.sync().observePending() }.collectAsStateWithLifecycle(0)
+    var lastAt by remember { mutableStateOf(settings.lastSyncAt) }
+    var lastError by remember { mutableStateOf(settings.lastSyncError) }
+    var syncing by remember { mutableStateOf(false) }
+    var restoring by remember { mutableStateOf(false) }
+    var confirmRestore by remember { mutableStateOf(false) }
+    var restoreMsg by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("Sinhronizacija", fontWeight = FontWeight.SemiBold)
+        Text(
+            when {
+                lastAt == 0L -> "Još nije sinhronizovano."
+                lastError != null -> "Poslednji pokušaj: ${fmtTime(lastAt)} — greška: $lastError"
+                else -> "Poslednja: ${fmtTime(lastAt)}"
+            },
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            if (pending == 0) "Sve je poslato u Notion." else "Čeka slanje: $pending (šalje se automatski kad ima interneta).",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Button(enabled = !syncing, onClick = {
+            syncing = true
+            val started = System.currentTimeMillis()
+            com.vukos.trening.notion.SyncWorker.request(context, 0)
+            scope.launch {
+                // Ceka da radnik zapise rezultat (najvise 2 min).
+                repeat(80) {
+                    kotlinx.coroutines.delay(1500)
+                    if (settings.lastSyncAt >= started) { lastAt = settings.lastSyncAt; lastError = settings.lastSyncError; syncing = false; return@launch }
+                }
+                syncing = false
+            }
+        }, modifier = Modifier.fillMaxWidth()) { Text(if (syncing) "Šaljem…" else "Sinhronizuj sad") }
+        OutlinedButton(enabled = !restoring, onClick = { confirmRestore = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (restoring) "Vraćam…" else "Vrati podatke iz Notiona")
+        }
+        restoreMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        Text(
+            "Slike tela se nikad ne šalju u Notion, pa ih vraćanje ne može vratiti.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    if (confirmRestore) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { confirmRestore = false },
+        title = { Text("Vrati iz Notiona?") },
+        text = { Text("Dodaju se planovi, treninzi, merenja i obroci iz Notiona kojih nema na telefonu. Postojeći podaci se ne menjaju.") },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                confirmRestore = false; restoring = true; restoreMsg = null
+                scope.launch {
+                    runCatching { com.vukos.trening.notion.NotionSync.restore(settings) }
+                        .onSuccess { r ->
+                            restoreMsg = "Vraćeno: ${r.routines} planova, ${r.workouts} treninga (${r.sets} setova), " +
+                                "${r.body} merenja, ${r.food} obroka, ${r.exercises} vežbi."
+                        }
+                        .onFailure { restoreMsg = "Neuspešno: ${it.message}" }
+                    restoring = false
+                }
+            }) { Text("Vrati") }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmRestore = false }) { Text("Otkaži") } },
+    )
+}
+
+private fun fmtTime(ms: Long): String {
+    val t = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
+    return "%d.%d. %02d:%02d".format(t.dayOfMonth, t.monthValue, t.hour, t.minute)
 }

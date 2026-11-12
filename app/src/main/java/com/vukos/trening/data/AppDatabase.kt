@@ -19,6 +19,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workouts(): WorkoutDao
     abstract fun body(): BodyDao
     abstract fun food(): FoodDao
+    abstract fun sync(): SyncDao
 
     companion object {
         fun create(context: Context): AppDatabase =

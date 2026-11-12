@@ -30,4 +30,13 @@ class Settings(context: Context) {
         set(value) { prefs.edit().putString("notion_dbs", value.entries.joinToString(";") { "${it.key}=${it.value}" }).apply() }
 
     val notionConfigured get() = notionToken != null && notionDatabases.containsKey("Routines")
+
+    /** Poslednja sinhronizacija: vreme, greska (null = uspeh), broj promenjenih stranica. */
+    fun recordSync(error: String?, changed: Int) {
+        prefs.edit().putLong("sync_at", System.currentTimeMillis()).putString("sync_error", error)
+            .putInt("sync_changed", changed).apply()
+    }
+    val lastSyncAt get() = prefs.getLong("sync_at", 0L)
+    val lastSyncError: String? get() = prefs.getString("sync_error", null)
+    val lastSyncChanged get() = prefs.getInt("sync_changed", 0)
 }

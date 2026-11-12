@@ -29,10 +29,16 @@ Svaka baza ima `AppId` (ID reda u aplikaciji) za uparivanje.
 | 4 | Logovanje treninga (Prethodno / kg / reps / ✓), trening u toku, istorija | ✅ |
 | 5 | Dnevnik: kalendar treninga + ishrana po danima + uvidi | ✅ |
 | 6 | Statistika: grafovi po vežbi (težina, 1RM, volumen) + grafikon kilaže | ✅ |
-| 7 | ⏳ Puna sinhronizacija sa Notionom (slanje, povlačenje, restore, upload slika) | |
+| 7 | Sinhronizacija sa Notionom: automatsko slanje (WorkManager), vraćanje iz Notiona; slike tela se ne šalju | ✅ |
 
 Pravila za podsetnike su u `data/CheckInSchedule.kt`: merenje jednom sedmično, termin je nedelja (kilaža), a svake druge sedmice i slike (15.11, 29.11, ...). U nedelju je to običan podsetnik, a ako se propusti, od ponedeljka je crveno dok se ne unese.
 
 ## Privatnost slika tela
 
 Slike (spreda, bok, leđa) se čuvaju samo u internom skladištu aplikacije (`files/body_photos`), šifrovane AES-256-GCM ključem iz Android Keystore-a. Ne idu u galeriju, Android backup (`allowBackup=false`) ni Notion (tamo je samo oznaka „Photos taken"). Ekran merenja ima FLAG_SECURE (bez screenshota i pregleda u nedavnim aplikacijama). Posledica: ako se aplikacija deinstalira ili se telefon izgubi, slike se ne mogu vratiti.
+
+## Sinhronizacija
+
+- Svaka izmena (plan, završen trening, setovi, merenje, obrok, sopstvena vežba) se označi kao neposlata; aplikacija je sama šalje u Notion kad ima interneta (posle ~20 s), plus provera na 6 h.
+- Trening u toku se ne šalje dok se ne završi. Obrisano u aplikaciji = arhivirano u Notionu.
+- Smer je aplikacija → Notion. Izmene napravljene direktno u Notionu se ne vraćaju u aplikaciju, osim planova (Notion treninzi) i „Vrati podatke iz Notiona" (dodaje samo ono čega nema na telefonu).
