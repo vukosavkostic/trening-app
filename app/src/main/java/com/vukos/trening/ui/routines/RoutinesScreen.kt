@@ -56,6 +56,7 @@ fun RoutinesScreen(
     onNotion: () -> Unit,
     onSettings: () -> Unit,
     onStart: (String?) -> Unit,
+    onOpenStats: () -> Unit,
 ) {
     val db = TreningApp.instance.db
     val routines by remember { db.routines().observeAll() }.collectAsStateWithLifecycle(emptyList())
@@ -83,6 +84,27 @@ fun RoutinesScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                // Nedeljni cilj i niz nedelja.
+                val goal = remember { TreningApp.instance.settings.weeklyGoal }
+                val dates = workouts.map { com.vukos.trening.data.JournalStats.dateOf(it) }
+                val today = java.time.LocalDate.now()
+                val thisWeek = dates.count { com.vukos.trening.data.TrainingStats.weekStart(it) == com.vukos.trening.data.TrainingStats.weekStart(today) }
+                val streak = com.vukos.trening.data.TrainingStats.streak(dates, goal, today)
+                AppCard(onClick = onOpenStats, padding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Ova nedelja", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("$thisWeek / $goal treninga", style = MaterialTheme.typography.titleLarge)
+                        }
+                        if (streak > 0) Chip("🔥 $streak ${if (streak == 1) "nedelja" else "nedelja"} zaredom",
+                            color = MaterialTheme.colorScheme.onPrimaryContainer, bg = MaterialTheme.colorScheme.primaryContainer)
+                        Icon(Icons.Filled.ChevronRight, "Statistika", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    com.vukos.trening.ui.stats.WeekProgress(thisWeek, goal)
+                }
+            }
             item {
                 AppCard(onClick = { onStart(null) }, padding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

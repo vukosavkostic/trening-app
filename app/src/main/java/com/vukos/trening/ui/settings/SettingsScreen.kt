@@ -5,6 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -60,7 +64,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         )
     }) { pad ->
         Column(
-            Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+            Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Notion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -112,10 +116,11 @@ fun SettingsScreen(onBack: () -> Unit) {
                 ) { Text(if (busy) "Povezujem…" else "Sačuvaj i poveži") }
             }
             message?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Text(
-                "Token se čuva šifrovan (Android Keystore) samo na ovom telefonu i ne nalazi se u APK-u.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-            )
+            com.vukos.trening.ui.common.LockNote("Token se čuva šifrovan (Android Keystore) samo na ovom telefonu i ne nalazi se u APK-u.")
+            Spacer(Modifier.height(12.dp))
+            GoalsSection()
+            Spacer(Modifier.height(12.dp))
+            BackupSection()
         }
     }
 }
@@ -202,4 +207,122 @@ private fun SyncSection() {
 private fun fmtTime(ms: Long): String {
     val t = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
     return "%d.%d. %02d:%02d".format(t.dayOfMonth, t.monthValue, t.hour, t.minute)
+}
+
+/** Ciljevi: kalorije, protein, treninga nedeljno. */
+@Composable
+private fun GoalsSection() {
+    val settings = TreningApp.instance.settings
+    var kcal by remember { mutableStateOf(settings.kcalGoal.takeIf { it > 0 }?.toString() ?: "") }
+    var prot by remember { mutableStateOf(settings.proteinGoal.takeIf { it > 0 }?.toString() ?: "") }
+    var weekly by remember { mutableStateOf(settings.weeklyGoal.toString()) }
+    Text("Ciljevi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        GoalField("kcal / dan", kcal, Modifier.weight(1f)) { kcal = it; settings.kcalGoal = it.toIntOrNull() ?: 0 }
+        GoalField("protein g", prot, Modifier.weight(1f)) { prot = it; settings.proteinGoal = it.toIntOrNull() ?: 0 }
+        GoalField("treninga / ned.", weekly, Modifier.weight(1f)) { weekly = it; it.toIntOrNull()?.takeIf { n -> n in 1..14 }?.let { n -> settings.weeklyGoal = n } }
+    }
+}
+
+@Composable
+private fun GoalField(label: String, value: String, modifier: Modifier, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value, { onChange(it.filter(Char::isDigit).take(5)) }, label = { Text(label, maxLines = 1) }, singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+        shape = RoundedCornerShape(14.dp), modifier = modifier,
+    )
+}
+
+/** Sifrovana rezervna kopija svih podataka (ukljucujuci slike) u fajl po izboru. */
+@Composable
+private fun BackupSection() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val settings = TreningApp.instance.settings
+    val scope = rememberCoroutineScope()
+    var mode by remember { mutableStateOf<String?>(null) }        // "export" / "import"
+    var pendingUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var msg by remember { mutableStateOf<String?>(null) }
+    var lastAt by remember { mutableStateOf(settings.lastBackupAt) }
+
+    val create = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri -> if (uri != null) { pendingUri = uri; mode = "export" } }
+    val open = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) { pendingUri = uri; mode = "import" } }
+
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("Rezervna kopija", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Svi podaci i slike tela u jednom fajlu, šifrovanom tvojom lozinkom. Sačuvaj ga na Drive ili računar. " +
+                "Bez lozinke se ne može otvoriti, pa je ne zaboravi.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            if (lastAt == 0L) "Još nije napravljena." else "Poslednja: ${fmtTime(lastAt)}",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Button(enabled = !busy, onClick = {
+            create.launch("Trening-backup-${java.time.LocalDate.now()}.trbk")
+        }, modifier = Modifier.fillMaxWidth()) { Text(if (busy && mode == null) "Radim…" else "Napravi kopiju") }
+        OutlinedButton(enabled = !busy, onClick = { open.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
+            Text("Vrati iz kopije")
+        }
+        msg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    }
+
+    val uri = pendingUri
+    if (mode != null && uri != null) PasswordDialog(
+        export = mode == "export",
+        onDismiss = { mode = null; pendingUri = null },
+    ) { password ->
+        val m = mode
+        mode = null; pendingUri = null; busy = true; msg = if (m == "export") "Pravim kopiju…" else "Vraćam podatke…"
+        scope.launch {
+            runCatching {
+                if (m == "export") com.vukos.trening.data.Backup.export(context, uri, password)
+                else com.vukos.trening.data.Backup.import(context, uri, password)
+            }.onSuccess {
+                if (m == "export") { lastAt = settings.lastBackupAt; msg = "Kopija je sačuvana." }
+                else { msg = "Podaci su vraćeni. Aplikacija se ponovo pokreće…"; com.vukos.trening.data.Backup.restartApp(context) }
+            }.onFailure { msg = "Neuspešno: ${it.message}" }
+            java.util.Arrays.fill(password, ' ')
+            busy = false
+        }
+    }
+}
+
+@Composable
+private fun PasswordDialog(export: Boolean, onDismiss: () -> Unit, onConfirm: (CharArray) -> Unit) {
+    var p1 by remember { mutableStateOf("") }
+    var p2 by remember { mutableStateOf("") }
+    val ok = if (export) p1.length >= 8 && p1 == p2 else p1.isNotEmpty()
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (export) "Lozinka za kopiju" else "Vrati iz kopije?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    if (export) "Najmanje 8 znakova. Bez nje se kopija ne može otvoriti."
+                    else "SVI podaci na ovom telefonu biće zamenjeni sadržajem kopije. Notion token ćeš morati ponovo da uneseš.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(p1, { p1 = it }, label = { Text("Lozinka") }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                if (export) OutlinedTextField(p2, { p2 = it }, label = { Text("Ponovi lozinku") }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(enabled = ok, onClick = { onConfirm(p1.toCharArray()) }) {
+                Text(if (export) "Šifruj i sačuvaj" else "Zameni podatke")
+            }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Otkaži") } },
+    )
 }

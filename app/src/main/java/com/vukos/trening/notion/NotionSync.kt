@@ -3,6 +3,7 @@ package com.vukos.trening.notion
 import androidx.room.withTransaction
 import com.vukos.trening.TreningApp
 import com.vukos.trening.data.BodyEntry
+import com.vukos.trening.data.SetType
 import com.vukos.trening.data.Exercise
 import com.vukos.trening.data.FoodEntry
 import com.vukos.trening.data.Routine
@@ -104,6 +105,7 @@ object NotionSync {
         .put("Equipment", Props.select(ex.equipment))
         .put("Category", Props.select(ex.category))
         .put("Custom", Props.checkbox(ex.isCustom))
+        .put("Notes", Props.text(ex.notes))
         .put("AppId", Props.text(ex.id))
         .apply { ex.thumbnailUrl?.takeIf { it.startsWith("https://") }?.let { put("Image", Props.externalFile(it)) } }
 
@@ -169,6 +171,7 @@ object NotionSync {
                 .put("Kg", Props.number(s.weightKg))
                 .put("Reps", Props.number(s.reps))
                 .put("Order", Props.number(s.exercisePosition))
+                .put("Type", Props.select(s.setType))
                 .put("AppId", Props.text(s.id))
                 .apply { exercisePageId(x, s.exerciseId)?.let { put("Exercise", Props.relation(listOf(it))) } }
             sync.setSynced(s.id, upsertPage(x, "Sets", s.notionPageId, props), s.updatedAt)
@@ -182,6 +185,11 @@ object NotionSync {
                 .put("Date", Props.date(day.toString()))
                 .put("Weight kg", Props.number(b.weightKg))
                 .put("Photos taken", Props.checkbox(sync.photoCount(b.id) > 0))   // samo oznaka, slike ostaju na telefonu
+                .put("Waist cm", Props.number(b.waistCm))
+                .put("Chest cm", Props.number(b.chestCm))
+                .put("Arm cm", Props.number(b.armCm))
+                .put("Thigh cm", Props.number(b.thighCm))
+                .put("Body fat %", Props.number(b.bodyFatPct))
                 .put("Notes", Props.text(b.notes))
                 .put("AppId", Props.text(b.id))
             sync.bodySynced(b.id, upsertPage(x, "Body", b.notionPageId, props), b.updatedAt)
@@ -301,6 +309,7 @@ object NotionSync {
                 id = id, workoutId = wid, exerciseId = exId,
                 exercisePosition = num(p, "Order")?.toInt() ?: 0, setIndex = num(p, "Set #")?.toInt() ?: 1,
                 weightKg = num(p, "Kg"), reps = num(p, "Reps")?.toInt(), done = true,
+                setType = select(p, "Type")?.takeIf { it in SetType.ALL } ?: SetType.NORMAL,
                 notionPageId = p.getString("id"), dirty = false,
             )
         }
@@ -309,6 +318,8 @@ object NotionSync {
             val d = dateStart(p, "Date") ?: return@mapNotNull null
             if (db.body().getByDay(epochDay(d)) != null) return@mapNotNull null   // vec postoji merenje za taj dan
             BodyEntry(id = id, epochDay = epochDay(d), weightKg = num(p, "Weight kg"), notes = NotionClient.text(p, "Notes"),
+                waistCm = num(p, "Waist cm"), chestCm = num(p, "Chest cm"), armCm = num(p, "Arm cm"),
+                thighCm = num(p, "Thigh cm"), bodyFatPct = num(p, "Body fat %"),
                 notionPageId = p.getString("id"), dirty = false)
         }
         val newFood = fPages.mapNotNull { p ->

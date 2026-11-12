@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -96,6 +98,8 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
     var day by remember { mutableStateOf(initialDay) }
     var weightText by remember { mutableStateOf("") }
     var existingPhotos by remember { mutableStateOf<Map<String, BodyPhoto>>(emptyMap()) }
+    val measureText = remember { androidx.compose.runtime.mutableStateListOf("", "", "", "", "") }
+    var showMeasures by remember { mutableStateOf(false) }
     val newPhotos = remember { mutableStateMapOf<Pose, Uri>() }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -108,6 +112,9 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
         val e = dao.getByDay(day.toEpochDay())
         weightText = e?.weightKg?.let { it.kg().removeSuffix(" kg") } ?: weightText.takeIf { e == null } ?: ""
         existingPhotos = e?.let { dao.photosFor(it.id).associateBy { p -> p.pose } } ?: emptyMap()
+        val m = e?.let { com.vukos.trening.data.Measurements.of(it) } ?: com.vukos.trening.data.Measurements()
+        com.vukos.trening.data.Measurements.FIELDS.forEachIndexed { i, f -> measureText[i] = f.third(m)?.let { fmtNum(it) } ?: "" }
+        if (!m.isEmpty) showMeasures = true
         newPhotos.clear()
     }
 
@@ -135,7 +142,7 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
         )
     }) { pad ->
         Column(
-            Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+            Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(
@@ -165,19 +172,43 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            // Mere (opciono): obimi u cm i % masti.
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
+                    .clickable { showMeasures = !showMeasures }.padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Mere tela", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(if (showMeasures) "Sakrij" else "Dodaj (opciono)", color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge)
+                }
+                if (showMeasures) {
+                    Spacer(Modifier.height(10.dp))
+                    com.vukos.trening.data.Measurements.FIELDS.chunked(2).forEachIndexed { row, pair ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                            pair.forEachIndexed { j, f ->
+                                val i = row * 2 + j
+                                OutlinedTextField(
+                                    value = measureText[i],
+                                    onValueChange = { v -> measureText[i] = v.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5) },
+                                    label = { Text(f.first) }, suffix = { Text(f.second) }, singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (pair.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
             Column {
                 Text(
                     if (photoWeek) "Slike (ove sedmice obavezno)" else "Slike (opciono ove sedmice)",
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Lock, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        " Šifrovano, samo u aplikaciji. Ne ide u galeriju, backup ni Notion.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Spacer(Modifier.height(4.dp))
+                com.vukos.trening.ui.common.LockNote("Šifrovano, samo u aplikaciji. Ne ide u galeriju ni u Notion.")
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Pose.entries.forEach { pose ->
@@ -198,12 +229,17 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                 onClick = {
                     val kg = parseKg(weightText)
                     if (weightText.isNotBlank() && kg == null) { error = "Kilaža nije ispravna."; return@Button }
-                    if (kg == null && newPhotos.isEmpty() && existingPhotos.isEmpty()) {
-                        error = "Unesi kilažu ili bar jednu sliku."; return@Button
+                    val nums = measureText.map { it.trim().replace(',', '.').takeIf { t -> t.isNotEmpty() }?.toDoubleOrNull() }
+                    if (measureText.indices.any { measureText[it].isNotBlank() && nums[it] == null }) {
+                        error = "Neka mera nije ispravan broj."; return@Button
+                    }
+                    val measures = com.vukos.trening.data.Measurements(nums[0], nums[1], nums[2], nums[3], nums[4])
+                    if (kg == null && newPhotos.isEmpty() && existingPhotos.isEmpty() && measures.isEmpty) {
+                        error = "Unesi kilažu, mere ili bar jednu sliku."; return@Button
                     }
                     saving = true
                     scope.launch {
-                        runCatching { BodyRepo.save(context, day, kg, newPhotos.toMap()) }
+                        runCatching { BodyRepo.save(context, day, kg, newPhotos.toMap(), measures) }
                             .onSuccess {
                                 clearCaptures(context)
                                 Reminders.cancelNotification(context)

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -64,6 +66,10 @@ import com.vukos.trening.data.RoutineExercise
 import com.vukos.trening.data.WorkoutMath
 import com.vukos.trening.data.WorkoutRepo
 import com.vukos.trening.data.WorkoutSet
+import com.vukos.trening.data.SetType
+import com.vukos.trening.data.PlanUpdate
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.TrendingUp
 import com.vukos.trening.ui.common.ExerciseThumb
 import com.vukos.trening.ui.common.OutlinePill
 import com.vukos.trening.ui.common.StatTile
@@ -115,6 +121,24 @@ fun ActiveWorkoutScreen(
     // Ekran treninga se ne napusta dok se trening ne zavrsi ili odbaci.
     androidx.activity.compose.BackHandler { dialog = "leave" }
 
+    // Ekran ostaje upaljen tokom treninga (gasi se samo kad ga korisnik zakljuca).
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
+    // Razlika u odnosu na plan (za "Azuriraj plan" pri zavrsetku).
+    var planItems by remember { mutableStateOf<List<RoutineExercise>>(emptyList()) }
+    LaunchedEffect(workout?.routineId, dialog) {
+        if (dialog == "finish") workout?.routineId?.let { planItems = db.routines().getExercises(it) }
+    }
+    val planUpdate = remember(planItems, sets, dialog) {
+        workout?.routineId?.takeIf { dialog == "finish" }?.let { WorkoutMath.planUpdate(it, planItems, sets) }
+    }
+    var updatePlan by remember { mutableStateOf(false) }
+    var noteFor by remember { mutableStateOf<Exercise?>(null) }
+
     val groups = sets.groupBy { it.exercisePosition }.toSortedMap()
     val start = workout?.startedAt?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalTime() }
 
@@ -143,7 +167,7 @@ fun ActiveWorkoutScreen(
         )
     }) { pad ->
         LazyColumn(
-            Modifier.padding(pad).fillMaxSize(),
+            Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize(),
             contentPadding = PaddingValues(bottom = 48.dp),
         ) {
             item {
@@ -166,6 +190,7 @@ fun ActiveWorkoutScreen(
                         onAddSet = { scope.launch { WorkoutRepo.addSet(workoutId, groupSets.first().exerciseId, pos) } },
                         onUpdate = { s -> scope.launch { WorkoutRepo.updateSet(s) } },
                         onDelete = { s -> scope.launch { WorkoutRepo.deleteSet(s) } },
+                        onNote = { noteFor = ex },
                     )
                 }
             }
@@ -185,15 +210,41 @@ fun ActiveWorkoutScreen(
                 onDismissRequest = { dialog = null },
                 title = { Text(if (done == 0) "Nema unetih setova" else "Završi trening?") },
                 text = {
-                    Text(
-                        if (done == 0) "Upiši kilažu i ponavljanja bar za jedan set, ili odbaci trening."
-                        else "Čuva se $done setova." + if (notDone > 0) "\nPrazni setovi ($notDone) se ne čuvaju." else ""
-                    )
+                    Column {
+                        Text(
+                            if (done == 0) "Upiši kilažu i ponavljanja bar za jedan set, ili odbaci trening."
+                            else "Čuva se $done setova." + if (notDone > 0) "\nPrazni setovi ($notDone) se ne čuvaju." else ""
+                        )
+                        if (done > 0 && planUpdate != null) {
+                            Spacer(Modifier.height(16.dp))
+                            Row(
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .clickable { updatePlan = !updatePlan }.padding(12.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                androidx.compose.material3.Checkbox(checked = updatePlan, onCheckedChange = { updatePlan = it })
+                                Column(Modifier.padding(top = 10.dp)) {
+                                    Text("Ažuriraj plan „${workout?.name}“", style = MaterialTheme.typography.titleSmall)
+                                    planChanges(planUpdate, byId).forEach {
+                                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
                 confirmButton = {
                     if (done > 0) TextButton(onClick = {
                         dialog = null
-                        scope.launch { if (WorkoutRepo.finish(workoutId)) onFinished(workoutId) }
+                        val upd = planUpdate.takeIf { updatePlan }
+                        val rid = workout?.routineId
+                        scope.launch {
+                            if (WorkoutRepo.finish(workoutId)) {
+                                if (upd != null && rid != null) WorkoutRepo.applyPlanUpdate(rid, upd)
+                                onFinished(workoutId)
+                            }
+                        }
                     }) { Text("Završi") }
                     else TextButton(onClick = { dialog = "discard" }) { Text("Odbaci") }
                 },
@@ -212,6 +263,15 @@ fun ActiveWorkoutScreen(
                 }
             },
         )
+        else -> Unit
+    }
+    noteFor?.let { ex ->
+        NoteDialog(ex, onDismiss = { noteFor = null }) { note ->
+            noteFor = null
+            scope.launch { WorkoutRepo.saveExerciseNote(ex.id, note) }
+        }
+    }
+    when (dialog) {
         "discard" -> AlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text("Odbaci trening?") },
@@ -222,6 +282,33 @@ fun ActiveWorkoutScreen(
             dismissButton = { TextButton(onClick = { dialog = null }) { Text("Nazad") } },
         )
     }
+}
+
+/** Opis izmena plana za dijalog zavrsetka. */
+private fun planChanges(u: PlanUpdate, byId: Map<String, Exercise>): List<String> = buildList {
+    fun n(id: String) = byId[id]?.name ?: "?"
+    u.added.forEach { add("+ ${n(it)}") }
+    u.removed.forEach { add("− ${n(it)}") }
+    u.setChanges.forEach { (id, a, b) -> add("${n(id)}: $a → $b setova") }
+    if (u.reordered) add("novi redosled vežbi")
+    add("kilaže iz ovog treninga postaju cilj")
+}
+
+@Composable
+private fun NoteDialog(exercise: Exercise, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf(exercise.notes) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Beleška: ${exercise.name}") },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                text, { text = it.take(300) }, placeholder = { Text("npr. sedište na 4, uži hvat") },
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+            )
+        },
+        confirmButton = { TextButton(onClick = { onSave(text) }) { Text("Sačuvaj") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Otkaži") } },
+    )
 }
 
 @Composable
@@ -243,8 +330,15 @@ private fun ExerciseBlock(
     onAddSet: () -> Unit,
     onUpdate: (WorkoutSet) -> Unit,
     onDelete: (WorkoutSet) -> Unit,
+    onNote: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
+    val progression = WorkoutMath.progression(previous, target)
+    // Oznaka seta: W/D/F za posebne setove, inace redni broj medju radnim setovima.
+    val labels = remember(sets) {
+        var n = 0
+        sets.associate { s -> s.id to (SetType.short(s.setType)?.takeIf { s.setType == SetType.WARMUP } ?: "${++n}") }
+    }
     Column(
         Modifier.padding(horizontal = 16.dp, vertical = 6.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer).padding(vertical = 12.dp)
@@ -266,8 +360,37 @@ private fun ExerciseBlock(
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opcije vežbe") }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("Ukloni vežbu") }, onClick = { menu = false; onRemove() })
+                    DropdownMenuItem(text = { Text(if (exercise?.notes.isNullOrBlank()) "Dodaj belešku" else "Izmeni belešku") },
+                        onClick = { menu = false; onNote() })
+                    DropdownMenuItem(text = { Text("Statistika vežbe") }, onClick = { menu = false; onOpen() })
+                    DropdownMenuItem(text = { Text("Ukloni vežbu", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; onRemove() })
                 }
+            }
+        }
+        exercise?.notes?.takeIf { it.isNotBlank() }?.let { note ->
+            Row(
+                Modifier.padding(horizontal = 16.dp).padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onNote)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.PushPin, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(8.dp))
+                Text(note, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        progression?.let { kg ->
+            Row(
+                Modifier.padding(horizontal = 16.dp).padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer).padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.TrendingUp, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Prošli put si ispunio sva ponavljanja: probaj ${WorkoutMath.fmtKg(kg)} kg (+${WorkoutMath.fmtKg(WorkoutMath.PROGRESSION_STEP_KG)})",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
         }
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 4.dp)) {
@@ -278,7 +401,7 @@ private fun ExerciseBlock(
             Header("✓", Modifier.width(44.dp))
         }
         sets.forEach { s ->
-            androidx.compose.runtime.key(s.id) { SetRow(s, previous, target, onUpdate, onDelete) }
+            androidx.compose.runtime.key(s.id) { SetRow(s, labels[s.id] ?: "${s.setIndex}", previous, target, onUpdate, onDelete) }
         }
         TextButton(onClick = onAddSet, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
             Icon(Icons.Filled.Add, null); Text("  Dodaj set")
@@ -295,6 +418,7 @@ private fun Header(text: String, modifier: Modifier) {
 @Composable
 private fun SetRow(
     set: WorkoutSet,
+    label: String,
     previous: List<WorkoutSet>,
     target: RoutineExercise?,
     onUpdate: (WorkoutSet) -> Unit,
@@ -303,17 +427,45 @@ private fun SetRow(
     // Tekst polja zivi lokalno (bez skakanja kursora); baza se azurira na svaku promenu.
     var kg by remember(set.id) { mutableStateOf(WorkoutMath.fmtKg(set.weightKg)) }
     var reps by remember(set.id) { mutableStateOf(set.reps?.toString() ?: "") }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var typeMenu by remember { mutableStateOf(false) }
     val prev = previous.firstOrNull { it.setIndex == set.setIndex }
-    val (hintKg, hintReps) = WorkoutMath.hint(set.setIndex, previous, target)
+    val (hintKg, hintReps) = WorkoutMath.hint(set.setIndex, previous, target, set.setType)
     val bg = if (set.done) DoneGreen.copy(alpha = 0.22f) else Color.Transparent
 
     Row(
         Modifier.padding(horizontal = 8.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("${set.setIndex}", Modifier.width(36.dp).clickable { confirmDelete = true },
-            textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+        Box(Modifier.width(36.dp), contentAlignment = Alignment.Center) {
+            val typeColor = when (set.setType) {
+                SetType.WARMUP -> Color(0xFFF5B83D); SetType.DROP -> Color(0xFF5B9CFF); SetType.FAILURE -> Color(0xFFE5484D)
+                else -> MaterialTheme.colorScheme.onSurface
+            }
+            Box(
+                Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).clickable { typeMenu = true },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (set.setType == SetType.DROP || set.setType == SetType.FAILURE) SetType.short(set.setType)!! else label,
+                    textAlign = TextAlign.Center, fontWeight = FontWeight.ExtraBold, color = typeColor,
+                )
+            }
+            DropdownMenu(expanded = typeMenu, onDismissRequest = { typeMenu = false }) {
+                SetType.ALL.forEach { t ->
+                    DropdownMenuItem(
+                        text = { Text((SetType.short(t)?.let { "$it  " } ?: "") + SetType.label(t)) },
+                        trailingIcon = { if (t == set.setType) Icon(Icons.Filled.Check, null) },
+                        onClick = {
+                            typeMenu = false
+                            onUpdate(set.copy(setType = t, weightKg = WorkoutMath.parseKg(kg), reps = WorkoutMath.parseReps(reps)))
+                        },
+                    )
+                }
+                androidx.compose.material3.HorizontalDivider()
+                DropdownMenuItem(text = { Text("Obriši set", color = MaterialTheme.colorScheme.error) },
+                    onClick = { typeMenu = false; onDelete(set) })
+            }
+        }
         Text(
             prev?.let { "${WorkoutMath.fmtKg(it.weightKg)} × ${it.reps ?: "-"}" } ?: "—",
             Modifier.weight(1.3f), textAlign = TextAlign.Center,
@@ -346,13 +498,8 @@ private fun SetRow(
         }
     }
 
-    if (confirmDelete) AlertDialog(
-        onDismissRequest = { confirmDelete = false },
-        title = { Text("Obrisati set ${set.setIndex}?") },
-        confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete(set) }) { Text("Obriši") } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Otkaži") } },
-    )
 }
+
 
 @Composable
 private fun NumField(value: String, hint: String, decimal: Boolean, modifier: Modifier, onChange: (String) -> Unit) {

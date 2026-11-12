@@ -146,6 +146,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 JournalScreen(
                     onOpenWorkout = { nav.navigate("workout_detail/$it") },
                     onOpenBodyDay = { nav.navigate("body_day/${it.toEpochDay()}") },
+                    onOpenStats = { nav.navigate("stats") },
                 )
             }
             composable("workout/{id}") { e ->
@@ -172,6 +173,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onNotion = { nav.navigate("notion_routines") },
                     onSettings = { nav.navigate("settings") },
                     onStart = { startWorkout(it) },
+                    onOpenStats = { nav.navigate("stats") },
                 )
             }
             composable("routine/{id}") { e ->
@@ -197,8 +199,11 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onNew = { openCheckIn() },
                     onOpenChart = { nav.navigate("body_chart") },
                     onSettings = { nav.navigate("settings") },
+                    onCompare = { nav.navigate("body_compare") },
                 )
             }
+            composable("stats") { com.vukos.trening.ui.stats.StatsScreen(onBack = { nav.popBackStack() }) }
+            composable("body_compare") { com.vukos.trening.ui.body.BodyCompareScreen(onBack = { nav.popBackStack() }) }
             composable("body_day/{day}") { e ->
                 val day = LocalDate.ofEpochDay(e.arguments!!.getString("day")!!.toLong())
                 BodyDayScreen(day, onBack = { nav.popBackStack() }, onEdit = { openCheckIn(day) })

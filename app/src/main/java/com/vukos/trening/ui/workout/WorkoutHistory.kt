@@ -49,6 +49,9 @@ import com.vukos.trening.data.Workout
 import com.vukos.trening.data.WorkoutMath
 import com.vukos.trening.data.WorkoutRepo
 import com.vukos.trening.data.WorkoutSet
+import com.vukos.trening.data.SetType
+import com.vukos.trening.data.ExerciseStats
+import androidx.compose.material.icons.filled.EmojiEvents
 import com.vukos.trening.ui.body.srLong
 import com.vukos.trening.ui.common.AppCard
 import com.vukos.trening.ui.common.Chip
@@ -134,6 +137,9 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
     val exercises by remember { db.exercises().observeAll() }.collectAsStateWithLifecycle(emptyList())
     val byId = remember(exercises) { exercises.associateBy { it.id } }
     var confirm by remember { mutableStateOf(false) }
+    val allWorkouts by remember { db.workouts().observeFinished() }.collectAsStateWithLifecycle(emptyList())
+    val allSets by remember { db.workouts().observeAllDoneSets() }.collectAsStateWithLifecycle(emptyList())
+    val records = remember(allWorkouts, allSets) { ExerciseStats.newRecords(workoutId, allWorkouts, allSets) }
 
     Scaffold(topBar = {
         TopAppBar(
@@ -156,6 +162,25 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
                     StatTile("${sets.size}", "setova", Modifier.weight(1f))
                 }
             }
+            if (records.isNotEmpty()) item {
+                AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Text(if (records.size == 1) "Novi lični rekord!" else "${records.size} nova lična rekorda!",
+                            style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    records.forEach { r ->
+                        Column(Modifier.padding(top = 10.dp)) {
+                            Text(byId[r.exerciseId]?.name ?: "?", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "${r.kind}: ${WorkoutMath.fmtKg(r.value)} kg (pre: ${WorkoutMath.fmtKg(r.previous)} kg)",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
             items(sets.groupBy { it.exercisePosition }.toSortedMap().values.toList()) { g ->
                 val ex = byId[g.first().exerciseId]
                 AppCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
@@ -170,7 +195,7 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
                         Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(26.dp).clip(androidx.compose.foundation.shape.CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-                                Text("${s.setIndex}", style = MaterialTheme.typography.labelMedium)
+                                Text(SetType.short(s.setType) ?: "${s.setIndex}", style = MaterialTheme.typography.labelMedium)
                             }
                             Spacer(Modifier.width(12.dp))
                             Text("${WorkoutMath.fmtKg(s.weightKg).ifEmpty { "0" }} kg", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))

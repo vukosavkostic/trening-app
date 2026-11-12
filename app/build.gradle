@@ -15,8 +15,8 @@ android {
         applicationId 'com.vukos.trening'
         minSdk 28   // ImageDecoder (EXIF rotacija slika)
         targetSdk 34
-        versionCode 1
-        versionName '0.4'
+        versionCode 5
+        versionName '0.5'
     }
     // Release kljuc i lozinka su van repozitorijuma: ~/.gradle/gradle.properties
     // (TRENING_STORE_FILE, TRENING_STORE_PASSWORD). Bez njih se koristi debug kljuc.
@@ -70,6 +70,8 @@ dependencies {
     implementation 'io.coil-kt:coil-compose:2.7.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
+    // Skener barkoda (Google Play services, bez dozvole za kameru)
+    implementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303'

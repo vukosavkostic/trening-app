@@ -57,7 +57,7 @@ object ExerciseStats {
         zone: ZoneId = ZoneId.systemDefault(),
     ): List<ExerciseSession> {
         val byId = workouts.filter { it.finishedAt != null && !it.deleted }.associateBy { it.id }
-        return doneSets.filter { it.exerciseId == exerciseId && it.done && !it.deleted && it.workoutId in byId }
+        return doneSets.filter { it.exerciseId == exerciseId && it.done && !it.deleted && it.setType != SetType.WARMUP && it.workoutId in byId }
             .groupBy { it.workoutId }
             .map { (wid, sets) -> ExerciseSession(wid, JournalStats.dateOf(byId.getValue(wid), zone), sets.sortedBy { it.setIndex }) }
             .sortedBy { byId.getValue(it.workoutId).startedAt }
@@ -73,4 +73,29 @@ object ExerciseStats {
             sessions = sessions.size,
         )
     }
+
+    /**
+     * Novi licni rekordi postignuti na treningu [workoutId] (u odnosu na sve ranije treninge).
+     * Prvi put radjena vezba se ne racuna kao rekord.
+     */
+    fun newRecords(workoutId: String, workouts: List<Workout>, doneSets: List<WorkoutSet>): List<PrHit> {
+        val w = workouts.firstOrNull { it.id == workoutId } ?: return emptyList()
+        val earlier = workouts.filter { it.startedAt < w.startedAt }
+        val exerciseIds = doneSets.filter { it.workoutId == workoutId }.map { it.exerciseId }.distinct()
+        return exerciseIds.flatMap { exId ->
+            val now = sessions(exId, listOf(w), doneSets).firstOrNull() ?: return@flatMap emptyList()
+            val before = sessions(exId, earlier, doneSets)
+            if (before.isEmpty()) return@flatMap emptyList()
+            buildList {
+                val heavy = before.maxOf { it.heaviest }
+                if (now.heaviest > heavy + 1e-9) add(PrHit(exId, "Najveća težina", now.heaviest, heavy))
+                val orm = before.maxOf { it.oneRm }
+                if (now.oneRm > orm + 1e-9) add(PrHit(exId, "Procenjeni 1RM", now.oneRm, orm))
+                val bs = before.maxOf { it.bestSetVolume }
+                if (now.bestSetVolume > bs + 1e-9) add(PrHit(exId, "Najbolji set", now.bestSetVolume, bs))
+            }
+        }
+    }
 }
+
+data class PrHit(val exerciseId: String, val kind: String, val value: Double, val previous: Double)

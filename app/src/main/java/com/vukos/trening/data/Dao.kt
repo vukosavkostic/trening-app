@@ -158,6 +158,16 @@ interface FoodDao {
     @Query("SELECT DISTINCT epochDay FROM food_entry WHERE deleted = 0")
     fun observeDays(): Flow<List<Long>>
 
+    @Query("SELECT * FROM food_entry WHERE deleted = 0 AND epochDay = :day ORDER BY createdAt")
+    suspend fun getDay(day: Long): List<FoodEntry>
+
+    /** Skorasnji unosi (za "cesto jedes"). */
+    @Query("SELECT * FROM food_entry WHERE deleted = 0 ORDER BY createdAt DESC LIMIT 400")
+    fun observeRecent(): Flow<List<FoodEntry>>
+
+    @Upsert
+    suspend fun upsertAll(items: List<FoodEntry>)
+
     @Upsert
     suspend fun upsert(item: FoodEntry)
 }

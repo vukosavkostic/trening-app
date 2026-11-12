@@ -43,6 +43,9 @@ import com.vukos.trening.TreningApp
 import com.vukos.trening.data.BodyRepo
 import com.vukos.trening.data.BodyStats
 import com.vukos.trening.data.CheckInSchedule
+import com.vukos.trening.data.Measurements
+import com.vukos.trening.ui.common.LockNote
+import androidx.compose.material.icons.filled.Compare
 import com.vukos.trening.ui.common.AppCard
 import com.vukos.trening.ui.common.Chip
 import com.vukos.trening.ui.common.EmptyState
@@ -57,7 +60,7 @@ import java.time.LocalDate
 
 /** Tab Profil: trenutna kilaza, sledece merenje, grafikon i istorija merenja. */
 @Composable
-fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: () -> Unit, onSettings: () -> Unit) {
+fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: () -> Unit, onSettings: () -> Unit, onCompare: () -> Unit) {
     val dao = TreningApp.instance.db.body()
     val entries by remember { dao.observeAll() }.collectAsStateWithLifecycle(emptyList())
     val photos by remember { dao.observeAllPhotos() }.collectAsStateWithLifecycle(emptyList())
@@ -98,6 +101,43 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                 if (stats.count >= 2) item { WeightChart(entries, Modifier.fillMaxWidth(), onClick = onOpenChart) }
             }
             item { NextCheckInCard(due, onNew) }
+            // Mere tela: poslednja vrednost i promena od prve.
+            val measured = entries.filter { !Measurements.of(it).isEmpty }.sortedBy { it.epochDay }
+            if (measured.isNotEmpty()) item {
+                AppCard {
+                    Text("Mere", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Measurements.FIELDS.forEach { (label, unit, get) ->
+                        val vals = measured.mapNotNull { get(Measurements.of(it)) }
+                        val last = vals.lastOrNull() ?: return@forEach
+                        Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                            if (vals.size >= 2) {
+                                val d = last - vals.first()
+                                Text(
+                                    (if (d > 0.04) "+" else if (d < -0.04) "−" else "") + fmtNum(kotlin.math.abs(d)) + " $unit  ",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text("${fmtNum(last)} $unit", style = MaterialTheme.typography.titleSmall)
+                        }
+                    }
+                }
+            }
+            if (stats.photoDays >= 2) item {
+                AppCard(onClick = onCompare, padding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconBadge(Icons.Filled.Compare)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Uporedi slike", style = MaterialTheme.typography.titleMedium)
+                            Text("Pre i posle, jedna preko druge", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             if (entries.isNotEmpty()) {
                 item { SectionTitle("Istorija merenja") }
                 itemsIndexed(entries, key = { _, e -> e.id }) { i, e ->
@@ -188,11 +228,7 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
             if (pending != null) PrimaryPill("Unesi merenje", onNew, Modifier.fillMaxWidth())
             else OutlinePill("Unesi merenje", onNew, Modifier.fillMaxWidth())
             Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Lock, null, Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(" Slike su šifrovane i vidi ih samo ova aplikacija", style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            LockNote("Slike su šifrovane i vidi ih samo ova aplikacija", center = true)
         }
     }
 }
@@ -203,3 +239,6 @@ internal fun Double?.signed(): String = when {
     this < -0.04 -> "−" + kotlin.math.abs(this).kg()
     else -> "0 kg"
 }
+
+/** 82.0 -> "82", 82.45 -> "82.5" */
+internal fun fmtNum(v: Double): String = String.format(java.util.Locale.US, "%.1f", v).removeSuffix(".0")

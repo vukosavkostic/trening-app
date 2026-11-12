@@ -93,6 +93,20 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
                 }
             }
 
+            entry?.let { com.vukos.trening.data.Measurements.of(it) }?.takeIf { !it.isEmpty }?.let { m ->
+                com.vukos.trening.ui.common.AppCard {
+                    Text("Mere", style = MaterialTheme.typography.titleMedium)
+                    com.vukos.trening.data.Measurements.FIELDS.forEach { (label, unit, get) ->
+                        get(m)?.let { v ->
+                            Row(Modifier.padding(top = 8.dp)) {
+                                Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                                Text("${fmtNum(v)} $unit", style = MaterialTheme.typography.titleSmall)
+                            }
+                        }
+                    }
+                }
+            }
+
             Text("Slike", style = MaterialTheme.typography.titleLarge)
             if (photos.isEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -4,6 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -145,4 +149,33 @@ fun EmptyState(icon: ImageVector, title: String, text: String, modifier: Modifie
             if (action != null) { Spacer(Modifier.height(8.dp)); action() }
         }
     }
+}
+
+/**
+ * Napomena sa katancem. Katanac je deo teksta (inline), pa je uvek u ravni sa prvim redom,
+ * i kad se tekst prelomi u vise redova.
+ */
+@Composable
+fun LockNote(text: String, modifier: Modifier = Modifier, center: Boolean = false) {
+    val id = "lock"
+    val annotated = androidx.compose.ui.text.buildAnnotatedString {
+        appendInlineContent(id, "[lock]")
+        append(" ")
+        append(text)
+    }
+    val style = MaterialTheme.typography.labelMedium
+    val inline = mapOf(
+        id to androidx.compose.foundation.text.InlineTextContent(
+            androidx.compose.ui.text.Placeholder(
+                width = style.fontSize, height = style.fontSize,
+                placeholderVerticalAlign = androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter,
+            )
+        ) {
+            Icon(Icons.Filled.Lock, null, Modifier.fillMaxSize(), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    )
+    Text(
+        annotated, modifier, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        inlineContent = inline, textAlign = if (center) TextAlign.Center else TextAlign.Start,
+    )
 }

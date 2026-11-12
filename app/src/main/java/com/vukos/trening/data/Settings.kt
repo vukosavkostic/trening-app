@@ -39,4 +39,19 @@ class Settings(context: Context) {
     val lastSyncAt get() = prefs.getLong("sync_at", 0L)
     val lastSyncError: String? get() = prefs.getString("sync_error", null)
     val lastSyncChanged get() = prefs.getInt("sync_changed", 0)
+
+    /** Dnevni ciljevi ishrane (0 = nije postavljen) i nedeljni cilj treninga. */
+    var kcalGoal: Int
+        get() = prefs.getInt("kcal_goal", 0)
+        set(v) { prefs.edit().putInt("kcal_goal", v).apply() }
+    var proteinGoal: Int
+        get() = prefs.getInt("protein_goal", 0)
+        set(v) { prefs.edit().putInt("protein_goal", v).apply() }
+    var weeklyGoal: Int
+        get() = prefs.getInt("weekly_goal", 3)
+        set(v) { prefs.edit().putInt("weekly_goal", v).apply() }
+
+    var lastBackupAt: Long
+        get() = prefs.getLong("backup_at", 0L)
+        set(v) { prefs.edit().putLong("backup_at", v).apply() }
 }

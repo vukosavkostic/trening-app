@@ -1,5 +1,6 @@
 package com.vukos.trening.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -31,6 +32,8 @@ data class Exercise(
     val isCustom: Boolean = false,
     /** Lokalna slika za sopstvene vezbe (file:// u internom skladistu aplikacije). */
     val customImage: String? = null,
+    /** Licna beleska uz vezbu (npr. "sediste na 4"), prikazuje se na svakom treningu. */
+    @ColumnInfo(defaultValue = "") val notes: String = "",
     val notionPageId: String? = null,
     val updatedAt: Long = System.currentTimeMillis(),
     val dirty: Boolean = false,
@@ -107,6 +110,8 @@ data class WorkoutSet(
     val weightKg: Double? = null,
     val reps: Int? = null,
     val done: Boolean = false,
+    /** normal / warmup / drop / failure (vidi [SetType]). */
+    @ColumnInfo(defaultValue = "normal") val setType: String = SetType.NORMAL,
     val notionPageId: String? = null,
     val updatedAt: Long = System.currentTimeMillis(),
     val dirty: Boolean = true,
@@ -122,6 +127,12 @@ data class BodyEntry(
     val epochDay: Long,
     val weightKg: Double? = null,
     val notes: String = "",
+    /** Obimi u cm i procenat masti (opciono). */
+    val waistCm: Double? = null,
+    val chestCm: Double? = null,
+    val armCm: Double? = null,
+    val thighCm: Double? = null,
+    val bodyFatPct: Double? = null,
     val notionPageId: String? = null,
     val updatedAt: Long = System.currentTimeMillis(),
     val dirty: Boolean = true,
@@ -157,3 +168,14 @@ data class FoodEntry(
     val dirty: Boolean = true,
     val deleted: Boolean = false,
 )
+
+/** Tipovi setova. Zagrevanje se ne racuna u volumen, rekorde ni progresiju. */
+object SetType {
+    const val NORMAL = "normal"
+    const val WARMUP = "warmup"
+    const val DROP = "drop"
+    const val FAILURE = "failure"
+    val ALL = listOf(NORMAL, WARMUP, DROP, FAILURE)
+    fun label(t: String) = when (t) { WARMUP -> "Zagrevanje"; DROP -> "Drop set"; FAILURE -> "Do otkaza"; else -> "Normalan set" }
+    fun short(t: String) = when (t) { WARMUP -> "W"; DROP -> "D"; FAILURE -> "F"; else -> null }
+}

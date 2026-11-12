@@ -35,11 +35,16 @@ object BodyRepo {
         day: LocalDate,
         weightKg: Double?,
         newPhotos: Map<Pose, Uri>,
+        measurements: Measurements = Measurements(),
     ) = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val existing = dao.getByDay(day.toEpochDay())
         val entry = (existing ?: BodyEntry(epochDay = day.toEpochDay()))
-            .copy(weightKg = weightKg, updatedAt = now, dirty = true)
+            .copy(
+                weightKg = weightKg, waistCm = measurements.waist, chestCm = measurements.chest,
+                armCm = measurements.arm, thighCm = measurements.thigh, bodyFatPct = measurements.bodyFat,
+                updatedAt = now, dirty = true,
+            )
         dao.upsert(entry)
         val old = dao.photosFor(entry.id).associateBy { it.pose }
         for ((pose, uri) in newPhotos) {
@@ -62,5 +67,27 @@ object BodyRepo {
             dao.upsertPhoto(it.copy(deleted = true, dirty = true, updatedAt = now))
         }
         dao.upsert(entry.copy(deleted = true, dirty = true, updatedAt = now))
+    }
+}
+
+/** Obimi (cm) i procenat masti - sve opciono. */
+data class Measurements(
+    val waist: Double? = null,
+    val chest: Double? = null,
+    val arm: Double? = null,
+    val thigh: Double? = null,
+    val bodyFat: Double? = null,
+) {
+    val isEmpty get() = listOf(waist, chest, arm, thigh, bodyFat).all { it == null }
+
+    companion object {
+        fun of(e: BodyEntry) = Measurements(e.waistCm, e.chestCm, e.armCm, e.thighCm, e.bodyFatPct)
+
+        /** Polja za prikaz: naziv, jedinica, vrednost iz merenja. */
+        val FIELDS: List<Triple<String, String, (Measurements) -> Double?>> = listOf(
+            Triple("Struk", "cm", { it.waist }), Triple("Grudi", "cm", { it.chest }),
+            Triple("Ruka", "cm", { it.arm }), Triple("Butina", "cm", { it.thigh }),
+            Triple("Masti", "%", { it.bodyFat }),
+        )
     }
 }
