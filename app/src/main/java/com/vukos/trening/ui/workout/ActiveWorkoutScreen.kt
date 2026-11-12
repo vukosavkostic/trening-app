@@ -65,11 +65,13 @@ import com.vukos.trening.data.WorkoutMath
 import com.vukos.trening.data.WorkoutRepo
 import com.vukos.trening.data.WorkoutSet
 import com.vukos.trening.ui.common.ExerciseThumb
+import com.vukos.trening.ui.common.OutlinePill
+import com.vukos.trening.ui.common.StatTile
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 
-private val DoneGreen = Color(0xFF2E7D32)
+private val DoneGreen = Color(0xFF22A06B)
 
 /** Logovanje treninga: za svaku vezbu tabela Set | Prethodno | kg | Ponav. | ✓. Sve se odmah cuva u bazu. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -128,7 +130,9 @@ fun ActiveWorkoutScreen(
                 }
             },
             actions = {
-                Button(onClick = { dialog = "finish" }, modifier = Modifier.padding(end = 4.dp)) { Text("Završi") }
+                Button(onClick = { dialog = "finish" }, modifier = Modifier.padding(end = 4.dp), shape = androidx.compose.foundation.shape.CircleShape) {
+                    Text("Završi", style = MaterialTheme.typography.labelLarge)
+                }
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Još") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -143,10 +147,10 @@ fun ActiveWorkoutScreen(
             contentPadding = PaddingValues(bottom = 48.dp),
         ) {
             item {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Stat("Volumen", "${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", Modifier.weight(1f))
-                    Stat("Setovi", "${WorkoutMath.doneCount(sets)} / ${sets.size}", Modifier.weight(1f))
-                    Stat("Vežbe", "${groups.size}", Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatTile("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", "volumen", Modifier.weight(1f), MaterialTheme.colorScheme.primary)
+                    StatTile("${WorkoutMath.doneCount(sets)} / ${sets.size}", "setova", Modifier.weight(1f))
+                    StatTile("${groups.size}", "vežbi", Modifier.weight(1f))
                 }
             }
             groups.forEach { (pos, groupSets) ->
@@ -167,9 +171,7 @@ fun ActiveWorkoutScreen(
             }
             item {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onPickExercises, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Filled.Add, null); Text("  Dodaj vežbu")
-                    }
+                    OutlinePill("Dodaj vežbu", onPickExercises, Modifier.fillMaxWidth(), Icons.Filled.Add)
                 }
             }
         }
@@ -243,12 +245,15 @@ private fun ExerciseBlock(
     onDelete: (WorkoutSet) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-        Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(
+        Modifier.padding(horizontal = 16.dp, vertical = 6.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer).padding(vertical = 12.dp)
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             exercise?.let { ExerciseThumb(it, 40.dp) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f).clickable(onClick = onOpen)) {
-                Text(exercise?.name ?: "?", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold,
+                Text(exercise?.name ?: "?", style = MaterialTheme.typography.titleMedium,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 target?.let { t ->
                     Text(
@@ -265,7 +270,7 @@ private fun ExerciseBlock(
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 4.dp)) {
             Header("Set", Modifier.width(36.dp))
             Header("Prethodno", Modifier.weight(1.3f))
             Header("kg", Modifier.weight(1f))
@@ -275,7 +280,7 @@ private fun ExerciseBlock(
         sets.forEach { s ->
             androidx.compose.runtime.key(s.id) { SetRow(s, previous, target, onUpdate, onDelete) }
         }
-        TextButton(onClick = onAddSet, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        TextButton(onClick = onAddSet, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
             Icon(Icons.Filled.Add, null); Text("  Dodaj set")
         }
     }
@@ -304,7 +309,7 @@ private fun SetRow(
     val bg = if (set.done) DoneGreen.copy(alpha = 0.22f) else Color.Transparent
 
     Row(
-        Modifier.fillMaxWidth().background(bg).padding(horizontal = 16.dp, vertical = 4.dp),
+        Modifier.padding(horizontal = 8.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("${set.setIndex}", Modifier.width(36.dp).clickable { confirmDelete = true },
@@ -322,7 +327,7 @@ private fun SetRow(
         }
         Box(Modifier.width(44.dp), contentAlignment = Alignment.Center) {
             Box(
-                Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
                     .background(if (set.done) DoneGreen else MaterialTheme.colorScheme.surfaceContainerHighest)
                     .clickable {
                         if (set.done) onUpdate(set.copy(weightKg = WorkoutMath.parseKg(kg), reps = WorkoutMath.parseReps(reps), done = false))
@@ -354,7 +359,7 @@ private fun NumField(value: String, hint: String, decimal: Boolean, modifier: Mo
     val style = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
         textAlign = TextAlign.Center)
     Box(
-        modifier.padding(horizontal = 4.dp).height(36.dp).clip(RoundedCornerShape(8.dp))
+        modifier.padding(horizontal = 4.dp).height(38.dp).clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center,
     ) {

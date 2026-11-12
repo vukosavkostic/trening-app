@@ -1,23 +1,24 @@
 package com.vukos.trening.ui.common
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,23 +31,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.YearMonth
 
-private val MONTHS = listOf(
+val MONTHS = listOf(
     "Januar", "Februar", "Mart", "April", "Maj", "Jun",
     "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar",
 )
-private val WEEKDAYS = listOf("Pon", "Uto", "Sre", "Čet", "Pet", "Sub", "Ned")
-
-/** Oznaka za dan u kalendaru: do 2 tackice u boji (npr. merenje, slike, trening). */
-data class DayMarker(val colors: List<Color>)
+private val WEEKDAYS = listOf("P", "U", "S", "Č", "P", "S", "N")
 
 /**
- * Mesecni kalendar (ponedeljak prvi). Dani sa oznakom su klikabilni.
- * Koristi se na tabu Telo, a kasnije i u Dnevniku za treninge.
+ * Oznaka dana: [filled] = pun narandzasti krug (glavna aktivnost, npr. trening),
+ * [dot] = diskretna tackica ispod broja (ostalo, npr. obrok ili kilaza).
  */
+data class DayMarker(val filled: Boolean = false, val dot: Boolean = false)
+
+/** Mesecni kalendar (ponedeljak prvi), bez legende - znacenje se vidi u detaljima izabranog dana. */
 @Composable
 fun MonthCalendar(
     markers: Map<LocalDate, DayMarker>,
@@ -61,61 +63,61 @@ fun MonthCalendar(
     val shown = month ?: localMonth
     fun go(m: YearMonth) { localMonth = m; onMonthChange?.invoke(m) }
     val today = LocalDate.now()
-    Column(
-        modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(12.dp)
-    ) {
+    val accent = MaterialTheme.colorScheme.primary
+
+    AppCard(modifier, padding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "${MONTHS[shown.monthValue - 1]} ${shown.year}",
-                fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp),
+                style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(start = 4.dp),
             )
-            IconButton(onClick = { go(shown.minusMonths(1)) }) { Icon(Icons.Filled.ChevronLeft, "Prethodni mesec") }
-            IconButton(onClick = { go(shown.plusMonths(1)) }) { Icon(Icons.Filled.ChevronRight, "Sledeći mesec") }
+            RoundIcon(Icons.Filled.ChevronLeft, "Prethodni mesec") { go(shown.minusMonths(1)) }
+            Spacer(Modifier.width(8.dp))
+            RoundIcon(Icons.Filled.ChevronRight, "Sledeći mesec") { go(shown.plusMonths(1)) }
         }
+        Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {
             WEEKDAYS.forEach {
                 Text(
-                    it, Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    it, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
                 )
             }
         }
         Spacer(Modifier.height(4.dp))
-        val first = shown.atDay(1)
-        val offset = first.dayOfWeek.value - 1
-        val cells = offset + shown.lengthOfMonth()
-        val rows = (cells + 6) / 7
+        val offset = shown.atDay(1).dayOfWeek.value - 1
+        val rows = (offset + shown.lengthOfMonth() + 6) / 7
         for (r in 0 until rows) {
             Row(Modifier.fillMaxWidth()) {
                 for (c in 0 until 7) {
                     val dayNum = r * 7 + c - offset + 1
-                    Box(Modifier.weight(1f).height(44.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).height(46.dp), contentAlignment = Alignment.Center) {
                         if (dayNum in 1..shown.lengthOfMonth()) {
                             val date = shown.atDay(dayNum)
-                            val marker = markers[date]
-                            Column(
-                                Modifier.clip(RoundedCornerShape(8.dp))
-                                    .then(if (date == selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
-                                    .then(if (marker != null || allClickable) Modifier.clickable { onDayClick(date) } else Modifier)
-                                    .padding(horizontal = 8.dp, vertical = 2.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                            val m = markers[date]
+                            val filled = m?.filled == true
+                            Box(
+                                Modifier.size(38.dp).clip(CircleShape)
+                                    .background(if (filled) accent else Color.Transparent)
+                                    .then(if (date == selected) Modifier.border(2.dp, if (filled) Color.White else accent, CircleShape) else Modifier)
+                                    .then(if (m != null || allClickable) Modifier.clickable { onDayClick(date) } else Modifier),
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     "$dayNum",
-                                    fontWeight = if (date == today) FontWeight.Bold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (filled || date == today) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = when {
-                                        date == today -> MaterialTheme.colorScheme.primary
-                                        marker != null -> MaterialTheme.colorScheme.onSurface
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        filled -> Color.White
+                                        date == today -> accent
+                                        date.isAfter(today) -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        else -> MaterialTheme.colorScheme.onSurface
                                     },
                                 )
-                                Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.height(8.dp)) {
-                                    marker?.colors?.take(3)?.forEach { col ->
-                                        Box(Modifier.size(6.dp).clip(CircleShape).background(col))
-                                    }
-                                }
+                                if (m?.dot == true) Box(
+                                    Modifier.align(Alignment.BottomCenter).offset(y = (-4).dp).size(4.dp).clip(CircleShape)
+                                        .background(if (filled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
                             }
                         }
                     }
@@ -123,4 +125,12 @@ fun MonthCalendar(
             }
         }
     }
+}
+
+@Composable
+private fun RoundIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, desc, Modifier.size(20.dp)) }
 }

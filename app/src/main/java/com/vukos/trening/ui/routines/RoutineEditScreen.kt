@@ -164,31 +164,20 @@ fun RoutineEditScreen(
                 OutlinedTextField(
                     value = vm.name, onValueChange = { vm.name = it }, label = { Text("Naziv plana") }, placeholder = { Text("npr. Push, Pull, Noge, Full Body") },
                     singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.titleLarge, shape = RoundedCornerShape(16.dp),
                 )
             }
-            item {
-                Text("Dani", style = MaterialTheme.typography.titleSmall)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
-                    itemsIndexed(Weekdays.LABELS) { i, label ->
-                        FilterChip(
-                            selected = vm.weekdays and (1 shl i) != 0,
-                            onClick = { vm.weekdays = Weekdays.toggle(vm.weekdays, i) },
-                            label = { Text(label) },
-                        )
-                    }
-                }
-            }
-            item { Text("Vežbe (${vm.items.size})", style = MaterialTheme.typography.titleSmall) }
+            item { Text("Vežbe (${vm.items.size})", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 8.dp)) }
             itemsIndexed(vm.items, key = { i, d -> "$i-${d.exerciseId}" }) { i, d ->
                 val ex = byId[d.exerciseId]
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer).padding(12.dp)
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ex?.let { ExerciseThumb(it, 44.dp) }
                         Spacer(Modifier.width(12.dp))
-                        Text(ex?.name ?: "?", fontWeight = FontWeight.SemiBold, maxLines = 2,
+                        Text(ex?.name ?: "?", style = MaterialTheme.typography.titleMedium, maxLines = 2,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         IconButton(onClick = { vm.move(i, -1) }, enabled = i > 0) { Icon(Icons.Filled.KeyboardArrowUp, "Gore") }
                         IconButton(onClick = { vm.move(i, 1) }, enabled = i < vm.items.lastIndex) { Icon(Icons.Filled.KeyboardArrowDown, "Dole") }
@@ -208,9 +197,7 @@ fun RoutineEditScreen(
                 }
             }
             item {
-                OutlinedButton(onClick = onPickExercises, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Add, null); Text("  Dodaj vežbe")
-                }
+                com.vukos.trening.ui.common.OutlinePill("Dodaj vežbe", onPickExercises, Modifier.fillMaxWidth(), Icons.Filled.Add)
             }
         }
     }

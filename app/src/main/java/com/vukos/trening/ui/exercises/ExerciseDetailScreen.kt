@@ -178,7 +178,7 @@ private fun Overview(e: Exercise, sessions: List<ExerciseSession>) {
 private fun Records(sessions: List<ExerciseSession>) {
     val r = ExerciseStats.records(sessions)
     Column(
-        Modifier.padding(16.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp))
+        Modifier.padding(16.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -208,7 +208,7 @@ private fun History(sessions: List<ExerciseSession>, onOpenWorkout: (String) -> 
         if (sessions.isEmpty()) item { Text("Nema istorije.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(sessions.reversed(), key = { it.workoutId }) { s ->
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
                     .clickable { onOpenWorkout(s.workoutId) }.padding(16.dp)
             ) {
                 Row {

@@ -104,22 +104,21 @@ fun NotionRoutinesScreen(onBack: () -> Unit, onSettings: () -> Unit, onOpenRouti
                     items(items!!, key = { it.pageId }) { nr ->
                         val added = nr.appId != null && nr.appId in localIds
                         Column(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainer).padding(20.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(nr.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                                     Text(
-                                        (if (nr.days.isEmpty()) "bez dana" else nr.days.joinToString(", ")) +
-                                            " · ${nr.lines.size} vežbi",
+                                        "${nr.lines.size} vežbi",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
                                 when {
                                     added -> TextButton(onClick = { onOpenRoutine(nr.appId!!) }) {
-                                        Icon(Icons.Filled.CheckCircle, null, tint = Color(0xFF43A047))
+                                        Icon(Icons.Filled.CheckCircle, null, tint = com.vukos.trening.ui.theme.Success)
                                         Text("  Dodato")
                                     }
                                     importing == nr.pageId -> CircularProgressIndicator(Modifier.padding(8.dp))

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NoPhotography
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +33,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,36 +64,36 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
         .collectAsStateWithLifecycle(emptyList())
     val byPose = photos.associateBy { it.pose }
     var fullscreen by remember { mutableStateOf<Int?>(null) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(day.sr()) },
+            title = { Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleLarge) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
-            actions = { IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Izmeni") } },
+            actions = {
+                if (entry != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Obriši merenje") }
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Izmeni") }
+            },
         )
     }) { pad ->
         Column(
             Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
-            ) {
+            com.vukos.trening.ui.common.AppCard(padding = androidx.compose.foundation.layout.PaddingValues(24.dp)) {
                 Text("Kilaža", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                Text(entry?.weightKg?.kg() ?: "nije uneta", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(entry?.weightKg?.kg() ?: "nije uneta", style = MaterialTheme.typography.displaySmall)
                 val w = entry?.weightKg
                 if (w != null && previous != null) {
-                    val d = w - previous.weightKg!!
-                    Text(
-                        (if (d >= 0) "+" else "−") + kotlin.math.abs(d).kg() +
-                            " u odnosu na ${LocalDate.ofEpochDay(previous.epochDay).sr()}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Spacer(Modifier.height(8.dp))
+                    com.vukos.trening.ui.common.Chip(
+                        (w - previous.weightKg!!).signed() + " od " + LocalDate.ofEpochDay(previous.epochDay).srDate()
                     )
                 }
             }
 
-            Text("Slike", fontWeight = FontWeight.SemiBold)
+            Text("Slike", style = MaterialTheme.typography.titleLarge)
             if (photos.isEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.NoPhotography, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -101,7 +104,7 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
                     Pose.entries.forEachIndexed { i, pose ->
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
-                                Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(12.dp))
+                                Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(18.dp))
                                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                     .clickable(enabled = byPose[pose.key] != null) { fullscreen = i },
                                 contentAlignment = Alignment.Center,
@@ -118,6 +121,19 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
             }
         }
     }
+
+    if (confirmDelete) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { confirmDelete = false },
+        title = { Text("Obrisati merenje?") },
+        text = { Text("Kilaža i slike za ${day.srDate()} se trajno brišu sa telefona.") },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                confirmDelete = false
+                scope.launch { com.vukos.trening.data.BodyRepo.delete(day); onBack() }
+            }) { Text("Obriši", color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Otkaži") } },
+    )
 
     // Preko celog ekrana, prevlacenje levo/desno izmedju poza.
     fullscreen?.let { start ->

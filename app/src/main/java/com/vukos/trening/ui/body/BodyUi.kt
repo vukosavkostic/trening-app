@@ -3,6 +3,7 @@ package com.vukos.trening.ui.body
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +41,32 @@ private val DAYS = listOf("pon", "uto", "sre", "čet", "pet", "sub", "ned")
 
 fun LocalDate.sr(): String = "${DAYS[dayOfWeek.value - 1]} $dayOfMonth.$monthValue.$year."
 fun LocalDate.srShort(): String = "$dayOfMonth.$monthValue."
+
+private val DAYS_FULL = listOf("ponedeljak", "utorak", "sreda", "četvrtak", "petak", "subota", "nedelja")
+private val MONTHS_GEN = listOf("januara", "februara", "marta", "aprila", "maja", "juna",
+    "jula", "avgusta", "septembra", "oktobra", "novembra", "decembra")
+
+/** "12. novembra" (godina samo ako nije tekuca). */
+fun LocalDate.srDate(): String =
+    "$dayOfMonth. ${MONTHS_GEN[monthValue - 1]}" + if (year != LocalDate.now().year) " $year." else ""
+
+/** "četvrtak, 12. novembra" */
+fun LocalDate.srLong(): String = "${DAYS_FULL[dayOfWeek.value - 1]}, ${srDate()}"
+
+/** "danas", "sutra", "za 3 dana", "pre 2 dana"... */
+fun LocalDate.srRelative(today: LocalDate = LocalDate.now()): String {
+    val d = toEpochDay() - today.toEpochDay()
+    return when {
+        d == 0L -> "danas"
+        d == 1L -> "sutra"
+        d == -1L -> "juče"
+        d > 1 -> "za $d dana"
+        d > -7 -> "pre ${-d} dana"
+        d > -14 -> "pre nedelju dana"
+        d > -60 -> "pre ${-d / 7} nedelje"
+        else -> "pre ${-d / 30} meseci"
+    }
+}
 fun Double.kg(): String = String.format(Locale.US, "%.1f", this).removeSuffix(".0") + " kg"
 
 fun parseKg(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it in 20.0..400.0 }
@@ -57,23 +84,34 @@ fun CheckInSchedule.Due.whatMissing(): String = when {
 @Composable
 fun CheckInBanner(due: CheckInSchedule.Due?, topInset: Boolean = true, onClick: () -> Unit) {
     if (due == null || !due.anythingMissing) return
-    val bg = if (due.overdue) Danger else MaterialTheme.colorScheme.primaryContainer
-    val fg = if (due.overdue) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
-    Row(
-        Modifier.fillMaxWidth().background(bg).then(if (topInset) Modifier.statusBarsPadding() else Modifier).clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val bg = if (due.overdue) Danger else MaterialTheme.colorScheme.primary
+    Box(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)
+            .then(if (topInset) Modifier.statusBarsPadding() else Modifier)
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp)
     ) {
-        Icon(if (due.overdue) Icons.Filled.Warning else Icons.Filled.MonitorWeight, null, tint = fg)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                if (due.overdue) "Propušteno merenje (${due.checkInDay.sr()})" else "Danas je merenje",
-                color = fg, fontWeight = FontWeight.Bold,
-            )
-            Text("Unesi: ${due.whatMissing()}", color = fg, style = MaterialTheme.typography.bodySmall)
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg).clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center) {
+                Icon(if (due.overdue) Icons.Filled.Warning else Icons.Filled.MonitorWeight, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (due.overdue) "Propušteno merenje" else "Danas je merenje",
+                    color = Color.White, style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    (if (due.overdue) "${due.checkInDay.srDate()} · " else "") + "unesi ${due.whatMissing()}",
+                    color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Icon(Icons.Filled.ChevronRight, null, tint = Color.White)
         }
-        Icon(Icons.Filled.ChevronRight, null, tint = fg)
     }
 }
 
@@ -93,12 +131,12 @@ fun WeightChart(
     val line = MaterialTheme.colorScheme.primary
     val grid = MaterialTheme.colorScheme.outlineVariant
     Column(
-        modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
+        modifier.clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(16.dp)
+            .padding(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Kilaža", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("Kilaža", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             val diff = pts.last().weightKg!! - pts.first().weightKg!!
             Text(
                 (if (diff >= 0) "+" else "−") + kotlin.math.abs(diff).kg() + " od ${LocalDate.ofEpochDay(pts.first().epochDay).srShort()}",
@@ -123,8 +161,12 @@ fun WeightChart(
                 drawLine(grid, Offset(0f, 0f), Offset(size.width, 0f))
                 drawLine(grid, Offset(0f, size.height), Offset(size.width, size.height))
                 val path = Path().apply { moveTo(p(0).x, p(0).y); for (i in 1 until n) lineTo(p(i).x, p(i).y) }
-                drawPath(path, line, style = Stroke(width = 3.dp.toPx()))
-                for (i in 0 until n) drawCircle(line, 4.dp.toPx(), p(i))
+                val area = Path().apply { addPath(path); lineTo(p(n - 1).x, size.height); lineTo(p(0).x, size.height); close() }
+                drawPath(area, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(line.copy(alpha = 0.28f), Color.Transparent)))
+                drawPath(path, line, style = Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                if (n <= 30) for (i in 0 until n) drawCircle(line, 3.5.dp.toPx(), p(i))
+                drawCircle(Color.White, 5.dp.toPx(), p(n - 1)); drawCircle(line, 3.5.dp.toPx(), p(n - 1))
             }
         }
         Row(Modifier.padding(start = 52.dp)) {

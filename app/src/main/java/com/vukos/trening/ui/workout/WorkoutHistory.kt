@@ -3,7 +3,10 @@ package com.vukos.trening.ui.workout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,7 +49,12 @@ import com.vukos.trening.data.Workout
 import com.vukos.trening.data.WorkoutMath
 import com.vukos.trening.data.WorkoutRepo
 import com.vukos.trening.data.WorkoutSet
-import com.vukos.trening.ui.body.sr
+import com.vukos.trening.ui.body.srLong
+import com.vukos.trening.ui.common.AppCard
+import com.vukos.trening.ui.common.Chip
+import com.vukos.trening.ui.common.IconBadge
+import com.vukos.trening.ui.common.StatTile
+import androidx.compose.ui.text.style.TextOverflow
 import com.vukos.trening.ui.common.ExerciseThumb
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -77,24 +85,40 @@ fun ActiveWorkoutBanner(workout: Workout?, sets: List<WorkoutSet>, onClick: () -
     }
 }
 
-/** Kartica zavrsenog treninga (lista u Dnevniku). */
+/** Kartica zavrsenog treninga: naziv, datum, brojke i najbolji set po vezbi. */
 @Composable
 fun WorkoutCard(w: Workout, sets: List<WorkoutSet>, exerciseNames: Map<String, String>, onClick: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
-            .clickable(onClick = onClick).padding(16.dp)
-    ) {
-        Row {
-            Text(w.name, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text(w.date().sr(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    AppCard(onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(Icons.Filled.FitnessCenter)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(w.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(w.date().srLong(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(
-            "${WorkoutMath.duration(w.startedAt, w.finishedAt)} · ${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg · ${sets.size} setova",
-            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-        )
-        sets.groupBy { it.exercisePosition }.toSortedMap().values.forEach { g ->
-            Text("${g.size} × ${exerciseNames[g.first().exerciseId] ?: "?"}", style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 2.dp))
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip(WorkoutMath.duration(w.startedAt, w.finishedAt))
+            Chip("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg")
+            Chip("${sets.size} setova")
+        }
+        val groups = sets.groupBy { it.exercisePosition }.toSortedMap().values
+        if (groups.isNotEmpty()) Spacer(Modifier.height(12.dp))
+        groups.forEach { g ->
+            val best = g.maxWithOrNull(compareBy<WorkoutSet>({ it.weightKg ?: 0.0 }, { it.reps ?: 0 }))
+            Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${g.size} × ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(exerciseNames[g.first().exerciseId] ?: "?", style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                best?.let {
+                    Text(
+                        (WorkoutMath.fmtKg(it.weightKg).takeIf { k -> k.isNotEmpty() }?.let { k -> "$k kg × " } ?: "") + "${it.reps ?: 0}",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
@@ -125,28 +149,32 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Text(workout.date().sr(), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(Modifier.padding(top = 8.dp)) {
-                    Info("Trajanje", WorkoutMath.duration(workout.startedAt, workout.finishedAt), Modifier.weight(1f))
-                    Info("Volumen", "${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", Modifier.weight(1f))
-                    Info("Setovi", "${sets.size}", Modifier.weight(1f))
+                Text(workout.date().srLong().replaceFirstChar { it.uppercase() }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatTile(WorkoutMath.duration(workout.startedAt, workout.finishedAt), "trajanje", Modifier.weight(1f))
+                    StatTile("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", "volumen", Modifier.weight(1f))
+                    StatTile("${sets.size}", "setova", Modifier.weight(1f))
                 }
             }
             items(sets.groupBy { it.exercisePosition }.toSortedMap().values.toList()) { g ->
                 val ex = byId[g.first().exerciseId]
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer).padding(12.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { ex?.let { onOpenExercise(it.id) } }) {
-                        ex?.let { ExerciseThumb(it, 40.dp) }
+                AppCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { ex?.let { onOpenExercise(it.id) } }) {
+                        ex?.let { ExerciseThumb(it, 44.dp) }
                         Spacer(Modifier.width(12.dp))
-                        Text(ex?.name ?: "?", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                        Text(ex?.name ?: "?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Icon(Icons.Filled.ChevronRight, "Statistika vežbe", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    Spacer(Modifier.height(8.dp))
                     g.forEach { s ->
-                        Row(Modifier.padding(top = 6.dp)) {
-                            Text("${s.setIndex}", Modifier.width(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${WorkoutMath.fmtKg(s.weightKg).ifEmpty { "0" }} kg × ${s.reps ?: 0}")
+                        Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(26.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+                                Text("${s.setIndex}", style = MaterialTheme.typography.labelMedium)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text("${WorkoutMath.fmtKg(s.weightKg).ifEmpty { "0" }} kg", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Text("${s.reps ?: 0} ponav.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

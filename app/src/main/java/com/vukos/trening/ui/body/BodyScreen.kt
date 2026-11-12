@@ -9,142 +9,124 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShowChart
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vukos.trening.TreningApp
+import com.vukos.trening.data.BodyRepo
 import com.vukos.trening.data.BodyStats
 import com.vukos.trening.data.CheckInSchedule
-import com.vukos.trening.ui.common.DayMarker
-import com.vukos.trening.ui.common.MonthCalendar
+import com.vukos.trening.ui.common.AppCard
+import com.vukos.trening.ui.common.Chip
+import com.vukos.trening.ui.common.EmptyState
+import com.vukos.trening.ui.common.IconBadge
+import com.vukos.trening.ui.common.OutlinePill
+import com.vukos.trening.ui.common.PrimaryPill
+import com.vukos.trening.ui.common.SectionTitle
+import com.vukos.trening.ui.common.StatTile
+import com.vukos.trening.ui.common.TabTopBar
+import com.vukos.trening.ui.theme.Danger
 import java.time.LocalDate
 
-private val PhotoBlue = Color(0xFF4F8DF7)
-
-/** Tab Telo: statistika, grafikon (otvara se), kalendar merenja i lista dana. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Tab Profil: trenutna kilaza, sledece merenje, grafikon i istorija merenja. */
 @Composable
 fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: () -> Unit, onSettings: () -> Unit) {
     val dao = TreningApp.instance.db.body()
     val entries by remember { dao.observeAll() }.collectAsStateWithLifecycle(emptyList())
     val photos by remember { dao.observeAllPhotos() }.collectAsStateWithLifecycle(emptyList())
+    val due by remember { BodyRepo.observeDue() }.collectAsStateWithLifecycle(null)
     val photoCount = remember(photos) { photos.groupingBy { it.bodyEntryId }.eachCount() }
     val stats = remember(entries, photoCount) { BodyStats.compute(entries, photoCount.keys) }
-    val accent = MaterialTheme.colorScheme.primary
-    val markers = remember(entries, photoCount, accent) {
-        entries.associate { e ->
-            LocalDate.ofEpochDay(e.epochDay) to DayMarker(
-                listOfNotNull(accent.takeIf { e.weightKg != null }, PhotoBlue.takeIf { (photoCount[e.id] ?: 0) > 0 })
-            )
-        }
+    // Za svako merenje: promena u odnosu na prethodno merenje sa kilazom.
+    val deltas = remember(entries) {
+        val withKg = entries.filter { it.weightKg != null }.sortedBy { it.epochDay }
+        withKg.zipWithNext { a, b -> b.id to (b.weightKg!! - a.weightKg!!) }.toMap()
     }
-    val next = CheckInSchedule.nextCheckInDay(LocalDate.now())
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Profil") },
-                actions = {
-                    IconButton(onClick = onOpenChart) { Icon(Icons.Filled.ShowChart, "Grafikon") }
-                    IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
-                },
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onNew,
-                icon = { Icon(Icons.Filled.Add, null) },
-                text = { Text("Merenje") },
-            )
-        },
-    ) { pad ->
+    Scaffold(topBar = {
+        TabTopBar("Profil") {
+            IconButton(onClick = onOpenChart) { Icon(Icons.Filled.ShowChart, "Grafikon kilaže") }
+            IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
+        }
+    }) { pad ->
         LazyColumn(
             Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { StatsCard(stats) }
-            item {
-                if (stats.count >= 2) WeightChart(entries, Modifier.fillMaxWidth(), onClick = onOpenChart)
-                else Card {
-                    Text("Grafikon kilaže", fontWeight = FontWeight.SemiBold)
-                    Text("Pojaviće se posle drugog merenja.", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall)
+            if (stats.current == null) item {
+                EmptyState(Icons.Filled.MonitorWeight, "Prvo merenje",
+                    "Unesi kilažu da bi pratio napredak. Merenje je jednom nedeljno (nedeljom), a svake druge nedelje i 3 slike.") {
+                    PrimaryPill("Unesi merenje", onNew, Modifier.fillMaxWidth(), Icons.Filled.Add)
                 }
-            }
-            item {
-                MonthCalendar(markers = markers, onDayClick = onOpenDay, modifier = Modifier.fillMaxWidth())
-            }
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
-                    Legend(accent, "kilaža"); Spacer(Modifier.width(16.dp)); Legend(PhotoBlue, "slike")
-                }
-            }
-            item {
-                Card {
-                    Text("Sledeće merenje", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        next.sr() + if (CheckInSchedule.isPhotoDay(next)) " · kilaža + 3 slike" else " · kilaža",
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                        Icon(Icons.Filled.Lock, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            " Slike su šifrovane i vidi ih samo ova aplikacija.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+            } else {
+                item { CurrentWeightCard(stats, onOpenChart) }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        StatTile(stats.change30.signed(), "30 dana", Modifier.weight(1f))
+                        StatTile(stats.totalChange.signed(), "ukupno", Modifier.weight(1f))
+                        StatTile("${stats.count}", if (stats.photoDays > 0) "merenja · ${stats.photoDays} sa sl." else "merenja", Modifier.weight(1f))
                     }
                 }
+                if (stats.count >= 2) item { WeightChart(entries, Modifier.fillMaxWidth(), onClick = onOpenChart) }
             }
-            if (entries.isNotEmpty()) item {
-                Text("Sva merenja", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
-            }
-            items(entries, key = { it.id }) { e ->
-                val day = LocalDate.ofEpochDay(e.epochDay)
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .clickable { onOpenDay(day) }.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(day.sr(), modifier = Modifier.weight(1f))
-                    val n = photoCount[e.id] ?: 0
-                    if (n > 0) {
-                        Icon(Icons.Filled.PhotoCamera, null, tint = PhotoBlue, modifier = Modifier.size(18.dp))
-                        Text(" $n", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(16.dp))
+            item { NextCheckInCard(due, onNew) }
+            if (entries.isNotEmpty()) {
+                item { SectionTitle("Istorija merenja") }
+                itemsIndexed(entries, key = { _, e -> e.id }) { i, e ->
+                    val day = LocalDate.ofEpochDay(e.epochDay)
+                    val first = i == 0
+                    val last = i == entries.lastIndex
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(
+                                topStart = if (first) 24.dp else 6.dp, topEnd = if (first) 24.dp else 6.dp,
+                                bottomStart = if (last) 24.dp else 6.dp, bottomEnd = if (last) 24.dp else 6.dp,
+                            ))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .clickable { onOpenDay(day) }.padding(horizontal = 18.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall)
+                            Text(day.srRelative(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if ((photoCount[e.id] ?: 0) > 0) {
+                            Icon(Icons.Filled.PhotoCamera, "Ima slike", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(12.dp))
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(e.weightKg?.kg() ?: "—", style = MaterialTheme.typography.titleMedium)
+                            deltas[e.id]?.let { Text(it.signed(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        }
                     }
-                    Text(e.weightKg?.kg() ?: "—", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -152,59 +134,72 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
 }
 
 @Composable
-private fun StatsCard(s: BodyStats) {
-    Card {
-        Row {
-            Column(Modifier.weight(1f)) {
-                Text("Trenutno", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                Text(s.current?.kg() ?: "—", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                s.currentDay?.let {
-                    Text(it.sr(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                }
-            }
+private fun CurrentWeightCard(s: BodyStats, onOpenChart: () -> Unit) {
+    AppCard(onClick = onOpenChart, padding = PaddingValues(24.dp)) {
+        Text("Trenutna kilaža", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(s.current!!.kg().removeSuffix(" kg"), style = MaterialTheme.typography.displaySmall)
+            Text(" kg", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp))
+            Spacer(Modifier.weight(1f))
+            s.lastChange?.let { Chip(it.signed() + " od prošlog") }
         }
-        Spacer(Modifier.size(12.dp))
-        Row {
-            Stat("Od prošlog", s.lastChange.signed(), Modifier.weight(1f))
-            Stat("30 dana", s.change30.signed(), Modifier.weight(1f))
-            Stat("Ukupno", s.totalChange.signed(), Modifier.weight(1f))
+        s.currentDay?.let {
+            Text("izmereno ${it.srRelative()} · ${it.srDate()}", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         }
-        Spacer(Modifier.size(12.dp))
-        Row {
-            Stat("Najmanje", s.min?.kg() ?: "—", Modifier.weight(1f))
-            Stat("Najviše", s.max?.kg() ?: "—", Modifier.weight(1f))
-            Stat("Merenja / slike", "${s.count} / ${s.photoDays}", Modifier.weight(1f))
+        Row(Modifier.padding(top = 16.dp)) {
+            Text("Najniža ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(s.min?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
+            Text("   ·   Najviša ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(s.max?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
-private fun Double?.signed(): String = when {
+/** Kartica sledeceg merenja (centrirano: ikona, naslov, opis, dugme). */
+@Composable
+private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
+    val today = LocalDate.now()
+    val pending = due?.takeIf { it.anythingMissing }
+    val day = pending?.checkInDay ?: CheckInSchedule.nextCheckInDay(today)
+    val photos = pending?.photosMissing ?: CheckInSchedule.isPhotoDay(day)
+    val title = when {
+        pending?.overdue == true -> "Propušteno merenje"
+        pending != null -> "Danas je merenje"
+        else -> "Sledeće merenje"
+    }
+    val what = if (pending != null) pending.whatMissing().replaceFirstChar { it.uppercase() }
+        else if (photos) "Kilaža i 3 slike (spreda, bok, leđa)" else "Kilaža"
+    AppCard(padding = PaddingValues(24.dp)) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            IconBadge(if (pending?.overdue == true) Icons.Filled.Warning else Icons.Filled.MonitorWeight,
+                if (pending?.overdue == true) Danger else MaterialTheme.colorScheme.primary, 56.dp)
+            Spacer(Modifier.height(14.dp))
+            Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "${day.srLong().replaceFirstChar { it.uppercase() }} · ${day.srRelative(today)}\n$what",
+                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(20.dp))
+            if (pending != null) PrimaryPill("Unesi merenje", onNew, Modifier.fillMaxWidth())
+            else OutlinePill("Unesi merenje", onNew, Modifier.fillMaxWidth())
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Lock, null, Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(" Slike su šifrovane i vidi ih samo ova aplikacija", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+internal fun Double?.signed(): String = when {
     this == null -> "—"
     this > 0.04 -> "+" + kg()
     this < -0.04 -> "−" + kotlin.math.abs(this).kg()
     else -> "0 kg"
-}
-
-@Composable
-private fun Stat(label: String, value: String, modifier: Modifier) {
-    Column(modifier) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-        Text(value, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-private fun Card(content: @Composable () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
-    ) { content() }
-}
-
-@Composable
-private fun Legend(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Spacer(Modifier.size(8.dp).clip(CircleShape).background(color))
-        Text("  $label", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
 }

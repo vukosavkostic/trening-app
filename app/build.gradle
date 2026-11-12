@@ -16,7 +16,7 @@ android {
         minSdk 28   // ImageDecoder (EXIF rotacija slika)
         targetSdk 34
         versionCode 1
-        versionName '0.1'
+        versionName '0.4'
     }
     // Release kljuc i lozinka su van repozitorijuma: ~/.gradle/gradle.properties
     // (TRENING_STORE_FILE, TRENING_STORE_PASSWORD). Bez njih se koristi debug kljuc.

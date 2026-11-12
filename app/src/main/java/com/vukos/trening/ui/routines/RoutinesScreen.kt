@@ -1,7 +1,5 @@
 package com.vukos.trening.ui.routines
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,41 +9,46 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vukos.trening.TreningApp
 import com.vukos.trening.data.Routine
-import com.vukos.trening.data.Weekdays
-import java.time.LocalDate
+import com.vukos.trening.ui.body.srRelative
+import com.vukos.trening.ui.common.AppCard
+import com.vukos.trening.ui.common.Chip
+import com.vukos.trening.ui.common.EmptyState
+import com.vukos.trening.ui.common.IconBadge
+import com.vukos.trening.ui.common.OutlinePill
+import com.vukos.trening.ui.common.PrimaryPill
+import com.vukos.trening.ui.common.SectionTitle
+import com.vukos.trening.ui.common.TabTopBar
 
-/** Tab Trening: danas, nedeljni raspored, planovi sa dugmetom Zapocni trening. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Tab Trening: brzi start, pa lista planova (nisu vezani za dan - bilo koji se radi bilo kad). */
 @Composable
 fun RoutinesScreen(
     onOpen: (String) -> Unit,
@@ -58,120 +61,94 @@ fun RoutinesScreen(
     val routines by remember { db.routines().observeAll() }.collectAsStateWithLifecycle(emptyList())
     val links by remember { db.routines().observeAllExercises() }.collectAsStateWithLifecycle(emptyList())
     val exercises by remember { db.exercises().observeAll() }.collectAsStateWithLifecycle(emptyList())
+    val workouts by remember { db.workouts().observeFinished() }.collectAsStateWithLifecycle(emptyList())
     val names = remember(exercises) { exercises.associate { it.id to it.name } }
     val byRoutine = remember(links) { links.groupBy { it.routineId } }
-    val today = LocalDate.now().dayOfWeek
-    val todays = routines.filter { Weekdays.has(it.weekdays, today) }
+    // Kad je koji plan poslednji put odradjen.
+    val lastDone = remember(workouts) {
+        workouts.filter { it.routineId != null }.groupBy { it.routineId!! }
+            .mapValues { (_, ws) -> ws.maxOf { it.startedAt } }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Trening") },
-                actions = {
-                    IconButton(onClick = onNotion) { Icon(Icons.Filled.CloudDownload, "Notion treninzi") }
-                    IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
-                },
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onNew, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Novi plan") })
+            TabTopBar("Trening") {
+                IconButton(onClick = onNotion) { Icon(Icons.Filled.CloudDownload, "Planovi iz Notiona") }
+                IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
+            }
         },
     ) { pad ->
         LazyColumn(
             Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Card {
-                    Text("Danas · ${Weekdays.FULL[today.value - 1]}", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelMedium)
-                    if (todays.isEmpty()) {
-                        Text("Dan odmora (nema plana za danas)", fontWeight = FontWeight.SemiBold)
-                    } else todays.forEach { r ->
-                        Text(r.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 4.dp))
-                        Text(
-                            byRoutine[r.id].orEmpty().joinToString(", ") { names[it.exerciseId] ?: "?" },
-                            maxLines = 2, overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { onStart(r.id) }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Započni trening")
+                AppCard(onClick = { onStart(null) }, padding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconBadge(Icons.Filled.Bolt)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Slobodan trening", style = MaterialTheme.typography.titleMedium)
+                            Text("Bez plana, vežbe dodaješ usput", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = { onStart(null) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Prazan trening (bez plana)")
+                        Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             item {
-                Card {
-                    Text("Nedelja", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(6.dp))
-                    Weekdays.LABELS.forEachIndexed { i, label ->
-                        val plans = routines.filter { it.weekdays and (1 shl i) != 0 }
-                        Row(Modifier.padding(vertical = 3.dp)) {
-                            Text(label, Modifier.width(44.dp),
-                                fontWeight = if (i == today.value - 1) FontWeight.Bold else FontWeight.Normal,
-                                color = if (i == today.value - 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                if (plans.isEmpty()) "odmor" else plans.joinToString(" + ") { it.name },
-                                color = if (plans.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
+                SectionTitle("Moji planovi") {
+                    TextButton(onClick = onNew) { Icon(Icons.Filled.Add, null, Modifier.size(18.dp)); Text(" Novi plan") }
                 }
             }
             if (routines.isEmpty()) item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Još nema planova.", fontWeight = FontWeight.SemiBold)
-                    OutlinedButton(onClick = onNotion) {
-                        Icon(Icons.Filled.CloudDownload, null); Text("  Uvezi iz Notiona")
+                EmptyState(
+                    Icons.Filled.FitnessCenter, "Još nemaš planova",
+                    "Napravi plan sa vežbama koje radiš, ili ga uvezi iz Notiona. Plan možeš da započneš bilo kog dana.",
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        PrimaryPill("Napravi plan", onNew, Modifier.fillMaxWidth(), Icons.Filled.Add)
+                        OutlinePill("Uvezi iz Notiona", onNotion, Modifier.fillMaxWidth(), Icons.Filled.CloudDownload)
                     }
                 }
-            } else item {
-                Text("Svi planovi", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
             }
             items(routines, key = { it.id }) { r ->
-                RoutineCard(r, byRoutine[r.id].orEmpty().map { names[it.exerciseId] ?: "?" }, onStart = { onStart(r.id) }) { onOpen(r.id) }
+                RoutineCard(
+                    r, byRoutine[r.id].orEmpty().map { names[it.exerciseId] ?: "?" }, lastDone[r.id],
+                    onStart = { onStart(r.id) }, onEdit = { onOpen(r.id) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun RoutineCard(r: Routine, exerciseNames: List<String>, onStart: () -> Unit, onClick: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
-            .clickable(onClick = onClick).padding(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(r.name, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            if (r.notionPageId != null) Text("Notion  ", style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun RoutineCard(r: Routine, exerciseNames: List<String>, lastDone: Long?, onStart: () -> Unit, onEdit: () -> Unit) {
+    AppCard(onClick = onEdit) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(r.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    listOfNotNull(
+                        "${exerciseNames.size} ${if (exerciseNames.size == 1) "vežba" else "vežbi"}",
+                        lastDone?.let { "poslednji put " + java.time.Instant.ofEpochMilli(it)
+                            .atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative() } ?: "još nije rađen",
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (r.notionPageId != null) Chip("Notion")
+            Icon(Icons.Filled.Edit, "Izmeni plan", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp).size(20.dp))
         }
-        Text(
-            "${Weekdays.describe(r.weekdays)} · ${exerciseNames.size} vežbi",
-            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-        )
         if (exerciseNames.isNotEmpty()) Text(
-            exerciseNames.joinToString(", "), maxLines = 2, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp),
+            exerciseNames.joinToString(" · "), maxLines = 2, overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp),
         )
-        Spacer(Modifier.height(10.dp))
-        Button(onClick = onStart, enabled = exerciseNames.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-            Text("Započni trening")
-        }
+        Spacer(Modifier.height(16.dp))
+        if (exerciseNames.isEmpty()) OutlinePill("Dodaj vežbe u plan", onEdit, Modifier.fillMaxWidth(), Icons.Filled.Add)
+        else PrimaryPill("Započni trening", onStart, Modifier.fillMaxWidth(), Icons.Filled.PlayArrow)
     }
-}
-
-@Composable
-private fun Card(content: @Composable () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
-    ) { content() }
 }

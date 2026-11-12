@@ -55,7 +55,12 @@ fun LineChart(
                 }
                 if (pts.size > 1) {
                     val path = Path().apply { moveTo(p(0).x, p(0).y); for (i in 1 until pts.size) lineTo(p(i).x, p(i).y) }
-                    drawPath(path, line, style = Stroke(width = 2.5.dp.toPx()))
+                    val n = pts.size
+                    val area = Path().apply { addPath(path); lineTo(p(n - 1).x, size.height); lineTo(p(0).x, size.height); close() }
+                    drawPath(area, androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(line.copy(alpha = 0.28f), androidx.compose.ui.graphics.Color.Transparent)))
+                    drawPath(path, line, style = Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                        join = androidx.compose.ui.graphics.StrokeJoin.Round))
                 }
                 for (i in pts.indices) drawCircle(line, 3.5.dp.toPx(), p(i))
             }

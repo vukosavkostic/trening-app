@@ -52,4 +52,15 @@ object BodyRepo {
             dao.upsertPhoto(BodyPhoto(id = id, bodyEntryId = entry.id, pose = pose.key, localPath = path))
         }
     }
+
+    /** Brise merenje dana: kilazu i slike (sifrovani fajlovi se brisu odmah, Notion stranica se arhivira pri sinhronizaciji). */
+    suspend fun delete(day: LocalDate) = withContext(Dispatchers.IO) {
+        val entry = dao.getByDay(day.toEpochDay()) ?: return@withContext
+        val now = System.currentTimeMillis()
+        dao.photosFor(entry.id).forEach {
+            SecurePhotoStore.delete(it.localPath)
+            dao.upsertPhoto(it.copy(deleted = true, dirty = true, updatedAt = now))
+        }
+        dao.upsert(entry.copy(deleted = true, dirty = true, updatedAt = now))
+    }
 }

@@ -139,21 +139,27 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainer)
-                    .clickable { showDate = true }.padding(16.dp),
+                    .clickable { showDate = true }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.CalendarMonth, null)
-                Text("  ${day.sr()}", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                Text("Promeni", color = MaterialTheme.colorScheme.primary)
+                com.vukos.trening.ui.common.IconBadge(Icons.Filled.CalendarMonth, size = 40.dp)
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium)
+                    Text(day.srRelative(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("Promeni", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
             }
 
             OutlinedTextField(
                 value = weightText,
                 onValueChange = { weightText = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(6) },
-                label = { Text("Kilaža (kg)") },
-                placeholder = { Text("npr. 82,4") },
+                label = { Text("Kilaža") },
+                placeholder = { Text("npr. 82,4", style = MaterialTheme.typography.headlineMedium) },
+                suffix = { Text("kg", style = MaterialTheme.typography.titleLarge) },
+                textStyle = MaterialTheme.typography.headlineMedium,
+                shape = RoundedCornerShape(20.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -207,8 +213,8 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) { Text(if (saving) "Čuvam…" else "Sačuvaj") }
+                shape = androidx.compose.foundation.shape.CircleShape,
+            ) { Text(if (saving) "Čuvam…" else "Sačuvaj merenje", style = MaterialTheme.typography.labelLarge) }
         }
     }
 
@@ -269,8 +275,8 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
 private fun PhotoSlot(pose: Pose, newUri: Uri?, existing: BodyPhoto?, modifier: Modifier, onClick: () -> Unit) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onClick),
+            Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             if (newUri == null && existing == null) {
