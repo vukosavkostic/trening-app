@@ -25,10 +25,10 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             app.settings.recordSync(null, r.created + r.updated + r.archived)
             Result.success()
         } catch (e: NotionException) {
-            app.settings.recordSync(e.message ?: "Greška", 0)
+            app.settings.recordSync(e.message ?: com.vukos.trening.i18n.tr("Greška", "Error"), 0)
             if (e.status == 429 || e.status >= 500) Result.retry() else Result.failure()
         } catch (e: IOException) {
-            app.settings.recordSync("Nema veze sa Notionom", 0)
+            app.settings.recordSync(com.vukos.trening.i18n.tr("Nema veze sa Notionom", "No connection to Notion"), 0)
             Result.retry()
         }
     }

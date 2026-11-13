@@ -150,7 +150,7 @@ fun ActiveWorkoutScreen(
                 Column(Modifier.padding(end = 12.dp)) {
                     Text(workout?.name ?: tr("Trening", "Workout"), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Početak ${start?.let { "%02d:%02d".format(it.hour, it.minute) } ?: ""}",
+                        tr("Početak", "Started") + " ${start?.let { "%02d:%02d".format(it.hour, it.minute) } ?: ""}",
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

@@ -61,7 +61,7 @@ object OpenFoodFacts {
         val n = p.optJSONObject("nutriments") ?: JSONObject()
         val name = p.optString("product_name_sr").ifBlank { p.optString("product_name") }.trim()
         val brand = p.optString("brands").split(',').firstOrNull()?.trim().orEmpty()
-        val full = listOf(name, brand).filter { it.isNotBlank() }.distinct().joinToString(" · ").ifBlank { "Proizvod" }
+        val full = listOf(name, brand).filter { it.isNotBlank() }.distinct().joinToString(" · ").ifBlank { com.vukos.trening.i18n.tr("Proizvod", "Product") }
         fun num(k: String) = if (n.has(k)) n.optDouble(k).takeIf { !it.isNaN() } else null
         val kcal = num("energy-kcal_100g") ?: num("energy_100g")?.let { it / 4.184 }
         return FoodProduct(full, kcal, num("proteins_100g"))

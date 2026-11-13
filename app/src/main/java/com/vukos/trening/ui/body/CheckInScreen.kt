@@ -230,14 +230,14 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                 enabled = !saving,
                 onClick = {
                     val kg = parseKg(weightText)
-                    if (weightText.isNotBlank() && kg == null) { error = "Kilaža nije ispravna."; return@Button }
+                    if (weightText.isNotBlank() && kg == null) { error = tr("Kilaža nije ispravna.", "Weight is not a valid number."); return@Button }
                     val nums = measureText.map { it.trim().replace(',', '.').takeIf { t -> t.isNotEmpty() }?.toDoubleOrNull() }
                     if (measureText.indices.any { measureText[it].isNotBlank() && nums[it] == null }) {
-                        error = "Neka mera nije ispravan broj."; return@Button
+                        error = tr("Neka mera nije ispravan broj.", "A measurement is not a valid number."); return@Button
                     }
                     val measures = com.vukos.trening.data.Measurements(nums[0], nums[1], nums[2], nums[3], nums[4])
                     if (kg == null && newPhotos.isEmpty() && existingPhotos.isEmpty() && measures.isEmpty) {
-                        error = "Unesi kilažu, mere ili bar jednu sliku."; return@Button
+                        error = tr("Unesi kilažu, mere ili bar jednu sliku.", "Enter weight, measurements or at least one photo."); return@Button
                     }
                     saving = true
                     scope.launch {

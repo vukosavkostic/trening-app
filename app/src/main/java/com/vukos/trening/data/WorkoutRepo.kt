@@ -126,7 +126,7 @@ object WorkoutRepo {
 
     suspend fun startEmpty(): String {
         dao.getActive()?.let { return it.id }
-        val w = Workout(name = "Trening")
+        val w = Workout(name = com.vukos.trening.i18n.tr("Trening", "Workout"))
         dao.upsert(w)
         return w.id
     }

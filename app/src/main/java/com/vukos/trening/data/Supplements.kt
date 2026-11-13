@@ -29,7 +29,31 @@ object Supplements {
     val CATEGORIES = listOf("Performanse", "Protein", "Oporavak i san", "Vitamini i minerali", "Zdravlje i ostalo")
 
     /** Najcesci trening suplementi (doze su uobicajene pocetne vrednosti; menjaju se pri unosu). */
-    val LIST = listOf(
+    /** Spisak na jeziku aplikacije; na engleskom srpski naziv ostaje u aliasima za pretragu. */
+    val LIST: List<SupplementDef> get() = if (!com.vukos.trening.i18n.Lang.en) LIST_SR else LIST_SR.map {
+        it.copy(name = EN_NAMES[it.name] ?: it.name, dose = enDose(it.dose), aliases = it.aliases + " " + it.name)
+    }
+
+    private fun enDose(d: String): String = d.replace("1 merica", "1 scoop").replace("1 kesica", "1 sachet")
+        .replace("1 kom", "1 pc").replace("1 doza", "1 serving").replace("1 tableta", "1 tablet")
+        .replace("1 kapsula", "1 capsule").replace(Regex("(\\d),(\\d)"), "$1.$2")
+
+    private val EN_NAMES = mapOf(
+        "Kreatin monohidrat" to "Creatine monohydrate", "Kofein" to "Caffeine", "Beta-alanin" to "Beta-alanine",
+        "Citrulin malat" to "Citrulline malate", "L-arginin" to "L-arginine", "Betain" to "Betaine", "Taurin" to "Taurine",
+        "Elektroliti" to "Electrolytes", "Sok od cvekle (nitrati)" to "Beetroot juice (nitrates)",
+        "Natrijum bikarbonat" to "Sodium bicarbonate", "Ugljeni hidrati (dekstrin)" to "Carbs (dextrin)",
+        "Whey izolat" to "Whey isolate", "Kazein" to "Casein", "Biljni protein" to "Plant protein",
+        "Goveđi protein" to "Beef protein", "Proteinska čokoladica" to "Protein bar", "Kolagen" to "Collagen",
+        "Glutamin" to "Glutamine", "Ašvaganda (KSM-66)" to "Ashwagandha (KSM-66)", "Sok od višnje" to "Tart cherry juice",
+        "Kurkumin" to "Curcumin", "Glicin" to "Glycine", "L-teanin" to "L-theanine", "Omega-3 (riblje ulje)" to "Omega-3 (fish oil)",
+        "Magnezijum (bisglicinat)" to "Magnesium (bisglycinate)", "Cink" to "Zinc", "Gvožđe" to "Iron", "Kalcijum" to "Calcium",
+        "Kalijum" to "Potassium", "B kompleks" to "B complex", "Selen" to "Selenium", "Probiotik" to "Probiotic",
+        "Psilijum (vlakna)" to "Psyllium (fiber)", "L-karnitin" to "L-carnitine", "Koenzim Q10" to "Coenzyme Q10",
+        "Glukozamin" to "Glucosamine",
+    )
+
+    private val LIST_SR = listOf(
         // Performanse
         SupplementDef("Kreatin monohidrat", "5 g", "Performanse", aliases = "creatine kreatin"),
         SupplementDef("Kofein", "200 mg", "Performanse", aliases = "caffeine kafa"),
@@ -102,7 +126,7 @@ object Supplements {
         val used = history.filter { it.meal == MEAL }.sortedByDescending { it.createdAt }
             .distinctBy { norm(nameOf(it.text)) }
             .map { e ->
-                val known = LIST.firstOrNull { norm(it.name) == norm(nameOf(e.text)) }
+                val known = (LIST + LIST_SR).firstOrNull { norm(it.name) == norm(nameOf(e.text)) }
                 SupplementDef(nameOf(e.text), doseOf(e.text).ifBlank { known?.dose ?: "" }, "Skoro korišćeno",
                     e.kcal ?: known?.kcal, e.proteinG ?: known?.proteinG, known?.aliases ?: "")
             }

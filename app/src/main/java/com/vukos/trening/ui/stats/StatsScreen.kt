@@ -147,7 +147,7 @@ fun StatsScreen(onBack: () -> Unit) {
                     val max = muscles.maxOfOrNull { it.second } ?: 1
                     muscles.forEach { (m, n) ->
                         Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text((muscleLabels[m] ?: m).replaceFirstChar { it.uppercase() }, Modifier.width(110.dp),
+                            Text((muscleLabels[m] ?: if (m == "ostalo") tr("ostalo", "other") else m).replaceFirstChar { it.uppercase() }, Modifier.width(110.dp),
                                 style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                             Box(Modifier.weight(1f).height(10.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
                                 Box(Modifier.fillMaxWidth(n.toFloat() / max).fillMaxHeight().clip(CircleShape).background(MaterialTheme.colorScheme.primary))
@@ -270,7 +270,7 @@ private fun ActivityChart(
         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onVar)
         Spacer(Modifier.height(16.dp))
         Row {
-            MiniStat(String.format(java.util.Locale.US, "%.1f", avg).replace('.', ','), tr("prosek $unit", "average $unit"), Modifier.weight(1f))
+            MiniStat(String.format(java.util.Locale.US, "%.1f", avg).let { if (com.vukos.trening.i18n.Lang.en) it else it.replace('.', ',') }, tr("prosek $unit", "average $unit"), Modifier.weight(1f))
             MiniStat("$best", tr("najviše", "best"), Modifier.weight(1f))
             if (goal != null) MiniStat("$met/${closed.size}", tr("nedelja sa ciljem", "weeks on goal"), Modifier.weight(1f))
         }

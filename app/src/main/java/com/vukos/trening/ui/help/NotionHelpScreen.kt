@@ -353,7 +353,7 @@ private fun AccountPage() {
         tr("Prijavi se Google nalogom ili mejlom (besplatno, bez kartice).", "Sign up with Google or email (free, no card needed)."),
         tr("Na pitanje „How are you planning to use Notion?“ izaberi „For myself“.", "When asked “How are you planning to use Notion?”, choose “For myself”."),
     )
-    HelpButton("Otvori notion.so", openUri(URL_SIGNUP), icon = Icons.AutoMirrored.Filled.OpenInNew)
+    HelpButton(tr("Otvori notion.so", "Open notion.so"), openUri(URL_SIGNUP), icon = Icons.AutoMirrored.Filled.OpenInNew)
     Tip(tr("Notion ima i aplikaciju za telefon i računar - korisno za pregled, ali nije obavezna.", "Notion also has phone and desktop apps - handy for browsing, but not required."))
 }
 
@@ -391,7 +391,7 @@ private fun TokenPage() {
         tr("Otvori karticu „Configuration“ i kod „Internal Integration Secret“ dodirni Show, pa Copy.", "Open the “Configuration” tab and next to “Internal Integration Secret” tap Show, then Copy."),
     )
     IntegrationMock()
-    HelpButton("Otvori Notion integracije", openUri(URL_INTEGRATIONS), icon = Icons.AutoMirrored.Filled.OpenInNew)
+    HelpButton(tr("Otvori Notion integracije", "Open Notion integrations"), openUri(URL_INTEGRATIONS), icon = Icons.AutoMirrored.Filled.OpenInNew)
     Warn(tr("Token počinje sa ntn_. Čuvaj ga kao lozinku: ne šalji ga u chat, mejl ni poruke. Ako procuri, na istoj strani izaberi „Refresh“.", "The token starts with ntn_. Treat it like a password: never send it in chats, email or messages. If it leaks, choose “Refresh” on the same page."))
 }
 

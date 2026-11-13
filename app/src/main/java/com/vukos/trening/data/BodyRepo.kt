@@ -1,5 +1,7 @@
 package com.vukos.trening.data
 
+import com.vukos.trening.i18n.tr
+
 import android.content.Context
 import android.net.Uri
 import com.vukos.trening.TreningApp
@@ -84,10 +86,10 @@ data class Measurements(
         fun of(e: BodyEntry) = Measurements(e.waistCm, e.chestCm, e.armCm, e.thighCm, e.bodyFatPct)
 
         /** Polja za prikaz: naziv, jedinica, vrednost iz merenja. */
-        val FIELDS: List<Triple<String, String, (Measurements) -> Double?>> = listOf(
-            Triple("Struk", "cm", { it.waist }), Triple("Grudi", "cm", { it.chest }),
-            Triple("Ruka", "cm", { it.arm }), Triple("Butina", "cm", { it.thigh }),
-            Triple("Masti", "%", { it.bodyFat }),
+        val FIELDS: List<Triple<String, String, (Measurements) -> Double?>> get() = listOf(
+            Triple(tr("Struk", "Waist"), "cm", { it.waist }), Triple(tr("Grudi", "Chest"), "cm", { it.chest }),
+            Triple(tr("Ruka", "Arm"), "cm", { it.arm }), Triple(tr("Butina", "Thigh"), "cm", { it.thigh }),
+            Triple(tr("Masti", "Body fat"), "%", { it.bodyFat }),
         )
     }
 }
