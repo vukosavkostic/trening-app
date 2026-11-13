@@ -283,7 +283,7 @@ private fun FoodCard(
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (kcal > 0 || prot > 0) Text(
-                    listOfNotNull(kcal.takeIf { it > 0 }?.let { "$it kcal" }, prot.takeIf { it > 0 }?.let { tr("$it g proteina", "$it g protein") }).joinToString(" · "),
+                    listOfNotNull(kcal.takeIf { it > 0 }?.let { "$it kcal" }, prot.takeIf { it > 0 }?.let { tr("$it g proteina", "$it g protein") }).joinToString(", "),
                     style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
                 ) else Spacer(Modifier.weight(1f))
                 TextButton(onClick = onGoals) { Text(tr("Postavi dnevni cilj", "Set a daily goal")) }
@@ -302,7 +302,7 @@ private fun FoodCard(
                     ) {
                         Text(f.text, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            listOfNotNull(f.kcal?.let { "$it kcal" }, f.proteinG?.let { "${it}g P" }).joinToString(" · "),
+                            listOfNotNull(f.kcal?.let { "$it kcal" }, f.proteinG?.let { "${it}g P" }).joinToString(", "),
                             color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -435,7 +435,7 @@ private fun FoodDialog(
                 product?.let { pr ->
                     Text(
                         tr("Na 100 g: ", "Per 100 g: ") + listOfNotNull(pr.kcal100?.let { "${Math.round(it)} kcal" }, pr.protein100?.let { tr("${WorkoutMath.fmtKg(it)} g proteina", "${WorkoutMath.fmtKg(it)} g protein") })
-                            .joinToString(" · ").ifEmpty { tr("nema podataka o vrednostima", "no nutrition data") },
+                            .joinToString(", ").ifEmpty { tr("nema podataka o vrednostima", "no nutrition data") },
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     OutlinedTextField(grams, { applyGrams(it.filter(Char::isDigit).take(4)) }, label = { Text(tr("Količina (g)", "Amount (g)")) },

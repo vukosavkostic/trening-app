@@ -159,7 +159,7 @@ private fun RoutineCard(r: Routine, exerciseNames: List<String>, lastDone: Long?
                         tr("${exerciseNames.size} ${if (exerciseNames.size == 1) "vežba" else "vežbi"}", "${exerciseNames.size} ${if (exerciseNames.size == 1) "exercise" else "exercises"}"),
                         lastDone?.let { tr("poslednji put ", "last done ") + java.time.Instant.ofEpochMilli(it)
                             .atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative() } ?: tr("još nije rađen", "not done yet"),
-                    ).joinToString(" · "),
+                    ).joinToString(", "),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -168,7 +168,7 @@ private fun RoutineCard(r: Routine, exerciseNames: List<String>, lastDone: Long?
                 modifier = Modifier.padding(start = 8.dp).size(20.dp))
         }
         if (exerciseNames.isNotEmpty()) Text(
-            exerciseNames.joinToString(" · "), maxLines = 2, overflow = TextOverflow.Ellipsis,
+            exerciseNames.joinToString(", "), maxLines = 2, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp),
         )
         Spacer(Modifier.height(16.dp))

@@ -103,7 +103,7 @@ class NewFeaturesTest {
 
     @Test fun openFoodFactsParse() {
         val p = OpenFoodFacts.parse("""{"status":1,"product":{"product_name":"Skyr","brands":"Arla, X","nutriments":{"energy-kcal_100g":63,"proteins_100g":11}}}""")!!
-        assertEquals("Skyr · Arla", p.name)
+        assertEquals("Skyr (Arla)", p.name)
         assertEquals(63.0, p.kcal100!!, 1e-9)
         assertEquals(11.0, p.protein100!!, 1e-9)
         assertNull(OpenFoodFacts.parse("""{"status":0}"""))

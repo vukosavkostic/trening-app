@@ -82,7 +82,7 @@ fun ActiveWorkoutBanner(workout: Workout?, sets: List<WorkoutSet>, onClick: () -
         Column(Modifier.weight(1f)) {
             Text(tr("Trening u toku: ${workout.name}", "Workout in progress: ${workout.name}"), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
             Text(
-                tr("${WorkoutMath.doneCount(sets)} setova · ${WorkoutMath.duration(workout.startedAt, null)} · nastavi", "${WorkoutMath.doneCount(sets)} sets · ${WorkoutMath.duration(workout.startedAt, null)} · continue"),
+                tr("Setova: ${WorkoutMath.doneCount(sets)}, trajanje ${WorkoutMath.duration(workout.startedAt, null)}. Dodirni za nastavak.", "Sets: ${WorkoutMath.doneCount(sets)}, duration ${WorkoutMath.duration(workout.startedAt, null)}. Tap to continue."),
                 color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.bodySmall,
             )
         }

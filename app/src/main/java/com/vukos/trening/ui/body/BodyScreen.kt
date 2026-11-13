@@ -192,13 +192,14 @@ private fun CurrentWeightCard(s: BodyStats, onOpenChart: () -> Unit) {
             s.lastChange?.let { Chip(it.signed() + tr(" od prošlog", " since last")) }
         }
         s.currentDay?.let {
-            Text(tr("izmereno ${it.srRelative()} · ${it.srDate()}", "measured ${it.srRelative()} · ${it.srDate()}"), style = MaterialTheme.typography.bodySmall,
+            Text(tr("Izmereno ${it.srRelative()}, ${it.srDate()}", "Measured ${it.srRelative()}, ${it.srDate()}"), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         }
         Row(Modifier.padding(top = 16.dp)) {
             Text(tr("Najniža ", "Lowest "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(s.min?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
-            Text(tr("   ·   Najviša ", "   ·   Highest "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(24.dp))
+            Text(tr("Najviša ", "Highest "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(s.max?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -226,7 +227,7 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
             Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
             Spacer(Modifier.height(6.dp))
             Text(
-                "${day.srLong().replaceFirstChar { it.uppercase() }} · ${day.srRelative(today)}\n$what",
+                "${day.srLong().replaceFirstChar { it.uppercase() }} (${day.srRelative(today)})\n$what",
                 style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )

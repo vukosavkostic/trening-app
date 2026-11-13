@@ -146,8 +146,8 @@ fun BodyCompareScreen(onBack: () -> Unit) {
                 val weeks = (eAfter.epochDay - eBefore.epochDay) / 7
                 Text(
                     "${LocalDate.ofEpochDay(eBefore.epochDay).srDate()} → ${LocalDate.ofEpochDay(eAfter.epochDay).srDate()}" +
-                        (if (weeks > 0) tr(" · $weeks ${if (weeks == 1L) "nedelja" else "nedelja"}", " · $weeks ${if (weeks == 1L) "week" else "weeks"}") else "") +
-                        (if (wB != null && wA != null) " · ${(wA - wB).signed()}" else ""),
+                        (if (weeks > 0) tr("\nRazmak: $weeks ${if (weeks == 1L) "nedelja" else if (weeks in 2..4) "nedelje" else "nedelja"}", "\nGap: $weeks ${if (weeks == 1L) "week" else "weeks"}") else "") +
+                        (if (wB != null && wA != null) tr("\nPromena kilaže: ", "\nWeight change: ") + (wA - wB).signed() else ""),
                     style = MaterialTheme.typography.titleSmall,
                 )
             }

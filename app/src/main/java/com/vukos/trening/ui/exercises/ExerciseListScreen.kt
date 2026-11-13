@@ -189,7 +189,7 @@ fun ExerciseRow(ex: Exercise, selectionMode: Boolean, selected: Boolean, onClick
                     muscleLabels[ex.primaryMuscle] ?: ex.primaryMuscle,
                     equipmentLabels[ex.equipment],
                     if (ex.isCustom) "moja" else null,
-                ).joinToString(" · "),
+                ).joinToString(", "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

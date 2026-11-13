@@ -305,7 +305,7 @@ private fun StepHeader(page: Int, done: Boolean) {
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                if (page == 0) tr("Vodič", "Guide") else tr("Korak $page od ${STEPS.size - 2}", "Step $page of ${STEPS.size - 2}") + if (s.minutes.isNotEmpty()) "  ·  ${s.minutes}" else "",
+                if (page == 0) tr("Vodič", "Guide") else tr("Korak $page od ${STEPS.size - 2}", "Step $page of ${STEPS.size - 2}") + if (s.minutes.isNotEmpty()) " (${s.minutes})" else "",
                 style = HelpSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f),
             )
             if (done) {

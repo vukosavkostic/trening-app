@@ -120,7 +120,7 @@ fun CheckInBanner(due: CheckInSchedule.Due?, topInset: Boolean = true, onClick: 
                     color = Color.White, style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    (if (due.overdue) "${due.checkInDay.srDate()} · " else "") + tr("unesi ${due.whatMissing()}", "log ${due.whatMissing()}"),
+                    (if (due.overdue) tr("Zakazano za ${due.checkInDay.srDate()}. ", "Due ${due.checkInDay.srDate()}. ") else "") + tr("Unesi ${due.whatMissing()}.", "Log ${due.whatMissing()}."),
                     color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
                 )
             }

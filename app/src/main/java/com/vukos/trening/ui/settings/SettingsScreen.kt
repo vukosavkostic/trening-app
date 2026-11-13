@@ -365,7 +365,7 @@ fun SettingsScreen(
         settings.kcalGoal.takeIf { it > 0 }?.let { "$it kcal" },
         settings.proteinGoal.takeIf { it > 0 }?.let { "$it g" },
         tr("${settings.weeklyGoal}× ned.", "${settings.weeklyGoal}× week"),
-    ).joinToString(" · ")
+    ).joinToString(", ")
     val reminders = remember { com.vukos.trening.reminders.SupplementReminders.load(ctx).count { it.enabled } }
     val backupAt = settings.lastBackupAt
 
@@ -391,7 +391,7 @@ fun SettingsScreen(
         }
         // Verzija aplikacije na dnu.
         Text(
-            "Trening · ${tr("verzija", "version")} ${com.vukos.trening.BuildConfig.VERSION_NAME}",
+            "Trening ${tr("verzija", "version")} ${com.vukos.trening.BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 16.dp),

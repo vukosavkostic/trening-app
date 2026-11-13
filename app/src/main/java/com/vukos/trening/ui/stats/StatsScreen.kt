@@ -316,7 +316,13 @@ private fun ActivityChart(
     AppCard {
         Text(title, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { stats.forEach { (v, l) -> MiniStat(v, l, Modifier.weight(1f)) } }
+        // Tri jednake kolone: prva poravnata levo, srednja centrirano, poslednja desno (simetricno u kartici).
+        Row(Modifier.fillMaxWidth()) {
+            stats.forEachIndexed { i, (v, l) ->
+                val align = when (i) { 0 -> Alignment.Start; stats.lastIndex -> Alignment.End; else -> Alignment.CenterHorizontally }
+                MiniStat(v, l, align, Modifier.weight(1f))
+            }
+        }
         Spacer(Modifier.height(20.dp))
         if (total == 0) {
             Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh),
@@ -423,8 +429,8 @@ private fun barAt(x: Float, width: Float, axisW: Float, n: Int): Int =
     ((x / ((width - axisW) / n)).toInt()).coerceIn(0, n - 1)
 
 @Composable
-private fun MiniStat(value: String, label: String, modifier: Modifier) {
-    Column(modifier) {
+private fun MiniStat(value: String, label: String, align: Alignment.Horizontal, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = align) {
         Text(value, style = MaterialTheme.typography.titleLarge)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
     }

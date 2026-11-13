@@ -138,7 +138,7 @@ private fun Overview(e: Exercise, sessions: List<ExerciseSession>) {
                     listOfNotNull(
                         tr("Glavni: ${muscleLabels[e.primaryMuscle] ?: e.primaryMuscle.ifBlank { "—" }}", "Primary: ${muscleLabels[e.primaryMuscle] ?: e.primaryMuscle.ifBlank { "—" }}"),
                         equipmentLabels[e.equipment],
-                    ).joinToString(" · "),
+                    ).joinToString(", "),
                     color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                 )
             }
