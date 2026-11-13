@@ -195,12 +195,14 @@ private fun CurrentWeightCard(s: BodyStats, onOpenChart: () -> Unit) {
             Text(tr("Izmereno ${it.srRelative()}, ${it.srDate()}", "Measured ${it.srRelative()}, ${it.srDate()}"), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         }
-        Row(Modifier.padding(top = 16.dp)) {
-            Text(tr("Najniža ", "Lowest "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(s.min?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.width(24.dp))
-            Text(tr("Najviša ", "Highest "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(s.max?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
+        // Kao brojke u grafikonu aktivnosti: jednake kolone, prva levo, poslednja uz desnu ivicu.
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+            listOf(tr("Najniža", "Lowest") to s.min, tr("Najviša", "Highest") to s.max).forEachIndexed { i, (label, v) ->
+                Column(Modifier.weight(1f), horizontalAlignment = if (i == 0) Alignment.Start else Alignment.End) {
+                    Text(v?.kg() ?: "—", style = MaterialTheme.typography.titleMedium)
+                    Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
