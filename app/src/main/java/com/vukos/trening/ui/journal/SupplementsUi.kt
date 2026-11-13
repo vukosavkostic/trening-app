@@ -134,7 +134,7 @@ fun SupplementDialog(
                 SupplementPicker(query, { query = it }, history, ::pick)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (initial == null) TextButton(onClick = { picked = null }) { Text(tr("← Izaberi drugi", "← Choose another")) }
+                    if (initial == null) TextButton(onClick = { picked = null }) { Text(tr("Izaberi drugi", "Choose another")) }
                     OutlinedTextField(dose, { dose = it.take(30) }, label = { Text(tr("Doza", "Dose")) }, placeholder = { Text(tr("npr. 5 g, 2 kapsule", "e.g. 5 g, 2 capsules")) },
                         singleLine = true, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

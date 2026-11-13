@@ -334,7 +334,7 @@ private fun GoalRing(value: Int, goal: Int, unit: String, color: Color) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            if (value >= goal) "$unit ✓" else tr("još ${goal - value} $unit", "${goal - value} $unit to go"),
+            if (value >= goal) tr("Cilj ispunjen", "Goal reached") else tr("još ${goal - value} $unit", "${goal - value} $unit to go"),
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

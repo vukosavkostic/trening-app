@@ -144,7 +144,7 @@ private fun SyncSection() {
         Text(
             when {
                 lastAt == 0L -> tr("Još nije sinhronizovano.", "Not synced yet.")
-                lastError != null -> tr("Poslednji pokušaj: ${fmtTime(lastAt)} — greška: $lastError", "Last attempt: ${fmtTime(lastAt)} — error: $lastError")
+                lastError != null -> tr("Poslednji pokušaj: ${fmtTime(lastAt)}. Greška: $lastError", "Last attempt: ${fmtTime(lastAt)}. Error: $lastError")
                 else -> tr("Poslednja: ${fmtTime(lastAt)}", "Last: ${fmtTime(lastAt)}")
             },
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -99,7 +99,7 @@ fun RoutinesScreen(
                             Text(tr("Ova nedelja", "This week"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(tr("$thisWeek / $goal treninga", "$thisWeek / $goal workouts"), style = MaterialTheme.typography.titleLarge)
                         }
-                        if (streak > 0) Chip(tr("🔥 $streak ${if (streak == 1) "nedelja" else "nedelja"} zaredom", "🔥 $streak ${if (streak == 1) "week" else "weeks"} in a row"),
+                        if (streak > 0) Chip(tr("$streak ${if (streak == 1) "nedelja" else "nedelja"} zaredom", "$streak ${if (streak == 1) "week" else "weeks"} in a row"),
                             color = MaterialTheme.colorScheme.onPrimaryContainer, bg = MaterialTheme.colorScheme.primaryContainer)
                         Icon(Icons.Filled.ChevronRight, tr("Statistika", "Statistics"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

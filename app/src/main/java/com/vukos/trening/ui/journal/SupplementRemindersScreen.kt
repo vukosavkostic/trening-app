@@ -148,7 +148,7 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             val taken = ExerciseSearch.normalize(r.name) in takenNames
                             Text(
-                                if (taken) tr("danas uneto ✓ · sledeći put sutra", "logged today ✓ · next time tomorrow") else tr("svaki dan", "every day"),
+                                if (taken) tr("Danas uneto. Sledeći put sutra.", "Logged today. Next reminder tomorrow.") else tr("svaki dan", "every day"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (taken) Success else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -167,9 +167,9 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             listOf(
                 tr("Svaki dan u zadato vreme stiže notifikacija.", "You get a notification every day at the set time."),
-                tr("Dugme „Uzeo sam ✓“ u notifikaciji odmah upisuje suplement u Dnevnik.", "The “Taken ✓” button in the notification logs the supplement in your Journal right away."),
+                tr("Dugme „Uzeo sam“ u notifikaciji odmah upisuje suplement u Dnevnik.", "The “Taken” button in the notification logs the supplement in your Journal."),
                 tr("Ako si suplement taj dan već uneo, podsetnik se preskače.", "If you already logged the supplement that day, the reminder is skipped."),
-                tr("Prekidačem privremeno isključuješ podsetnik, a dodirom na njega menjaš vreme ili ga brišeš.", "Use the switch to pause a reminder; tap it to change the time or delete it."),
+                tr("Prekidač privremeno isključuje podsetnik. Dodirni podsetnik da promeniš vreme ili da ga obrišeš.", "The switch pauses a reminder. Tap a reminder to change the time or delete it."),
             ).forEach { line ->
                 Row(Modifier.padding(vertical = 5.dp)) {
                     Text("•", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(18.dp))
@@ -179,7 +179,7 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(20.dp))
             Text(tr("Provera telefona", "Phone check"), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(2.dp))
-            if (!problems) Text(tr("Sve je podešeno ✓ Podsetnici stižu na vreme.", "All set ✓ Reminders arrive on time."),
+            if (!problems) Text(tr("Sve je podešeno. Podsetnici stižu na vreme.", "All set. Reminders arrive on time."),
                 style = MaterialTheme.typography.bodyMedium, color = Success, modifier = Modifier.padding(top = 6.dp))
             else {
                 Text(tr("Telefon trenutno blokira ili odlaže notifikacije ove aplikacije.", "Your phone is currently blocking or delaying this app's notifications."),
@@ -236,7 +236,7 @@ private fun ReminderDialog(initial: SuppReminder?, onDismiss: () -> Unit, onSave
                 TimePicker(time)
                 OutlinedTextField(dose, { dose = it.take(30) }, label = { Text(tr("Doza", "Dose")) }, singleLine = true,
                     shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
-                if (initial == null) TextButton(onClick = { picked = null }) { Text(tr("← Izaberi drugi suplement", "← Choose another supplement")) }
+                if (initial == null) TextButton(onClick = { picked = null }) { Text(tr("Izaberi drugi suplement", "Choose another supplement")) }
             }
         },
         confirmButton = {

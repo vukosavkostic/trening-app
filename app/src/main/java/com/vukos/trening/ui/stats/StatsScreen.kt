@@ -338,43 +338,35 @@ private fun ActivityChart(
         val measurer = androidx.compose.ui.text.rememberTextMeasurer()
         val axisStyle = MaterialTheme.typography.labelSmall.copy(color = onVar)
         val selStyle = MaterialTheme.typography.labelSmall.copy(color = accent, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-        // Lepa skala: gornja granica i korak (1, 2 ili 5...).
-        val rawTop = maxOf(best, goal ?: 0, 1)
-        val step = when { rawTop <= 4 -> 1; rawTop <= 10 -> 2; rawTop <= 25 -> 5; else -> 10 }
-        val top = ((rawTop + step - 1) / step) * step
+        // Bez y-ose: broj stoji iznad svakog stubica, pa je grafikon simetrican i citljiv.
+        // Najmanja skala 2, da jedan trening ne bude stubic preko cele visine.
+        val top = maxOf(best, goal ?: 0, 2)
         val n = values.size
 
         androidx.compose.foundation.Canvas(
-            Modifier.fillMaxWidth().height(190.dp)
+            Modifier.fillMaxWidth().height(170.dp)
                 .pointerInput(n) {
-                    detectTapGestures { o -> selected = barAt(o.x, size.width.toFloat(), 28.dp.toPx(), n) }
+                    detectTapGestures { o -> selected = barAt(o.x, size.width.toFloat(), 0f, n) }
                 }
                 .pointerInput(n) {
-                    detectHorizontalDragGestures { ch, _ -> selected = barAt(ch.position.x, size.width.toFloat(), 28.dp.toPx(), n) }
+                    detectHorizontalDragGestures { ch, _ -> selected = barAt(ch.position.x, size.width.toFloat(), 0f, n) }
                 }
         ) {
-            val axisW = 28.dp.toPx()            // mesto za brojeve desno
-            val labelH = 22.dp.toPx()           // mesto za oznake ispod
-            val plotW = size.width - axisW
+            val labelH = 24.dp.toPx()           // oznake ispod
+            val headroom = 20.dp.toPx()         // mesto za broj iznad najviseg stubica
+            val plotW = size.width
             val plotH = size.height - labelH
             val slot = plotW / n
-            val barW = (slot * 0.62f).coerceAtMost(28.dp.toPx())
-            fun y(v: Float) = plotH * (1f - v / top)
+            val barW = (slot * 0.56f).coerceAtMost(26.dp.toPx())
+            fun y(v: Float) = plotH - (plotH - headroom) * v / top
 
-            // Mreza + brojevi desno
-            var g = 0
-            while (g <= top) {
-                val yy = y(g.toFloat())
-                drawLine(grid, Offset(0f, yy), Offset(plotW, yy), strokeWidth = 1.dp.toPx())
-                val t = measurer.measure("$g", axisStyle)
-                drawText(t, topLeft = Offset(plotW + 8.dp.toPx(), (yy - t.size.height / 2f).coerceIn(0f, plotH - t.size.height)))
-                g += step
-            }
+            // Osnovna linija
+            drawLine(grid, Offset(0f, plotH), Offset(plotW, plotH), strokeWidth = 1.dp.toPx())
             // Isprekidana linija cilja
             if (goal != null && goal > 0) {
                 val yy = y(goal.toFloat())
-                drawLine(accent.copy(alpha = 0.8f), Offset(0f, yy), Offset(plotW, yy), strokeWidth = 1.5.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 5.dp.toPx())))
+                drawLine(accent.copy(alpha = 0.6f), Offset(0f, yy), Offset(plotW, yy), strokeWidth = 1.5.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 5.dp.toPx())))
             }
             // Stubici
             values.forEachIndexed { i, v ->
@@ -391,6 +383,8 @@ private fun ActivityChart(
                     addRoundRect(RoundRect(Rect(cx - barW / 2, plotH - h, cx + barW / 2, plotH),
                         topLeft = CornerRadius(r), topRight = CornerRadius(r)))
                 }, color)
+                val t = measurer.measure("$v", if (i == sel) selStyle else axisStyle)
+                drawText(t, topLeft = Offset(cx - t.size.width / 2f, plotH - h - t.size.height - 3.dp.toPx()))
             }
             // Oznake ispod: samo kada ima mesta (izabrani i tekuci uvek), bez preklapanja
             val measured = labels.map { measurer.measure(it, axisStyle) }
@@ -405,7 +399,7 @@ private fun ActivityChart(
                 if (drawn.any { it.start < range.endInclusive && range.start < it.endInclusive }) return@forEach
                 drawn += range
                 val t = if (i == sel) measurer.measure(labels[i], selStyle) else measured[i]
-                drawText(t, topLeft = Offset(left, plotH + 6.dp.toPx()))
+                drawText(t, topLeft = Offset(left, plotH + 7.dp.toPx()))
             }
         }
         if (goal != null) {

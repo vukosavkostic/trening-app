@@ -342,7 +342,7 @@ private fun OverviewPage(done: Map<Int, Boolean>, onJump: (Int) -> Unit) {
             }
         }
     }
-    Tip(tr("Ukupno oko 10 minuta. Možeš da staneš bilo kad - vodič uvek otvaraš iz Podešavanja (Uputstvo).", "About 10 minutes in total. You can stop anytime - open the guide again from Settings."))
+    Tip(tr("Ukupno oko 10 minuta. Možeš da staneš bilo kad. Vodič uvek otvaraš iz Podešavanja.", "About 10 minutes in total. You can stop anytime. Open the guide again from Settings."))
 }
 
 @Composable
@@ -354,7 +354,7 @@ private fun AccountPage() {
         tr("Na pitanje „How are you planning to use Notion?“ izaberi „For myself“.", "When asked “How are you planning to use Notion?”, choose “For myself”."),
     )
     HelpButton(tr("Otvori notion.so", "Open notion.so"), openUri(URL_SIGNUP), icon = Icons.AutoMirrored.Filled.OpenInNew)
-    Tip(tr("Notion ima i aplikaciju za telefon i računar - korisno za pregled, ali nije obavezna.", "Notion also has phone and desktop apps - handy for browsing, but not required."))
+    Tip(tr("Notion ima aplikaciju za telefon i računar. Korisna je za pregled, ali nije obavezna.", "Notion has phone and desktop apps. They are handy for browsing, but not required."))
 }
 
 @Composable
@@ -367,7 +367,7 @@ private fun StructurePage() {
     if (mode == 0) {
         Steps(
             tr("Kopiraj prompt ispod.", "Copy the prompt below."),
-            tr("Nalepi ga u AI koji ima pristup tvom Notionu: Notion AI (dugme ✦ u Notionu), Claude sa Notion konektorom ili ChatGPT sa Notion konektorom.", "Paste it into an AI that can access your Notion: Notion AI (the ✦ button in Notion), Claude with the Notion connector, or ChatGPT with the Notion connector."),
+            tr("Nalepi ga u AI koji ima pristup tvom Notionu: Notion AI (ugrađen u Notion), Claude sa Notion konektorom ili ChatGPT sa Notion konektorom.", "Paste it into an AI that can access your Notion: Notion AI (built into Notion), Claude with the Notion connector, or ChatGPT with the Notion connector."),
             tr("AI pravi stranicu i tabele, a na kraju ti objasni kako da napraviš ključ (sledeći korak).", "AI creates the page and tables, then explains how to create the key (next step)."),
         )
         PromptBox(PROMPT_SETUP)
@@ -384,10 +384,10 @@ private fun StructurePage() {
 
 @Composable
 private fun TokenPage() {
-    Body(tr("Ključ (token) je „lozinka“ kojom aplikacija sme da piše u tvoju stranicu Trening - i ništa drugo.", "The key (token) is a “password” that lets the app write to your Trening page - and nothing else."))
+    Body(tr("Ključ (token) je „lozinka“ kojom aplikacija sme da piše u tvoju stranicu Trening. Nigde drugde nema pristup.", "The key (token) is a “password” that lets the app write to your Trening page. It has no access anywhere else."))
     Steps(
         tr("Otvori stranicu integracija (dugme ispod) i izaberi „+ New integration“.", "Open the integrations page (button below) and choose “+ New integration”."),
-        tr("Name: Trening app · Type: Internal · izaberi svoj workspace · Save.", "Name: Trening app · Type: Internal · pick your workspace · Save."),
+        tr("Za Name upiši Trening app, za Type izaberi Internal, izaberi svoj workspace i sačuvaj.", "Set Name to Trening app and Type to Internal, pick your workspace and save."),
         tr("Otvori karticu „Configuration“ i kod „Internal Integration Secret“ dodirni Show, pa Copy.", "Open the “Configuration” tab and next to “Internal Integration Secret” tap Show, then Copy."),
     )
     IntegrationMock()
@@ -427,22 +427,22 @@ private fun AiPlanPage(connected: Boolean, onOpenNotionPlans: () -> Unit) {
     Steps(
         tr("Kopiraj prompt i u zagradama upiši svoj cilj, broj treninga i opremu.", "Copy the prompt and fill in your goal, sessions per week and equipment in the brackets."),
         tr("Nalepi ga u AI koji ima pristup Notionu (Notion AI, Claude ili ChatGPT sa Notion konektorom).", "Paste it into an AI with Notion access (Notion AI, Claude or ChatGPT with the Notion connector)."),
-        tr("U aplikaciji: Trening → ☁ (Notion planovi) → „Dodaj“ pored plana. Gotovo - plan je spreman za „Započni trening“.", "In the app: Workout → ☁ (Notion plans) → “Add” next to the plan. Done - the plan is ready for “Start workout”."),
+        tr("U aplikaciji otvori Trening → ikona oblaka (Notion planovi) i dodirni „Dodaj“ pored plana. Plan je odmah spreman za „Započni trening“.", "In the app open Workout → cloud icon (Notion plans) and tap “Add” next to the plan. The plan is ready for “Start workout” right away."),
     )
     PlanMock()
     PromptBox(PROMPT_PLAN)
     HelpButton(tr("Otvori Notion planove", "Open Notion plans"), onOpenNotionPlans, primary = true, enabled = connected)
     if (!connected) Small(tr("Prvo poveži Notion (korak 5).", "Connect Notion first (step 5)."))
-    Tip(tr("Format jednog reda: „Barbell Squat 4x6-8 80kg“ - naziv, setovi x ponavljanja (opseg ili broj) i opciono kilaža. Nepoznat naziv vežbe postaje tvoja nova vežba.", "One line format: “Barbell Squat 4x6-8 80kg” - name, sets x reps (range or number) and optional weight. Unknown exercise names become your own exercises."))
+    Tip(tr("Format jednog reda: „Barbell Squat 4x6-8 80kg“. Redom: naziv, setovi x ponavljanja (opseg ili broj) i, po želji, kilaža. Nepoznat naziv vežbe postaje tvoja nova vežba.", "One line format: “Barbell Squat 4x6-8 80kg”. In order: name, sets x reps (range or number) and optional weight. Unknown exercise names become your own exercises."))
 }
 
 @Composable
 private fun TipsPage() {
-    Benefit(Icons.Filled.TableChart, tr("Kalendar treninga", "Workout calendar"), tr("U tabeli Workouts otvori prikaz Calendar - vidiš svaki trening po danima.", "Open the Calendar view in the Workouts table - see every workout by day."))
+    Benefit(Icons.Filled.TableChart, tr("Kalendar treninga", "Workout calendar"), tr("U tabeli Workouts otvori prikaz Calendar. Tu vidiš svaki trening po danima.", "Open the Calendar view in the Workouts table. It shows every workout by day."))
     Benefit(Icons.Filled.FitnessCenter, tr("Svi setovi na jednom mestu", "Every set in one place"), tr("Tabela Sets: filtriraj po vežbi i vidi svaki set ikad (kg, ponavljanja, tip).", "Sets table: filter by exercise and see every set ever (kg, reps, type)."))
     Benefit(Icons.Filled.AutoAwesome, tr("Pitaj AI o napretku", "Ask AI about your progress"), tr("„Pogledaj moje Workouts i Sets za poslednji mesec i predloži izmene plana.“", "“Look at my Workouts and Sets for the last month and suggest plan changes.”"))
-    Benefit(Icons.Filled.CloudDone, tr("Novi telefon", "New phone"), tr("Podešavanja → „Vrati podatke iz Notiona“. Slike tela nisu u Notionu - za njih koristi Rezervnu kopiju.", "Settings → “Restore from Notion”. Body photos are not in Notion - use Backup for them."))
-    Benefit(Icons.Filled.Lightbulb, tr("Suplementi i ishrana", "Supplements and food"), tr("Tabela Food, filter Meal = Suplementi - sve što si uzimao.", "Food table, filter Meal = Suplementi - everything you have taken."))
+    Benefit(Icons.Filled.CloudDone, tr("Novi telefon", "New phone"), tr("Podešavanja → „Vrati podatke iz Notiona“. Slike tela nisu u Notionu. Za njih koristi Rezervnu kopiju.", "Settings → “Restore from Notion”. Body photos are not in Notion. Use Backup for them."))
+    Benefit(Icons.Filled.Lightbulb, tr("Suplementi i ishrana", "Supplements and food"), tr("U tabeli Food postavi filter Meal = Suplementi. Tu je sve što si uzimao.", "In the Food table set the filter Meal = Suplementi. It lists everything you have taken."))
     Warn(tr("Izmene koje napraviš direktno u Notionu se ne vraćaju u aplikaciju (osim uvoza planova). Aplikacija je „glavna“, Notion je kopija i pregled.", "Changes made directly in Notion do not flow back into the app (except plan imports). The app is the source of truth, Notion is a copy and a view."))
 }
 
@@ -588,7 +588,7 @@ private fun MockText(t: String, bold: Boolean = false, color: Color = PaperInk, 
 
 @Composable
 private fun NotionPageMock() = Illustration {
-    MockText("🏋️  Trening", bold = true, size = 18)
+    MockText("Trening", bold = true, size = 18)
     Spacer(Modifier.height(8.dp))
     listOf("Exercises", "Routines", "Workouts", "Sets", "Body", "Food").forEach {
         Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -633,7 +633,7 @@ private fun MockField(label: String, value: String) {
 @Composable
 private fun ConnectionsMock() = Illustration {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        MockText("🏋️  Trening", bold = true, size = 15)
+        MockText("Trening", bold = true, size = 15)
         Spacer(Modifier.weight(1f))
         Box(Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp)) { MockText("•••", bold = true) }
     }
@@ -667,7 +667,7 @@ private fun AppSettingsMock(connected: Boolean) {
             }
             Box(Modifier.fillMaxWidth().clip(CircleShape).background(if (connected) Success else MaterialTheme.colorScheme.primary).padding(10.dp),
                 contentAlignment = Alignment.Center) {
-                Text(if (connected) tr("Povezano ✓", "Connected ✓") else tr("Sačuvaj i poveži", "Save & connect"), color = Color.White, style = MaterialTheme.typography.labelLarge)
+                Text(if (connected) tr("Povezano", "Connected") else tr("Sačuvaj i poveži", "Save & connect"), color = Color.White, style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -691,6 +691,6 @@ private fun PlanMock() = Illustration {
             MockText(tr("Dodaj", "Add"), color = Color.White, bold = true, size = 12)
         }
         Spacer(Modifier.width(6.dp))
-        MockText(tr("→ Dodato ✓", "→ Added ✓"), color = Color(0xFF2E9E5B), bold = true, size = 12)
+        MockText(tr("Dodato", "Added"), color = Color(0xFF2E9E5B), bold = true, size = 12)
     }
 }

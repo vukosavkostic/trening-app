@@ -160,7 +160,7 @@ object SupplementReminders {
             .setContentTitle(tr("Vreme je za: ${r.name}", "Time for: ${r.name}"))
             .setContentText(if (r.dose.isBlank()) tr("Dodirni „Uzeo sam“ da se upiše u Dnevnik.", "Tap “Taken” to log it in your Journal.") else tr("Doza: ${r.dose}", "Dose: ${r.dose}"))
             .setContentIntent(open)
-            .addAction(0, tr("Uzeo sam ✓", "Taken ✓"), taken)
+            .addAction(0, tr("Uzeo sam", "Taken"), taken)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
