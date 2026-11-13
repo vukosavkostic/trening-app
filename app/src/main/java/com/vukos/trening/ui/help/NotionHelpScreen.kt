@@ -544,18 +544,14 @@ private fun HelpButton(text: String, onClick: () -> Unit, primary: Boolean = fal
 private fun PromptBox(prompt: String, collapsed: Boolean = true) {
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(!collapsed) }
     LaunchedEffect(copied) { if (copied) { delay(2000); copied = false } }
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(tr("Prompt za AI", "Prompt for AI"), style = HelpH2)
-        Text(
-            prompt, style = HelpSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-            maxLines = if (expanded) Int.MAX_VALUE else 5, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-        )
-        HelpButton(if (expanded) tr("Prikaži manje", "Show less") else tr("Prikaži više", "Show more"), { expanded = !expanded })
+        // Ceo prompt je odmah vidljiv.
+        Text(prompt, style = HelpSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f))
         if (copied) StatusOk(tr("Kopirano. Nalepi ga u AI chat.", "Copied. Paste it into your AI chat."))
         else HelpButton(tr("Kopiraj prompt", "Copy prompt"), { clipboard.setText(AnnotatedString(prompt)); copied = true }, primary = true, icon = Icons.Filled.ContentCopy)
     }

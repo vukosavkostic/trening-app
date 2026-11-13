@@ -387,10 +387,15 @@ fun SettingsScreen(
         }
         com.vukos.trening.ui.common.GroupHeader(tr("Pomoć", "Help"))
         com.vukos.trening.ui.common.SettingsGroup {
-            com.vukos.trening.ui.common.SettingsRow(tr("Uputstvo za Notion", "Notion guide"), onClick = onHelp)
-            com.vukos.trening.ui.common.SettingsRow(tr("Verzija", "Version"), com.vukos.trening.BuildConfig.VERSION_NAME, divider = false)
+            com.vukos.trening.ui.common.SettingsRow(tr("Uputstvo za Notion", "Notion guide"), onClick = onHelp, divider = false)
         }
-        Spacer(Modifier.height(16.dp))
+        // Verzija aplikacije na dnu.
+        Text(
+            "Trening · ${tr("verzija", "version")} ${com.vukos.trening.BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 16.dp),
+        )
     }
 
     if (langSheet) androidx.compose.material3.ModalBottomSheet(
