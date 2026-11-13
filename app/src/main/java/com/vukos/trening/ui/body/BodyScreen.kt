@@ -117,9 +117,10 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                             if (vals.size >= 2) {
                                 val d = last - vals.first()
                                 Text(
-                                    (if (d > 0.04) "+" else if (d < -0.04) "−" else "") + fmtNum(kotlin.math.abs(d)) + " $unit  ",
+                                    (if (d > 0.04) "+" else if (d < -0.04) "−" else "") + fmtNum(kotlin.math.abs(d)) + " $unit",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                Spacer(Modifier.width(16.dp))
                             }
                             Text("${fmtNum(last)} $unit", style = MaterialTheme.typography.titleSmall)
                         }
@@ -180,10 +181,13 @@ private fun CurrentWeightCard(s: BodyStats, onOpenChart: () -> Unit) {
     AppCard(onClick = onOpenChart, padding = PaddingValues(24.dp)) {
         Text(tr("Trenutna kilaža", "Current weight"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(s.current!!.kg().removeSuffix(" kg"), style = MaterialTheme.typography.displaySmall)
-            Text(" kg", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 4.dp))
+        // Broj i "kg" stoje na istoj osnovnoj liniji, a cip je vertikalno centriran u odnosu na red.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(s.current!!.kg().removeSuffix(" kg"), style = MaterialTheme.typography.displaySmall)
+                Text(" kg", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
             Spacer(Modifier.weight(1f))
             s.lastChange?.let { Chip(it.signed() + tr(" od prošlog", " since last")) }
         }

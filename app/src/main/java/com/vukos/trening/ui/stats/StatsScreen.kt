@@ -185,8 +185,8 @@ fun StatsScreen(onBack: () -> Unit) {
                             goal = null,
                             stats = listOf(
                                 "$total" to tr("treninga", "workouts"),
-                                "${values.count { it > 0 }}" to tr("dana sa treningom", "active days"),
-                                "$total/$goal" to tr("nedeljni cilj", "weekly goal"),
+                                "${values.count { it > 0 }}" to tr("dana", "days"),
+                                "$total/$goal" to tr("cilj", "goal"),
                             ),
                         )
                     }
@@ -196,6 +196,7 @@ fun StatsScreen(onBack: () -> Unit) {
                         val values = weeks.map { w -> dates.count { !it.isBefore(w) && !it.isAfter(w.plusDays(6)) } }
                         val cur = weeks.indexOf(TrainingStats.weekStart(today))
                         val closed = weeks.indices.filter { weeks[it].plusDays(6).isBefore(today) }.map { values[it] }
+                        val elapsed = weeks.indices.filter { !weeks[it].isAfter(today) }.map { values[it] }
                         ActivityChart(
                             title = tr("Treninzi po nedeljama", "Workouts by week"),
                             values = values,
@@ -204,16 +205,18 @@ fun StatsScreen(onBack: () -> Unit) {
                             highlight = cur,
                             goal = goal,
                             stats = listOf(
-                                fmt1(if (closed.isEmpty()) 0.0 else closed.average()) to tr("prosek nedeljno", "weekly average"),
-                                "${values.maxOrNull() ?: 0}" to tr("najviše", "best week"),
-                                "${closed.count { it >= goal }}/${closed.size}" to tr("nedelja sa ciljem", "weeks on goal"),
+                                fmt1(if (elapsed.isEmpty()) 0.0 else elapsed.average()) to tr("prosek", "average"),
+                                "${values.maxOrNull() ?: 0}" to tr("najviše", "best"),
+                                "${closed.count { it >= goal }}/${closed.size}" to tr("sa ciljem", "on goal"),
                             ),
                         )
                     }
                     Period.YEAR -> {
                         val data = TrainingStats.monthlyCounts(dates, from.year)
                         val values = data.map { it.second }
-                        val closed = data.filter { it.first.atEndOfMonth().isBefore(today) }.map { it.second }
+                        val firstActive = values.indexOfFirst { it > 0 }
+                        val lastIdx = if (from.year == today.year) today.monthValue - 1 else 11
+                        val elapsed = if (firstActive < 0 || firstActive > lastIdx) emptyList() else values.subList(firstActive, lastIdx + 1)
                         ActivityChart(
                             title = tr("Treninzi po mesecima", "Workouts by month"),
                             values = values,
@@ -223,8 +226,8 @@ fun StatsScreen(onBack: () -> Unit) {
                             goal = null,
                             stats = listOf(
                                 "${values.sum()}" to tr("ukupno", "total"),
-                                fmt1(if (closed.isEmpty()) 0.0 else closed.average()) to tr("prosek mesečno", "monthly average"),
-                                "${values.maxOrNull() ?: 0}" to tr("najviše", "best month"),
+                                fmt1(if (elapsed.isEmpty()) 0.0 else elapsed.average()) to tr("prosek", "average"),
+                                "${values.maxOrNull() ?: 0}" to tr("najviše", "best"),
                             ),
                         )
                     }
@@ -313,7 +316,7 @@ private fun ActivityChart(
     AppCard {
         Text(title, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
-        Row { stats.forEach { (v, l) -> MiniStat(v, l, Modifier.weight(1f)) } }
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { stats.forEach { (v, l) -> MiniStat(v, l, Modifier.weight(1f)) } }
         Spacer(Modifier.height(20.dp))
         if (total == 0) {
             Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh),
