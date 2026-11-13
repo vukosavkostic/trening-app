@@ -1,5 +1,7 @@
 package com.vukos.trening.reminders
 
+import com.vukos.trening.i18n.tr
+
 import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
@@ -110,7 +112,7 @@ object SupplementReminders {
     )
 
     fun createChannel(context: Context) {
-        val ch = NotificationChannel(CHANNEL, "Suplementi", NotificationManager.IMPORTANCE_DEFAULT)
+        val ch = NotificationChannel(CHANNEL, tr("Suplementi", "Supplements"), NotificationManager.IMPORTANCE_DEFAULT)
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
     }
 
@@ -131,10 +133,10 @@ object SupplementReminders {
         )
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Vreme je za: ${r.name}")
-            .setContentText(if (r.dose.isBlank()) "Dodirni „Uzeo sam“ da se upiše u Dnevnik." else "Doza: ${r.dose}")
+            .setContentTitle(tr("Vreme je za: ${r.name}", "Time for: ${r.name}"))
+            .setContentText(if (r.dose.isBlank()) tr("Dodirni „Uzeo sam“ da se upiše u Dnevnik.", "Tap “Taken” to log it in your Journal.") else tr("Doza: ${r.dose}", "Dose: ${r.dose}"))
             .setContentIntent(open)
-            .addAction(0, "Uzeo sam ✓", taken)
+            .addAction(0, tr("Uzeo sam ✓", "Taken ✓"), taken)
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(notifId(r.id), n)

@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.routines
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -73,9 +75,9 @@ fun RoutinesScreen(
 
     Scaffold(
         topBar = {
-            TabTopBar("Trening") {
-                IconButton(onClick = onNotion) { Icon(Icons.Filled.CloudDownload, "Planovi iz Notiona") }
-                IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
+            TabTopBar(tr("Trening", "Workout")) {
+                IconButton(onClick = onNotion) { Icon(Icons.Filled.CloudDownload, tr("Planovi iz Notiona", "Plans from Notion")) }
+                IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, tr("Podešavanja", "Settings")) }
             }
         },
     ) { pad ->
@@ -94,12 +96,12 @@ fun RoutinesScreen(
                 AppCard(onClick = onOpenStats, padding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Ova nedelja", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("$thisWeek / $goal treninga", style = MaterialTheme.typography.titleLarge)
+                            Text(tr("Ova nedelja", "This week"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("$thisWeek / $goal treninga", "$thisWeek / $goal workouts"), style = MaterialTheme.typography.titleLarge)
                         }
-                        if (streak > 0) Chip("🔥 $streak ${if (streak == 1) "nedelja" else "nedelja"} zaredom",
+                        if (streak > 0) Chip(tr("🔥 $streak ${if (streak == 1) "nedelja" else "nedelja"} zaredom", "🔥 $streak ${if (streak == 1) "week" else "weeks"} in a row"),
                             color = MaterialTheme.colorScheme.onPrimaryContainer, bg = MaterialTheme.colorScheme.primaryContainer)
-                        Icon(Icons.Filled.ChevronRight, "Statistika", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Filled.ChevronRight, tr("Statistika", "Statistics"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(12.dp))
                     com.vukos.trening.ui.stats.WeekProgress(thisWeek, goal)
@@ -111,8 +113,8 @@ fun RoutinesScreen(
                         IconBadge(Icons.Filled.Bolt)
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Slobodan trening", style = MaterialTheme.typography.titleMedium)
-                            Text("Bez plana, vežbe dodaješ usput", style = MaterialTheme.typography.bodySmall,
+                            Text(tr("Slobodan trening", "Free workout"), style = MaterialTheme.typography.titleMedium)
+                            Text(tr("Bez plana, vežbe dodaješ usput", "No plan, add exercises as you go"), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -120,18 +122,18 @@ fun RoutinesScreen(
                 }
             }
             item {
-                SectionTitle("Moji planovi") {
-                    TextButton(onClick = onNew) { Icon(Icons.Filled.Add, null, Modifier.size(18.dp)); Text(" Novi plan") }
+                SectionTitle(tr("Moji planovi", "My plans")) {
+                    TextButton(onClick = onNew) { Icon(Icons.Filled.Add, null, Modifier.size(18.dp)); Text(tr(" Novi plan", " New plan")) }
                 }
             }
             if (routines.isEmpty()) item {
                 EmptyState(
-                    Icons.Filled.FitnessCenter, "Još nemaš planova",
-                    "Napravi plan sa vežbama koje radiš, ili ga uvezi iz Notiona. Plan možeš da započneš bilo kog dana.",
+                    Icons.Filled.FitnessCenter, tr("Još nemaš planova", "No plans yet"),
+                    tr("Napravi plan sa vežbama koje radiš, ili ga uvezi iz Notiona. Plan možeš da započneš bilo kog dana.", "Create a plan with the exercises you do, or import one from Notion. You can start a plan on any day."),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PrimaryPill("Napravi plan", onNew, Modifier.fillMaxWidth(), Icons.Filled.Add)
-                        OutlinePill("Uvezi iz Notiona", onNotion, Modifier.fillMaxWidth(), Icons.Filled.CloudDownload)
+                        PrimaryPill(tr("Napravi plan", "Create plan"), onNew, Modifier.fillMaxWidth(), Icons.Filled.Add)
+                        OutlinePill(tr("Uvezi iz Notiona", "Import from Notion"), onNotion, Modifier.fillMaxWidth(), Icons.Filled.CloudDownload)
                     }
                 }
             }
@@ -154,15 +156,15 @@ private fun RoutineCard(r: Routine, exerciseNames: List<String>, lastDone: Long?
                 Spacer(Modifier.height(2.dp))
                 Text(
                     listOfNotNull(
-                        "${exerciseNames.size} ${if (exerciseNames.size == 1) "vežba" else "vežbi"}",
-                        lastDone?.let { "poslednji put " + java.time.Instant.ofEpochMilli(it)
-                            .atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative() } ?: "još nije rađen",
+                        tr("${exerciseNames.size} ${if (exerciseNames.size == 1) "vežba" else "vežbi"}", "${exerciseNames.size} ${if (exerciseNames.size == 1) "exercise" else "exercises"}"),
+                        lastDone?.let { tr("poslednji put ", "last done ") + java.time.Instant.ofEpochMilli(it)
+                            .atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative() } ?: tr("još nije rađen", "not done yet"),
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (r.notionPageId != null) Chip("Notion")
-            Icon(Icons.Filled.Edit, "Izmeni plan", tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            Icon(Icons.Filled.Edit, tr("Izmeni plan", "Edit plan"), tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 8.dp).size(20.dp))
         }
         if (exerciseNames.isNotEmpty()) Text(
@@ -170,7 +172,7 @@ private fun RoutineCard(r: Routine, exerciseNames: List<String>, lastDone: Long?
             style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp),
         )
         Spacer(Modifier.height(16.dp))
-        if (exerciseNames.isEmpty()) OutlinePill("Dodaj vežbe u plan", onEdit, Modifier.fillMaxWidth(), Icons.Filled.Add)
-        else PrimaryPill("Započni trening", onStart, Modifier.fillMaxWidth(), Icons.Filled.PlayArrow)
+        if (exerciseNames.isEmpty()) OutlinePill(tr("Dodaj vežbe u plan", "Add exercises to the plan"), onEdit, Modifier.fillMaxWidth(), Icons.Filled.Add)
+        else PrimaryPill(tr("Započni trening", "Start workout"), onStart, Modifier.fillMaxWidth(), Icons.Filled.PlayArrow)
     }
 }

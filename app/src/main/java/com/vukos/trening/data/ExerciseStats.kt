@@ -1,15 +1,19 @@
 package com.vukos.trening.data
 
+import com.vukos.trening.i18n.tr
+
 import java.time.LocalDate
 import java.time.ZoneId
 
 /** Metrike za grafikon napretka na vezbi (kao u Hevy-ju). */
-enum class ExerciseMetric(val label: String, val unit: String) {
-    HEAVIEST("Najveća težina", "kg"),
-    ONE_RM("Procenjeni 1RM", "kg"),
-    BEST_SET_VOLUME("Najbolji set", "kg"),
-    SESSION_VOLUME("Volumen treninga", "kg"),
-    TOTAL_REPS("Ukupno ponavljanja", ""),
+enum class ExerciseMetric(private val sr: String, private val en: String, val unit: String) {
+    HEAVIEST("Najveća težina", "Heaviest weight", "kg"),
+    ONE_RM("Procenjeni 1RM", "Estimated 1RM", "kg"),
+    BEST_SET_VOLUME("Najbolji set", "Best set", "kg"),
+    SESSION_VOLUME("Volumen treninga", "Session volume", "kg"),
+    TOTAL_REPS("Ukupno ponavljanja", "Total reps", "");
+
+    val label: String get() = tr(sr, en)
 }
 
 /** Jedan trening na kome je radjena vezba. */
@@ -88,11 +92,11 @@ object ExerciseStats {
             if (before.isEmpty()) return@flatMap emptyList()
             buildList {
                 val heavy = before.maxOf { it.heaviest }
-                if (now.heaviest > heavy + 1e-9) add(PrHit(exId, "Najveća težina", now.heaviest, heavy))
+                if (now.heaviest > heavy + 1e-9) add(PrHit(exId, ExerciseMetric.HEAVIEST.label, now.heaviest, heavy))
                 val orm = before.maxOf { it.oneRm }
-                if (now.oneRm > orm + 1e-9) add(PrHit(exId, "Procenjeni 1RM", now.oneRm, orm))
+                if (now.oneRm > orm + 1e-9) add(PrHit(exId, ExerciseMetric.ONE_RM.label, now.oneRm, orm))
                 val bs = before.maxOf { it.bestSetVolume }
-                if (now.bestSetVolume > bs + 1e-9) add(PrHit(exId, "Najbolji set", now.bestSetVolume, bs))
+                if (now.bestSetVolume > bs + 1e-9) add(PrHit(exId, ExerciseMetric.BEST_SET_VOLUME.label, now.bestSetVolume, bs))
             }
         }
     }

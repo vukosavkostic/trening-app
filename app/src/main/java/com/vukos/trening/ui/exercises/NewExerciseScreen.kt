@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.exercises
 
+import com.vukos.trening.i18n.tr
+
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -71,8 +73,8 @@ fun NewExerciseScreen(onDone: (String?) -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Nova vežba") },
-            navigationIcon = { IconButton(onClick = { onDone(null) }) { Icon(Icons.Filled.Close, "Otkaži") } },
+            title = { Text(tr("Nova vežba", "New exercise")) },
+            navigationIcon = { IconButton(onClick = { onDone(null) }) { Icon(Icons.Filled.Close, tr("Otkaži", "Cancel")) } },
             actions = {
                 TextButton(enabled = name.isNotBlank(), onClick = {
                     scope.launch {
@@ -86,7 +88,7 @@ fun NewExerciseScreen(onDone: (String?) -> Unit) {
                         )
                         onDone(id)
                     }
-                }) { Text("Sačuvaj") }
+                }) { Text(tr("Sačuvaj", "Save")) }
             },
         )
     }) { pad ->
@@ -96,21 +98,21 @@ fun NewExerciseScreen(onDone: (String?) -> Unit) {
         ) {
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
-                label = { Text("Naziv") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                label = { Text(tr("Naziv", "Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
-            Text("Glavni mišić", style = MaterialTheme.typography.titleSmall)
+            Text(tr("Glavni mišić", "Primary muscle"), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 muscleLabels.forEach { (key, label) ->
                     FilterChip(selected = muscle == key, onClick = { muscle = key }, label = { Text(label) })
                 }
             }
-            Text("Oprema", style = MaterialTheme.typography.titleSmall)
+            Text(tr("Oprema", "Equipment"), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 equipmentLabels.forEach { (key, label) ->
                     FilterChip(selected = equipment == key, onClick = { equipment = key }, label = { Text(label) })
                 }
             }
-            Text("Slika (opciono)", style = MaterialTheme.typography.titleSmall)
+            Text(tr("Slika (opciono)", "Image (optional)"), style = MaterialTheme.typography.titleSmall)
             Box(
                 Modifier.size(140.dp).clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -119,7 +121,7 @@ fun NewExerciseScreen(onDone: (String?) -> Unit) {
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                if (photo == null) Icon(Icons.Filled.AddPhotoAlternate, "Izaberi sliku", Modifier.size(40.dp))
+                if (photo == null) Icon(Icons.Filled.AddPhotoAlternate, tr("Izaberi sliku", "Choose image"), Modifier.size(40.dp))
                 else AsyncImage(photo, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             }
         }

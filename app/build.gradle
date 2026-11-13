@@ -15,8 +15,8 @@ android {
         applicationId 'com.vukos.trening'
         minSdk 28   // ImageDecoder (EXIF rotacija slika)
         targetSdk 34
-        versionCode 6
-        versionName '0.6'
+        versionCode 7
+        versionName '0.7'
     }
     // Release kljuc i lozinka su van repozitorijuma: ~/.gradle/gradle.properties
     // (TRENING_STORE_FILE, TRENING_STORE_PASSWORD). Bez njih se koristi debug kljuc.
@@ -43,7 +43,7 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = '17' }
-    buildFeatures { compose true }
+    buildFeatures { compose true; buildConfig true }
 }
 
 ksp { arg('room.schemaLocation', "$projectDir/schemas") }

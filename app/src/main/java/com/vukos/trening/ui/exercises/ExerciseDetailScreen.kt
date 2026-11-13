@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.exercises
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,16 +83,16 @@ fun ExerciseDetailScreen(id: String, onBack: () -> Unit, onOpenWorkout: (String)
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(ex?.name ?: "", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
             actions = {
-                if (ex?.isCustom == true) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Obriši") }
+                if (ex?.isCustom == true) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, tr("Obriši", "Delete")) }
             },
         )
     }) { pad ->
         val e = ex ?: return@Scaffold
         Column(Modifier.padding(pad).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
-                listOf("Pregled", "Istorija", "Uputstvo").forEachIndexed { i, t ->
+                listOf(tr("Pregled", "Overview"), tr("Istorija", "History"), tr("Uputstvo", "Guide")).forEachIndexed { i, t ->
                     Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) })
                 }
             }
@@ -104,12 +106,12 @@ fun ExerciseDetailScreen(id: String, onBack: () -> Unit, onOpenWorkout: (String)
 
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Obrisati vežbu?") },
-        text = { Text("Vežba nestaje iz liste. Stari treninzi sa njom ostaju sačuvani.") },
+        title = { Text(tr("Obrisati vežbu?", "Delete exercise?")) },
+        text = { Text(tr("Vežba nestaje iz liste. Stari treninzi sa njom ostaju sačuvani.", "The exercise disappears from the list. Past workouts with it are kept.")) },
         confirmButton = {
-            TextButton(onClick = { confirmDelete = false; scope.launch { db.exercises().softDeleteCustom(id); onBack() } }) { Text("Obriši") }
+            TextButton(onClick = { confirmDelete = false; scope.launch { db.exercises().softDeleteCustom(id); onBack() } }) { Text(tr("Obriši", "Delete")) }
         },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Otkaži") } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Otkaži", "Cancel")) } },
     )
 }
 
@@ -125,7 +127,7 @@ private fun Overview(e: Exercise, sessions: List<ExerciseSession>) {
         item {
             Box(Modifier.fillMaxWidth().aspectRatio(2f).background(Color.White), contentAlignment = Alignment.Center) {
                 val url = e.thumbnailUrl
-                if (url == null) Text("Nema slike", color = Color.Gray)
+                if (url == null) Text(tr("Nema slike", "No image"), color = Color.Gray)
                 else AsyncImage(url, e.name, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
             }
         }
@@ -134,7 +136,7 @@ private fun Overview(e: Exercise, sessions: List<ExerciseSession>) {
                 Text(e.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
                     listOfNotNull(
-                        "Glavni: ${muscleLabels[e.primaryMuscle] ?: e.primaryMuscle.ifBlank { "—" }}",
+                        tr("Glavni: ${muscleLabels[e.primaryMuscle] ?: e.primaryMuscle.ifBlank { "—" }}", "Primary: ${muscleLabels[e.primaryMuscle] ?: e.primaryMuscle.ifBlank { "—" }}"),
                         equipmentLabels[e.equipment],
                     ).joinToString(" · "),
                     color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
@@ -143,7 +145,7 @@ private fun Overview(e: Exercise, sessions: List<ExerciseSession>) {
         }
         if (sessions.isEmpty()) item {
             Text(
-                "Još nema urađenih setova za ovu vežbu. Grafikon i rekordi se pojavljuju posle prvog treninga.",
+                tr("Još nema urađenih setova za ovu vežbu. Grafikon i rekordi se pojavljuju posle prvog treninga.", "No sets logged for this exercise yet. The chart and records appear after your first workout."),
                 Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
@@ -160,7 +162,7 @@ private fun Overview(e: Exercise, sessions: List<ExerciseSession>) {
                 }
             }
             item {
-                if (shown.isEmpty()) Text("Nema podataka u izabranom periodu.", Modifier.padding(16.dp),
+                if (shown.isEmpty()) Text(tr("Nema podataka u izabranom periodu.", "No data in the selected period."), Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else LineChart(shown.map { it.date to it.value(metric) }, fmt, Modifier.padding(horizontal = 16.dp))
             }
@@ -184,13 +186,13 @@ private fun Records(sessions: List<ExerciseSession>) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary)
-            Text("  Lični rekordi", fontWeight = FontWeight.SemiBold)
+            Text(tr("  Lični rekordi", "  Personal records"), fontWeight = FontWeight.SemiBold)
         }
-        Rec("Najveća težina", r.heaviest?.let { "${WorkoutMath.fmtKg(it.weightKg)} kg × ${it.reps}" })
-        Rec("Procenjeni 1RM", "${WorkoutMath.fmtKg(Math.round(r.bestOneRm * 10) / 10.0)} kg")
-        Rec("Najbolji set (kg × ponav.)", r.bestSet?.let { "${WorkoutMath.fmtKg(it.weightKg)} kg × ${it.reps}" })
-        Rec("Najviše ponavljanja", r.mostReps?.let { "${it.reps} × ${WorkoutMath.fmtKg(it.weightKg)} kg" })
-        Rec("Broj treninga", "${r.sessions}")
+        Rec(tr("Najveća težina", "Heaviest weight"), r.heaviest?.let { "${WorkoutMath.fmtKg(it.weightKg)} kg × ${it.reps}" })
+        Rec(tr("Procenjeni 1RM", "Estimated 1RM"), "${WorkoutMath.fmtKg(Math.round(r.bestOneRm * 10) / 10.0)} kg")
+        Rec(tr("Najbolji set (kg × ponav.)", "Best set (kg × reps)"), r.bestSet?.let { "${WorkoutMath.fmtKg(it.weightKg)} kg × ${it.reps}" })
+        Rec(tr("Najviše ponavljanja", "Most reps"), r.mostReps?.let { "${it.reps} × ${WorkoutMath.fmtKg(it.weightKg)} kg" })
+        Rec(tr("Broj treninga", "Workouts"), "${r.sessions}")
     }
 }
 
@@ -205,7 +207,7 @@ private fun Rec(label: String, value: String?) {
 @Composable
 private fun History(sessions: List<ExerciseSession>, onOpenWorkout: (String) -> Unit) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (sessions.isEmpty()) item { Text("Nema istorije.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (sessions.isEmpty()) item { Text(tr("Nema istorije.", "No history."), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(sessions.reversed(), key = { it.workoutId }) { s ->
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
@@ -231,7 +233,7 @@ private fun History(sessions: List<ExerciseSession>, onOpenWorkout: (String) -> 
 @Composable
 private fun HowTo(e: Exercise) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (e.instructions.isBlank()) item { Text("Nema uputstva.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (e.instructions.isBlank()) item { Text(tr("Nema uputstva.", "No instructions."), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         else items(e.instructions.split('\n').withIndex().toList()) { (i, step) ->
             Row {
                 Text("${i + 1}.", Modifier.width(24.dp), color = MaterialTheme.colorScheme.primary)
@@ -239,7 +241,7 @@ private fun HowTo(e: Exercise) {
             }
         }
         if (e.secondaryList.isNotEmpty()) item {
-            Text("Pomoćni mišići: " + e.secondaryList.joinToString(", ") { muscleLabels[it] ?: it },
+            Text(tr("Pomoćni mišići: ", "Secondary muscles: ") + e.secondaryList.joinToString(", ") { muscleLabels[it] ?: it },
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
         }
     }

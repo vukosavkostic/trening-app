@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.journal
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,8 +62,8 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Podsetnici za suplemente", style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
+            title = { Text(tr("Podsetnici za suplemente", "Supplement reminders"), style = MaterialTheme.typography.titleLarge) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
         )
     }) { pad ->
         LazyColumn(
@@ -70,9 +72,9 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (list.isEmpty()) item {
-                EmptyState(Icons.Filled.NotificationsActive, "Bez podsetnika",
-                    "Dodaj podsetnik i svaki dan u zadato vreme stiže notifikacija. Dugme „Uzeo sam“ odmah upisuje suplement u Dnevnik. " +
-                        "Ako si ga taj dan već uneo, podsetnik se preskače.")
+                EmptyState(Icons.Filled.NotificationsActive, tr("Bez podsetnika", "No reminders"),
+                    tr("Dodaj podsetnik i svaki dan u zadato vreme stiže notifikacija. Dugme „Uzeo sam“ odmah upisuje suplement u Dnevnik. ", "Add a reminder and you get a notification every day at that time. The “Taken” button logs the supplement in your Journal right away. ") +
+                        tr("Ako si ga taj dan već uneo, podsetnik se preskače.", "If you already logged it that day, the reminder is skipped."))
             }
             items(list, key = { it.id }) { r ->
                 AppCard(onClick = { editing = r }, padding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)) {
@@ -84,13 +86,13 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
                             Text(r.name, style = MaterialTheme.typography.titleMedium)
                             if (r.dose.isNotBlank()) Text(r.dose, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("svaki dan", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("svaki dan", "every day"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(checked = r.enabled, onCheckedChange = { on -> save(list.map { if (it.id == r.id) it.copy(enabled = on) else it }) })
                     }
                 }
             }
-            item { PrimaryPill("Dodaj podsetnik", { adding = true }, Modifier.fillMaxWidth().padding(top = 8.dp), Icons.Filled.Add) }
+            item { PrimaryPill(tr("Dodaj podsetnik", "Add reminder"), { adding = true }, Modifier.fillMaxWidth().padding(top = 8.dp), Icons.Filled.Add) }
         }
     }
 
@@ -113,15 +115,15 @@ private fun ReminderDialog(initial: SuppReminder?, onDismiss: () -> Unit, onSave
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(picked?.name ?: "Koji suplement?") },
+        title = { Text(picked?.name ?: tr("Koji suplement?", "Which supplement?")) },
         text = {
             val p = picked
             if (p == null) SupplementPicker(query, { query = it }, history) { d -> picked = d; dose = d.dose }
             else Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 TimePicker(time)
-                OutlinedTextField(dose, { dose = it.take(30) }, label = { Text("Doza") }, singleLine = true,
+                OutlinedTextField(dose, { dose = it.take(30) }, label = { Text(tr("Doza", "Dose")) }, singleLine = true,
                     shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
-                if (initial == null) TextButton(onClick = { picked = null }) { Text("← Izaberi drugi suplement") }
+                if (initial == null) TextButton(onClick = { picked = null }) { Text(tr("← Izaberi drugi suplement", "← Choose another supplement")) }
             }
         },
         confirmButton = {
@@ -131,14 +133,14 @@ private fun ReminderDialog(initial: SuppReminder?, onDismiss: () -> Unit, onSave
                     name = d.name, dose = dose.trim(), hour = time.hour, minute = time.minute, enabled = true,
                     kcal = d.kcal, proteinG = d.proteinG,
                 ))
-            }) { Text("Sačuvaj") }
+            }) { Text(tr("Sačuvaj", "Save")) }
         },
         dismissButton = {
             Row {
                 if (onDelete != null) TextButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, null); Text(" Obriši", color = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Filled.Delete, null); Text(tr(" Obriši", " Delete"), color = MaterialTheme.colorScheme.error)
                 }
-                TextButton(onClick = onDismiss) { Text("Otkaži") }
+                TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) }
             }
         },
     )

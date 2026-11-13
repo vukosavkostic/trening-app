@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.routines
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -147,13 +149,13 @@ fun RoutineEditScreen(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(if (routineId == null) "Novi plan" else "Izmena plana") },
-            navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Filled.Close, "Zatvori") } },
+            title = { Text(if (routineId == null) tr("Novi plan", "New plan") else tr("Izmena plana", "Edit plan")) },
+            navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Filled.Close, tr("Zatvori", "Close")) } },
             actions = {
-                if (routineId != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Obriši") }
+                if (routineId != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, tr("Obriši", "Delete")) }
                 TextButton(enabled = vm.loaded && vm.name.isNotBlank(), onClick = {
                     scope.launch { vm.save(); onDone() }
-                }) { Text("Sačuvaj") }
+                }) { Text(tr("Sačuvaj", "Save")) }
             },
         )
     }) { pad ->
@@ -164,12 +166,12 @@ fun RoutineEditScreen(
         ) {
             item {
                 OutlinedTextField(
-                    value = vm.name, onValueChange = { vm.name = it }, label = { Text("Naziv plana") }, placeholder = { Text("npr. Push, Pull, Noge, Full Body") },
+                    value = vm.name, onValueChange = { vm.name = it }, label = { Text(tr("Naziv plana", "Plan name")) }, placeholder = { Text(tr("npr. Push, Pull, Noge, Full Body", "e.g. Push, Pull, Legs, Full Body")) },
                     singleLine = true, modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.titleLarge, shape = RoundedCornerShape(16.dp),
                 )
             }
-            item { Text("Vežbe (${vm.items.size})", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 8.dp)) }
+            item { Text(tr("Vežbe (${vm.items.size})", "Exercises (${vm.items.size})"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 8.dp)) }
             itemsIndexed(vm.items, key = { i, d -> "$i-${d.exerciseId}" }) { i, d ->
                 val ex = byId[d.exerciseId]
                 Column(
@@ -181,35 +183,35 @@ fun RoutineEditScreen(
                         Spacer(Modifier.width(12.dp))
                         Text(ex?.name ?: "?", style = MaterialTheme.typography.titleMedium, maxLines = 2,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { vm.move(i, -1) }, enabled = i > 0) { Icon(Icons.Filled.KeyboardArrowUp, "Gore") }
-                        IconButton(onClick = { vm.move(i, 1) }, enabled = i < vm.items.lastIndex) { Icon(Icons.Filled.KeyboardArrowDown, "Dole") }
-                        IconButton(onClick = { vm.items.removeAt(i) }) { Icon(Icons.Filled.Close, "Ukloni") }
+                        IconButton(onClick = { vm.move(i, -1) }, enabled = i > 0) { Icon(Icons.Filled.KeyboardArrowUp, tr("Gore", "Up")) }
+                        IconButton(onClick = { vm.move(i, 1) }, enabled = i < vm.items.lastIndex) { Icon(Icons.Filled.KeyboardArrowDown, tr("Dole", "Down")) }
+                        IconButton(onClick = { vm.items.removeAt(i) }) { Icon(Icons.Filled.Close, tr("Ukloni", "Remove")) }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Setovi", Modifier.width(56.dp), style = MaterialTheme.typography.bodySmall)
-                        IconButton(onClick = { if (d.sets > 1) vm.items[i] = d.copy(sets = d.sets - 1) }) { Icon(Icons.Filled.Remove, "Manje") }
+                        Text(tr("Setovi", "Sets"), Modifier.width(56.dp), style = MaterialTheme.typography.bodySmall)
+                        IconButton(onClick = { if (d.sets > 1) vm.items[i] = d.copy(sets = d.sets - 1) }) { Icon(Icons.Filled.Remove, tr("Manje", "Fewer")) }
                         Text("${d.sets}", fontWeight = FontWeight.Bold)
-                        IconButton(onClick = { if (d.sets < 20) vm.items[i] = d.copy(sets = d.sets + 1) }) { Icon(Icons.Filled.Add, "Više") }
+                        IconButton(onClick = { if (d.sets < 20) vm.items[i] = d.copy(sets = d.sets + 1) }) { Icon(Icons.Filled.Add, tr("Više", "More")) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SmallNum("Ponav. od", d.repsMin, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMin = it) }
-                        SmallNum("do", d.repsMax, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMax = it) }
-                        SmallNum("kg (opc.)", d.kg, Modifier.weight(1f), decimal = true) { vm.items[i] = d.copy(kg = it) }
+                        SmallNum(tr("Ponav. od", "Reps from"), d.repsMin, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMin = it) }
+                        SmallNum(tr("do", "to"), d.repsMax, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMax = it) }
+                        SmallNum(tr("kg (opc.)", "kg (opt.)"), d.kg, Modifier.weight(1f), decimal = true) { vm.items[i] = d.copy(kg = it) }
                     }
                 }
             }
             item {
-                com.vukos.trening.ui.common.OutlinePill("Dodaj vežbe", onPickExercises, Modifier.fillMaxWidth(), Icons.Filled.Add)
+                com.vukos.trening.ui.common.OutlinePill(tr("Dodaj vežbe", "Add exercises"), onPickExercises, Modifier.fillMaxWidth(), Icons.Filled.Add)
             }
         }
     }
 
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Obrisati plan?") },
-        text = { Text("Odrađeni treninzi po ovom planu ostaju sačuvani.") },
-        confirmButton = { TextButton(onClick = { scope.launch { vm.delete(); confirmDelete = false; onDone() } }) { Text("Obriši") } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Otkaži") } },
+        title = { Text(tr("Obrisati plan?", "Delete plan?")) },
+        text = { Text(tr("Odrađeni treninzi po ovom planu ostaju sačuvani.", "Completed workouts from this plan are kept.")) },
+        confirmButton = { TextButton(onClick = { scope.launch { vm.delete(); confirmDelete = false; onDone() } }) { Text(tr("Obriši", "Delete")) } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Otkaži", "Cancel")) } },
     )
 }
 

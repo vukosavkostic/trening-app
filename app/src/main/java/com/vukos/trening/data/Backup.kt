@@ -1,5 +1,7 @@
 package com.vukos.trening.data
 
+import com.vukos.trening.i18n.tr
+
 import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
@@ -50,7 +52,7 @@ object BackupCrypto {
 
     fun decrypt(data: ByteArray, password: CharArray): ByteArray {
         if (data.size < MAGIC.size + 28 || !data.copyOfRange(0, MAGIC.size).contentEquals(MAGIC))
-            throw BackupException("Ovo nije rezervna kopija Trening aplikacije.")
+            throw BackupException(tr("Ovo nije rezervna kopija Trening aplikacije.", "This is not a Trening app backup."))
         var p = MAGIC.size
         val salt = data.copyOfRange(p, p + 16); p += 16
         val iv = data.copyOfRange(p, p + 12); p += 12
@@ -58,7 +60,7 @@ object BackupCrypto {
         c.init(Cipher.DECRYPT_MODE, key(password, salt), GCMParameterSpec(128, iv))
         c.updateAAD(MAGIC)
         return try { c.doFinal(data, p, data.size - p) } catch (e: AEADBadTagException) {
-            throw BackupException("Pogrešna lozinka (ili je fajl oštećen).")
+            throw BackupException(tr("Pogrešna lozinka (ili je fajl oštećen).", "Wrong password (or the file is damaged)."))
         }
     }
 }
@@ -105,8 +107,8 @@ object Backup {
                 if (ok) entries[name] = zip.readBytes()
             }
         }
-        val dbBytes = entries[DB_ENTRY] ?: throw BackupException("Kopija nema bazu podataka.")
-        if (!String(dbBytes.copyOfRange(0, 15)).startsWith("SQLite format 3")) throw BackupException("Baza u kopiji je oštećena.")
+        val dbBytes = entries[DB_ENTRY] ?: throw BackupException(tr("Kopija nema bazu podataka.", "The backup has no database."))
+        if (!String(dbBytes.copyOfRange(0, 15)).startsWith("SQLite format 3")) throw BackupException(tr("Baza u kopiji je oštećena.", "The database in the backup is damaged."))
 
         TreningApp.instance.db.close()
         val dbFile = context.getDatabasePath(AppDatabase.NAME)

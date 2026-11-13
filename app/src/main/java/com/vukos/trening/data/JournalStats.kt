@@ -33,3 +33,8 @@ object JournalStats {
 
 /** Obroci (isti nazivi kao Meal u Notion bazi Food). */
 val MEALS = listOf("Doručak", "Ručak", "Večera", "Užina")
+
+/** Naziv obroka za prikaz (u bazi i Notionu ostaje srpski naziv). */
+fun mealLabel(meal: String): String = if (!com.vukos.trening.i18n.Lang.en) meal else when (meal) {
+    "Doručak" -> "Breakfast"; "Ručak" -> "Lunch"; "Večera" -> "Dinner"; "Užina" -> "Snack"; "Suplementi" -> "Supplements"; else -> meal
+}

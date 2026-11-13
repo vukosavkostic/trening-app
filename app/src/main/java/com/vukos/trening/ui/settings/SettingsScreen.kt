@@ -1,6 +1,10 @@
 package com.vukos.trening.ui.settings
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import com.vukos.trening.ui.body.srRelative
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,7 +52,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onHelp: () -> Unit = {}) {
+fun NotionSettingsScreen(onBack: () -> Unit, onHelp: () -> Unit) {
     val settings = TreningApp.instance.settings
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -58,44 +62,29 @@ fun SettingsScreen(onBack: () -> Unit, onHelp: () -> Unit = {}) {
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Podešavanja") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
-        )
-    }) { pad ->
-        Column(
-            Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Notion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                androidx.compose.material3.TextButton(onClick = onHelp) {
-                    Icon(Icons.AutoMirrored.Filled.HelpOutline, null, Modifier.padding(end = 6.dp)); Text("Uputstvo")
-                }
-            }
+    SubScreen("Notion", onBack) {
             if (configured) {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer).padding(20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.CheckCircle, null, tint = Color(0xFF43A047))
-                        Text("  Povezano sa stranicom Trening", fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Filled.CheckCircle, null, tint = com.vukos.trening.ui.theme.Success)
+                        Text(tr("  Povezano sa stranicom Trening", "  Connected to the Trening page"), fontWeight = FontWeight.SemiBold)
                     }
-                    Text("Baze: ${dbs.joinToString(", ")}", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Text(tr("Baze: ${dbs.joinToString(", ")}", "Databases: ${dbs.joinToString(", ")}"), color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
                 }
                 SyncSection()
                 OutlinedButton(onClick = {
                     settings.notionToken = null
                     settings.notionDatabases = emptyMap()
-                    configured = false; dbs = emptyList(); message = "Token je uklonjen sa telefona."
-                }) { Text("Ukloni token") }
+                    configured = false; dbs = emptyList(); message = tr("Token je uklonjen sa telefona.", "The token was removed from this phone.")
+                }) { Text(tr("Ukloni token", "Remove token")) }
             } else {
                 Text(
-                    "Nalepi Internal Integration Secret (ntn_…) integracije \"Trening app\". " +
-                        "Stranica Trening mora biti povezana sa integracijom (••• → Connections).",
+                    tr("Nalepi Internal Integration Secret (ntn_…) integracije \"Trening app\". ", "Paste the Internal Integration Secret (ntn_…) of the \"Trening app\" integration. ") +
+                        tr("Stranica Trening mora biti povezana sa integracijom (••• → Connections).", "The Trening page must be connected to the integration (••• → Connections)."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                 )
                 OutlinedTextField(
@@ -114,20 +103,19 @@ fun SettingsScreen(onBack: () -> Unit, onHelp: () -> Unit = {}) {
                                     configured = true; dbs = it.keys.sorted(); token = ""; message = null
                                     com.vukos.trening.notion.SyncWorker.request(ctx, 0)   // posalji sve sto je vec uneto
                                 }
-                                .onFailure { message = "Neuspešno: ${it.message}" }
+                                .onFailure { message = tr("Neuspešno: ${it.message}", "Failed: ${it.message}") }
                             busy = false
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(if (busy) "Povezujem…" else "Sačuvaj i poveži") }
+                ) { Text(if (busy) tr("Povezujem…", "Connecting…") else tr("Sačuvaj i poveži", "Save & connect")) }
             }
             message?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            com.vukos.trening.ui.common.LockNote("Token se čuva šifrovan (Android Keystore) samo na ovom telefonu i ne nalazi se u APK-u.")
-            Spacer(Modifier.height(12.dp))
-            GoalsSection()
-            Spacer(Modifier.height(12.dp))
-            BackupSection()
-        }
+            com.vukos.trening.ui.common.LockNote(tr("Token se čuva šifrovan (Android Keystore) samo na ovom telefonu i ne nalazi se u APK-u.", "The token is stored encrypted (Android Keystore) on this phone only and is not part of the APK."))
+            Spacer(Modifier.height(8.dp))
+            com.vukos.trening.ui.common.SettingsGroup {
+                com.vukos.trening.ui.common.SettingsRow(tr("Uputstvo korak po korak", "Step-by-step guide"), onClick = onHelp, divider = false)
+            }
     }
 }
 
@@ -148,21 +136,21 @@ private fun SyncSection() {
     var restoreMsg by remember { mutableStateOf<String?>(null) }
 
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Sinhronizacija", fontWeight = FontWeight.SemiBold)
+        Text(tr("Sinhronizacija", "Sync"), fontWeight = FontWeight.SemiBold)
         Text(
             when {
-                lastAt == 0L -> "Još nije sinhronizovano."
-                lastError != null -> "Poslednji pokušaj: ${fmtTime(lastAt)} — greška: $lastError"
-                else -> "Poslednja: ${fmtTime(lastAt)}"
+                lastAt == 0L -> tr("Još nije sinhronizovano.", "Not synced yet.")
+                lastError != null -> tr("Poslednji pokušaj: ${fmtTime(lastAt)} — greška: $lastError", "Last attempt: ${fmtTime(lastAt)} — error: $lastError")
+                else -> tr("Poslednja: ${fmtTime(lastAt)}", "Last: ${fmtTime(lastAt)}")
             },
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            if (pending == 0) "Sve je poslato u Notion." else "Čeka slanje: $pending (šalje se automatski kad ima interneta).",
+            if (pending == 0) tr("Sve je poslato u Notion.", "Everything is in Notion.") else tr("Čeka slanje: $pending (šalje se automatski kad ima interneta).", "Waiting to send: $pending (sent automatically when online)."),
             style = MaterialTheme.typography.bodySmall,
         )
         Button(enabled = !syncing, onClick = {
@@ -177,42 +165,71 @@ private fun SyncSection() {
                 }
                 syncing = false
             }
-        }, modifier = Modifier.fillMaxWidth()) { Text(if (syncing) "Šaljem…" else "Sinhronizuj sad") }
+        }, modifier = Modifier.fillMaxWidth()) { Text(if (syncing) tr("Šaljem…", "Sending…") else tr("Sinhronizuj sad", "Sync now")) }
         OutlinedButton(enabled = !restoring, onClick = { confirmRestore = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (restoring) "Vraćam…" else "Vrati podatke iz Notiona")
+            Text(if (restoring) tr("Vraćam…", "Restoring…") else tr("Vrati podatke iz Notiona", "Restore from Notion"))
         }
         restoreMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         Text(
-            "Slike tela se nikad ne šalju u Notion, pa ih vraćanje ne može vratiti.",
+            tr("Slike tela se nikad ne šalju u Notion, pa ih vraćanje ne može vratiti.", "Body photos are never sent to Notion, so restoring cannot bring them back."),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 
     if (confirmRestore) androidx.compose.material3.AlertDialog(
         onDismissRequest = { confirmRestore = false },
-        title = { Text("Vrati iz Notiona?") },
-        text = { Text("Dodaju se planovi, treninzi, merenja i obroci iz Notiona kojih nema na telefonu. Postojeći podaci se ne menjaju.") },
+        title = { Text(tr("Vrati iz Notiona?", "Restore from Notion?")) },
+        text = { Text(tr("Dodaju se planovi, treninzi, merenja i obroci iz Notiona kojih nema na telefonu. Postojeći podaci se ne menjaju.", "Plans, workouts, check-ins and meals from Notion that are missing on this phone are added. Existing data is not changed.")) },
         confirmButton = {
             androidx.compose.material3.TextButton(onClick = {
                 confirmRestore = false; restoring = true; restoreMsg = null
                 scope.launch {
                     runCatching { com.vukos.trening.notion.NotionSync.restore(settings) }
                         .onSuccess { r ->
-                            restoreMsg = "Vraćeno: ${r.routines} planova, ${r.workouts} treninga (${r.sets} setova), " +
-                                "${r.body} merenja, ${r.food} obroka, ${r.exercises} vežbi."
+                            restoreMsg = tr("Vraćeno: ${r.routines} planova, ${r.workouts} treninga (${r.sets} setova), ", "Restored: ${r.routines} plans, ${r.workouts} workouts (${r.sets} sets), ") +
+                                tr("${r.body} merenja, ${r.food} obroka, ${r.exercises} vežbi.", "${r.body} check-ins, ${r.food} meals, ${r.exercises} exercises.")
                         }
-                        .onFailure { restoreMsg = "Neuspešno: ${it.message}" }
+                        .onFailure { restoreMsg = tr("Neuspešno: ${it.message}", "Failed: ${it.message}") }
                     restoring = false
                 }
-            }) { Text("Vrati") }
+            }) { Text(tr("Vrati", "Restore")) }
         },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmRestore = false }) { Text("Otkaži") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmRestore = false }) { Text(tr("Otkaži", "Cancel")) } },
     )
 }
 
 private fun fmtTime(ms: Long): String {
     val t = java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
     return "%d.%d. %02d:%02d".format(t.dayOfMonth, t.monthValue, t.hour, t.minute)
+}
+
+@Composable
+fun GoalsScreen(onBack: () -> Unit) = SubScreen(tr("Ciljevi", "Goals"), onBack) {
+    Text(tr("Dnevni cilj za ishranu i broj treninga nedeljno. Prazno = ne pratiš.", "Daily food goal and workouts per week. Empty = not tracked."),
+        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    GoalsSection()
+}
+
+@Composable
+fun BackupScreen(onBack: () -> Unit) = SubScreen(tr("Rezervna kopija", "Backup"), onBack) { BackupSection() }
+
+/** Ekran podesavanja drugog nivoa: naslov u sredini, strelica nazad, sadrzaj sa skrolom. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SubScreen(title: String, onBack: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Scaffold(topBar = {
+        androidx.compose.material3.CenterAlignedTopAppBar(
+            title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
+            colors = androidx.compose.material3.TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+        )
+    }) { pad ->
+        Column(
+            Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content,
+        )
+    }
 }
 
 /** Ciljevi: kalorije, protein, treninga nedeljno. */
@@ -222,12 +239,9 @@ private fun GoalsSection() {
     var kcal by remember { mutableStateOf(settings.kcalGoal.takeIf { it > 0 }?.toString() ?: "") }
     var prot by remember { mutableStateOf(settings.proteinGoal.takeIf { it > 0 }?.toString() ?: "") }
     var weekly by remember { mutableStateOf(settings.weeklyGoal.toString()) }
-    Text("Ciljevi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        GoalField("kcal", kcal, Modifier.weight(1f)) { kcal = it; settings.kcalGoal = it.toIntOrNull() ?: 0 }
-        GoalField("protein g", prot, Modifier.weight(1f)) { prot = it; settings.proteinGoal = it.toIntOrNull() ?: 0 }
-        GoalField("tren./ned.", weekly, Modifier.weight(1f)) { weekly = it; it.toIntOrNull()?.takeIf { n -> n in 1..14 }?.let { n -> settings.weeklyGoal = n } }
-    }
+    GoalField(tr("Kalorije dnevno (kcal)", "Calories per day (kcal)"), kcal, Modifier.fillMaxWidth()) { kcal = it; settings.kcalGoal = it.toIntOrNull() ?: 0 }
+    GoalField(tr("Protein dnevno (g)", "Protein per day (g)"), prot, Modifier.fillMaxWidth()) { prot = it; settings.proteinGoal = it.toIntOrNull() ?: 0 }
+    GoalField(tr("Treninga nedeljno", "Workouts per week"), weekly, Modifier.fillMaxWidth()) { weekly = it; it.toIntOrNull()?.takeIf { n -> n in 1..14 }?.let { n -> settings.weeklyGoal = n } }
 }
 
 @Composable
@@ -259,25 +273,24 @@ private fun BackupSection() {
     ) { uri -> if (uri != null) { pendingUri = uri; mode = "import" } }
 
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("Rezervna kopija", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
         Text(
-            "Svi podaci i slike tela u jednom fajlu, šifrovanom tvojom lozinkom. Sačuvaj ga na Drive ili računar. " +
-                "Bez lozinke se ne može otvoriti, pa je ne zaboravi.",
+            tr("Svi podaci i slike tela u jednom fajlu, šifrovanom tvojom lozinkom. Sačuvaj ga na Drive ili računar. ", "All your data and body photos in one file, encrypted with your password. Save it to Drive or your computer. ") +
+                tr("Bez lozinke se ne može otvoriti, pa je ne zaboravi.", "It cannot be opened without the password, so do not forget it."),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            if (lastAt == 0L) "Još nije napravljena." else "Poslednja: ${fmtTime(lastAt)}",
+            if (lastAt == 0L) tr("Još nije napravljena.", "Not created yet.") else tr("Poslednja: ${fmtTime(lastAt)}", "Last: ${fmtTime(lastAt)}"),
             style = MaterialTheme.typography.bodySmall,
         )
         Button(enabled = !busy, onClick = {
             create.launch("Trening-backup-${java.time.LocalDate.now()}.trbk")
-        }, modifier = Modifier.fillMaxWidth()) { Text(if (busy && mode == null) "Radim…" else "Napravi kopiju") }
+        }, modifier = Modifier.fillMaxWidth()) { Text(if (busy && mode == null) tr("Radim…", "Working…") else tr("Napravi kopiju", "Create backup")) }
         OutlinedButton(enabled = !busy, onClick = { open.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Vrati iz kopije")
+            Text(tr("Vrati iz kopije", "Restore from backup"))
         }
         msg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
@@ -288,15 +301,15 @@ private fun BackupSection() {
         onDismiss = { mode = null; pendingUri = null },
     ) { password ->
         val m = mode
-        mode = null; pendingUri = null; busy = true; msg = if (m == "export") "Pravim kopiju…" else "Vraćam podatke…"
+        mode = null; pendingUri = null; busy = true; msg = if (m == "export") tr("Pravim kopiju…", "Creating backup…") else tr("Vraćam podatke…", "Restoring data…")
         scope.launch {
             runCatching {
                 if (m == "export") com.vukos.trening.data.Backup.export(context, uri, password)
                 else com.vukos.trening.data.Backup.import(context, uri, password)
             }.onSuccess {
-                if (m == "export") { lastAt = settings.lastBackupAt; msg = "Kopija je sačuvana." }
-                else { msg = "Podaci su vraćeni. Aplikacija se ponovo pokreće…"; com.vukos.trening.data.Backup.restartApp(context) }
-            }.onFailure { msg = "Neuspešno: ${it.message}" }
+                if (m == "export") { lastAt = settings.lastBackupAt; msg = tr("Kopija je sačuvana.", "Backup saved.") }
+                else { msg = tr("Podaci su vraćeni. Aplikacija se ponovo pokreće…", "Data restored. Restarting the app…"); com.vukos.trening.data.Backup.restartApp(context) }
+            }.onFailure { msg = tr("Neuspešno: ${it.message}", "Failed: ${it.message}") }
             java.util.Arrays.fill(password, ' ')
             busy = false
         }
@@ -310,25 +323,94 @@ private fun PasswordDialog(export: Boolean, onDismiss: () -> Unit, onConfirm: (C
     val ok = if (export) p1.length >= 8 && p1 == p2 else p1.isNotEmpty()
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (export) "Lozinka za kopiju" else "Vrati iz kopije?") },
+        title = { Text(if (export) tr("Lozinka za kopiju", "Backup password") else tr("Vrati iz kopije?", "Restore from backup?")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    if (export) "Najmanje 8 znakova. Bez nje se kopija ne može otvoriti."
-                    else "SVI podaci na ovom telefonu biće zamenjeni sadržajem kopije. Notion token ćeš morati ponovo da uneseš.",
+                    if (export) tr("Najmanje 8 znakova. Bez nje se kopija ne može otvoriti.", "At least 8 characters. The backup cannot be opened without it.")
+                    else tr("SVI podaci na ovom telefonu biće zamenjeni sadržajem kopije. Notion token ćeš morati ponovo da uneseš.", "ALL data on this phone will be replaced by the backup. You will need to enter the Notion token again."),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                OutlinedTextField(p1, { p1 = it }, label = { Text("Lozinka") }, singleLine = true,
+                OutlinedTextField(p1, { p1 = it }, label = { Text(tr("Lozinka", "Password")) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-                if (export) OutlinedTextField(p2, { p2 = it }, label = { Text("Ponovi lozinku") }, singleLine = true,
+                if (export) OutlinedTextField(p2, { p2 = it }, label = { Text(tr("Ponovi lozinku", "Repeat password")) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
             androidx.compose.material3.TextButton(enabled = ok, onClick = { onConfirm(p1.toCharArray()) }) {
-                Text(if (export) "Šifruj i sačuvaj" else "Zameni podatke")
+                Text(if (export) tr("Šifruj i sačuvaj", "Encrypt & save") else tr("Zameni podatke", "Replace data"))
             }
         },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Otkaži") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) } },
     )
+}
+
+
+/** Glavna podesavanja: grupe redova kao u modernim aplikacijama; detalji su na podekranima. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onNotion: () -> Unit,
+    onBackup: () -> Unit,
+    onGoals: () -> Unit,
+    onReminders: () -> Unit,
+    onHelp: () -> Unit,
+) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val settings = TreningApp.instance.settings
+    var langSheet by remember { mutableStateOf(false) }
+    val goals = listOfNotNull(
+        settings.kcalGoal.takeIf { it > 0 }?.let { "$it kcal" },
+        settings.proteinGoal.takeIf { it > 0 }?.let { "$it g" },
+        tr("${settings.weeklyGoal}× ned.", "${settings.weeklyGoal}× week"),
+    ).joinToString(" · ")
+    val reminders = remember { com.vukos.trening.reminders.SupplementReminders.load(ctx).count { it.enabled } }
+    val backupAt = settings.lastBackupAt
+
+    SubScreen(tr("Podešavanja", "Settings"), onBack) {
+        com.vukos.trening.ui.common.GroupHeader(tr("Opšte", "General"))
+        com.vukos.trening.ui.common.SettingsGroup {
+            com.vukos.trening.ui.common.SettingsRow(tr("Jezik", "Language"), com.vukos.trening.i18n.Lang.label, onClick = { langSheet = true })
+            com.vukos.trening.ui.common.SettingsRow(tr("Ciljevi", "Goals"), goals, onClick = onGoals)
+            com.vukos.trening.ui.common.SettingsRow(tr("Podsetnici za suplemente", "Supplement reminders"), if (reminders == 0) tr("Isključeno", "Off") else tr("$reminders aktivno", "$reminders active"),
+                onClick = onReminders, divider = false)
+        }
+        com.vukos.trening.ui.common.GroupHeader(tr("Podaci", "Data"))
+        com.vukos.trening.ui.common.SettingsGroup {
+            com.vukos.trening.ui.common.SettingsRow("Notion", if (settings.notionConfigured) tr("Povezano", "Connected") else tr("Nije povezano", "Not connected"), onClick = onNotion)
+            com.vukos.trening.ui.common.SettingsRow(tr("Rezervna kopija", "Backup"),
+                if (backupAt == 0L) tr("Nikad", "Never") else java.time.Instant.ofEpochMilli(backupAt).atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate().let { it.srRelative() },
+                onClick = onBackup, divider = false)
+        }
+        com.vukos.trening.ui.common.GroupHeader(tr("Pomoć", "Help"))
+        com.vukos.trening.ui.common.SettingsGroup {
+            com.vukos.trening.ui.common.SettingsRow(tr("Uputstvo za Notion", "Notion guide"), onClick = onHelp)
+            com.vukos.trening.ui.common.SettingsRow(tr("Verzija", "Version"), com.vukos.trening.BuildConfig.VERSION_NAME, divider = false)
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    if (langSheet) androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { langSheet = false },
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Text(tr("Jezik", "Language"), style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp))
+        listOf("sr" to "Srpski", "en" to "English").forEach { (code, name) ->
+            val sel = com.vukos.trening.i18n.Lang.code == code
+            Row(
+                Modifier.fillMaxWidth().clickable { com.vukos.trening.i18n.Lang.set(ctx, code); langSheet = false }
+                    .padding(horizontal = 24.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
+                    color = if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                androidx.compose.material3.RadioButton(selected = sel, onClick = { com.vukos.trening.i18n.Lang.set(ctx, code); langSheet = false })
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
 }

@@ -1,30 +1,36 @@
 package com.vukos.trening.data
 
+import com.vukos.trening.i18n.tr
+
 /** Grupe misica i opreme za filter-cipove (nazivi na srpskom, vrednosti iz free-exercise-db). */
-enum class MuscleGroup(val label: String, val muscles: Set<String>) {
-    CHEST("Grudi", setOf("chest")),
-    BACK("Leđa", setOf("lats", "middle back", "lower back", "traps")),
-    SHOULDERS("Ramena", setOf("shoulders", "neck")),
-    BICEPS("Biceps", setOf("biceps")),
-    TRICEPS("Triceps", setOf("triceps")),
-    FOREARMS("Podlaktice", setOf("forearms")),
-    LEGS("Noge", setOf("quadriceps", "hamstrings", "calves", "adductors", "abductors")),
-    GLUTES("Gluteus", setOf("glutes")),
-    ABS("Stomak", setOf("abdominals")),
+enum class MuscleGroup(private val sr: String, private val en: String, val muscles: Set<String>) {
+    CHEST("Grudi", "Chest", setOf("chest")),
+    BACK("Leđa", "Back", setOf("lats", "middle back", "lower back", "traps")),
+    SHOULDERS("Ramena", "Shoulders", setOf("shoulders", "neck")),
+    BICEPS("Biceps", "Biceps", setOf("biceps")),
+    TRICEPS("Triceps", "Triceps", setOf("triceps")),
+    FOREARMS("Podlaktice", "Forearms", setOf("forearms")),
+    LEGS("Noge", "Legs", setOf("quadriceps", "hamstrings", "calves", "adductors", "abductors")),
+    GLUTES("Gluteus", "Glutes", setOf("glutes")),
+    ABS("Stomak", "Abs", setOf("abdominals"));
+
+    val label: String get() = tr(sr, en)
 }
 
-enum class EquipmentGroup(val label: String, val values: Set<String>) {
-    BARBELL("Šipka", setOf("barbell", "e-z curl bar")),
-    DUMBBELL("Bučice", setOf("dumbbell")),
-    CABLE("Sajla", setOf("cable")),
-    MACHINE("Mašina", setOf("machine")),
-    BODY("Telo", setOf("body only", "")),
-    KETTLEBELL("Girja", setOf("kettlebells")),
-    OTHER("Ostalo", setOf("bands", "medicine ball", "exercise ball", "foam roll", "other")),
+enum class EquipmentGroup(private val sr: String, private val en: String, val values: Set<String>) {
+    BARBELL("Šipka", "Barbell", setOf("barbell", "e-z curl bar")),
+    DUMBBELL("Bučice", "Dumbbell", setOf("dumbbell")),
+    CABLE("Sajla", "Cable", setOf("cable")),
+    MACHINE("Mašina", "Machine", setOf("machine")),
+    BODY("Telo", "Bodyweight", setOf("body only", "")),
+    KETTLEBELL("Girja", "Kettlebell", setOf("kettlebells")),
+    OTHER("Ostalo", "Other", setOf("bands", "medicine ball", "exercise ball", "foam roll", "other"));
+
+    val label: String get() = tr(sr, en)
 }
 
-/** Srpski nazivi misica za prikaz. */
-val muscleLabels = mapOf(
+/** Srpski nazivi misica (pretraga radi na oba jezika). */
+val muscleLabelsSr = mapOf(
     "chest" to "grudi", "lats" to "latisimus", "middle back" to "srednja leđa",
     "lower back" to "donja leđa", "traps" to "trapez", "shoulders" to "ramena", "neck" to "vrat",
     "biceps" to "biceps", "triceps" to "triceps", "forearms" to "podlaktice",
@@ -33,12 +39,16 @@ val muscleLabels = mapOf(
     "abdominals" to "stomak",
 )
 
-val equipmentLabels = mapOf(
+val equipmentLabelsSr = mapOf(
     "barbell" to "šipka", "e-z curl bar" to "EZ šipka", "dumbbell" to "bučice", "cable" to "sajla",
     "machine" to "mašina", "body only" to "sopstvena težina", "kettlebells" to "girja",
     "bands" to "elastične trake", "medicine ball" to "medicinka", "exercise ball" to "pilates lopta",
     "foam roll" to "foam roller", "other" to "ostalo",
 )
+
+/** Nazivi za prikaz na trenutnom jeziku (engleski = originalni naziv iz baze). */
+val muscleLabels: Map<String, String> get() = if (com.vukos.trening.i18n.Lang.en) muscleLabelsSr.mapValues { it.key } else muscleLabelsSr
+val equipmentLabels: Map<String, String> get() = if (com.vukos.trening.i18n.Lang.en) equipmentLabelsSr.mapValues { it.key } else equipmentLabelsSr
 
 object ExerciseSearch {
     /**
@@ -63,7 +73,7 @@ object ExerciseSearch {
                 if (tokens.isEmpty()) return@filter true
                 val hay = normalize(
                     ex.name + " " + ex.primaryMuscle + " " + ex.equipment + " " +
-                        (muscleLabels[ex.primaryMuscle] ?: "")
+                        (muscleLabelsSr[ex.primaryMuscle] ?: "")
                 )
                 tokens.all { it in hay }
             }

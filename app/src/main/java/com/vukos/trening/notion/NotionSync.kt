@@ -1,5 +1,7 @@
 package com.vukos.trening.notion
 
+import com.vukos.trening.i18n.tr
+
 import androidx.room.withTransaction
 import com.vukos.trening.TreningApp
 import com.vukos.trening.data.BodyEntry
@@ -53,11 +55,11 @@ object NotionSync {
 
     private class Ctx(val c: NotionClient, val dbs: Map<String, String>) {
         var created = 0; var updated = 0; var archived = 0
-        fun dbId(name: String) = dbs[name] ?: throw NotionException(404, "Baza $name nije pronađena na stranici Trening.")
+        fun dbId(name: String) = dbs[name] ?: throw NotionException(404, tr("Baza $name nije pronađena na stranici Trening.", "Database $name not found on the Trening page."))
     }
 
     private fun ctx(settings: Settings): Ctx {
-        val token = settings.notionToken ?: throw NotionException(401, "Notion token nije unet.")
+        val token = settings.notionToken ?: throw NotionException(401, tr("Notion token nije unet.", "Notion token is not set."))
         return Ctx(NotionClient(token), settings.notionDatabases)
     }
 

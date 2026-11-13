@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.workout
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -78,9 +80,9 @@ fun ActiveWorkoutBanner(workout: Workout?, sets: List<WorkoutSet>, onClick: () -
         Icon(Icons.Filled.FitnessCenter, null, tint = MaterialTheme.colorScheme.onPrimary)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("Trening u toku: ${workout.name}", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+            Text(tr("Trening u toku: ${workout.name}", "Workout in progress: ${workout.name}"), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
             Text(
-                "${WorkoutMath.doneCount(sets)} setova · ${WorkoutMath.duration(workout.startedAt, null)} · nastavi",
+                tr("${WorkoutMath.doneCount(sets)} setova · ${WorkoutMath.duration(workout.startedAt, null)} · nastavi", "${WorkoutMath.doneCount(sets)} sets · ${WorkoutMath.duration(workout.startedAt, null)} · continue"),
                 color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -105,7 +107,7 @@ fun WorkoutCard(w: Workout, sets: List<WorkoutSet>, exerciseNames: Map<String, S
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip(WorkoutMath.duration(w.startedAt, w.finishedAt))
             Chip("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg")
-            Chip("${sets.size} setova")
+            Chip(tr("${sets.size} setova", "${sets.size} sets"))
         }
         val groups = sets.groupBy { it.exercisePosition }.toSortedMap().values
         if (groups.isNotEmpty()) Spacer(Modifier.height(12.dp))
@@ -144,8 +146,8 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(w?.name ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
-            actions = { IconButton(onClick = { confirm = true }) { Icon(Icons.Filled.Delete, "Obriši") } },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
+            actions = { IconButton(onClick = { confirm = true }) { Icon(Icons.Filled.Delete, tr("Obriši", "Delete")) } },
         )
     }) { pad ->
         val workout = w ?: return@Scaffold
@@ -157,9 +159,9 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
             item {
                 Text(workout.date().srLong().replaceFirstChar { it.uppercase() }, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile(WorkoutMath.duration(workout.startedAt, workout.finishedAt), "trajanje", Modifier.weight(1f))
-                    StatTile("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", "volumen", Modifier.weight(1f))
-                    StatTile("${sets.size}", "setova", Modifier.weight(1f))
+                    StatTile(WorkoutMath.duration(workout.startedAt, workout.finishedAt), tr("trajanje", "duration"), Modifier.weight(1f))
+                    StatTile("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", tr("volumen", "volume"), Modifier.weight(1f))
+                    StatTile("${sets.size}", tr("setova", "sets"), Modifier.weight(1f))
                 }
             }
             if (records.isNotEmpty()) item {
@@ -167,14 +169,14 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(10.dp))
-                        Text(if (records.size == 1) "Novi lični rekord!" else "${records.size} nova lična rekorda!",
+                        Text(if (records.size == 1) tr("Novi lični rekord!", "New personal record!") else tr("${records.size} nova lična rekorda!", "${records.size} new personal records!"),
                             style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     records.forEach { r ->
                         Column(Modifier.padding(top = 10.dp)) {
                             Text(byId[r.exerciseId]?.name ?: "?", style = MaterialTheme.typography.titleSmall)
                             Text(
-                                "${r.kind}: ${WorkoutMath.fmtKg(r.value)} kg (pre: ${WorkoutMath.fmtKg(r.previous)} kg)",
+                                tr("${r.kind}: ${WorkoutMath.fmtKg(r.value)} kg (pre: ${WorkoutMath.fmtKg(r.previous)} kg)", "${r.kind}: ${WorkoutMath.fmtKg(r.value)} kg (was: ${WorkoutMath.fmtKg(r.previous)} kg)"),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
@@ -188,7 +190,7 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
                         ex?.let { ExerciseThumb(it, 44.dp) }
                         Spacer(Modifier.width(12.dp))
                         Text(ex?.name ?: "?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        Icon(Icons.Filled.ChevronRight, "Statistika vežbe", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Filled.ChevronRight, tr("Statistika vežbe", "Exercise stats"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(8.dp))
                     g.forEach { s ->
@@ -199,7 +201,7 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
                             }
                             Spacer(Modifier.width(12.dp))
                             Text("${WorkoutMath.fmtKg(s.weightKg).ifEmpty { "0" }} kg", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                            Text("${s.reps ?: 0} ponav.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("${s.reps ?: 0} ponav.", "${s.reps ?: 0} reps"), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -209,9 +211,9 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
 
     if (confirm) AlertDialog(
         onDismissRequest = { confirm = false },
-        title = { Text("Obrisati trening?") },
-        confirmButton = { TextButton(onClick = { confirm = false; scope.launch { WorkoutRepo.discard(workoutId); onBack() } }) { Text("Obriši") } },
-        dismissButton = { TextButton(onClick = { confirm = false }) { Text("Otkaži") } },
+        title = { Text(tr("Obrisati trening?", "Delete workout?")) },
+        confirmButton = { TextButton(onClick = { confirm = false; scope.launch { WorkoutRepo.discard(workoutId); onBack() } }) { Text(tr("Obriši", "Delete")) } },
+        dismissButton = { TextButton(onClick = { confirm = false }) { Text(tr("Otkaži", "Cancel")) } },
     )
 }
 

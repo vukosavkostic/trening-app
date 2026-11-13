@@ -1,5 +1,7 @@
 package com.vukos.trening.data
 
+import com.vukos.trening.i18n.tr
+
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -176,6 +178,8 @@ object SetType {
     const val DROP = "drop"
     const val FAILURE = "failure"
     val ALL = listOf(NORMAL, WARMUP, DROP, FAILURE)
-    fun label(t: String) = when (t) { WARMUP -> "Zagrevanje"; DROP -> "Drop set"; FAILURE -> "Do otkaza"; else -> "Normalan set" }
+    fun label(t: String) = when (t) {
+        WARMUP -> tr("Zagrevanje", "Warm-up"); DROP -> "Drop set"; FAILURE -> tr("Do otkaza", "To failure"); else -> tr("Normalan set", "Normal set")
+    }
     fun short(t: String) = when (t) { WARMUP -> "W"; DROP -> "D"; FAILURE -> "F"; else -> null }
 }

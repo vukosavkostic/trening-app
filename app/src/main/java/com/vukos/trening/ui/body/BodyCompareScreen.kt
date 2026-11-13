@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -92,8 +94,8 @@ fun BodyCompareScreen(onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Uporedi slike", style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
+            title = { Text(tr("Uporedi slike", "Compare photos"), style = MaterialTheme.typography.titleLarge) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
         )
     }) { pad ->
         Column(
@@ -101,7 +103,7 @@ fun BodyCompareScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (days.size < 2) {
-                Text("Potrebna su bar dva dana sa slikama.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Potrebna su bar dva dana sa slikama.", "You need at least two days with photos."), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 return@Column
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -117,9 +119,9 @@ fun BodyCompareScreen(onBack: () -> Unit) {
                         detectDragGestures { change, _ -> split = (change.position.x / size.width).coerceIn(0f, 1f) }
                     },
             ) {
-                if (imgAfter != null) Image(imgAfter, "Posle", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                if (imgAfter != null) Image(imgAfter, tr("Posle", "After"), Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 if (imgBefore != null) Image(
-                    imgBefore, "Pre",
+                    imgBefore, tr("Pre", "Before"),
                     Modifier.fillMaxSize().drawWithContent { clipRect(right = size.width * split) { this@drawWithContent.drawContent() } },
                     contentScale = ContentScale.Crop,
                 )
@@ -128,12 +130,12 @@ fun BodyCompareScreen(onBack: () -> Unit) {
                     Box(Modifier.fillMaxHeight().width(2.dp).background(Color.White).align(Alignment.CenterEnd))
                 }
                 Row(Modifier.fillMaxWidth().padding(12.dp)) {
-                    Chip("Pre", color = Color.White, bg = Color.Black.copy(alpha = 0.5f))
+                    Chip(tr("Pre", "Before"), color = Color.White, bg = Color.Black.copy(alpha = 0.5f))
                     Spacer(Modifier.weight(1f))
-                    Chip("Posle", color = Color.White, bg = Color.Black.copy(alpha = 0.5f))
+                    Chip(tr("Posle", "After"), color = Color.White, bg = Color.Black.copy(alpha = 0.5f))
                 }
                 if (pBefore == null || pAfter == null) Text(
-                    "Nema slike „${pose.label}“ za " + listOfNotNull("pre".takeIf { pBefore == null }, "posle".takeIf { pAfter == null }).joinToString(" i "),
+                    tr("Nema slike „${pose.label}“ za ", "No “${pose.label}” photo for ") + listOfNotNull(tr("pre", "before").takeIf { pBefore == null }, tr("posle", "after").takeIf { pAfter == null }).joinToString(" i "),
                     color = Color.White, modifier = Modifier.align(Alignment.Center).background(Color.Black.copy(alpha = 0.6f)).padding(10.dp),
                 )
             }
@@ -144,13 +146,13 @@ fun BodyCompareScreen(onBack: () -> Unit) {
                 val weeks = (eAfter.epochDay - eBefore.epochDay) / 7
                 Text(
                     "${LocalDate.ofEpochDay(eBefore.epochDay).srDate()} → ${LocalDate.ofEpochDay(eAfter.epochDay).srDate()}" +
-                        (if (weeks > 0) " · $weeks ${if (weeks == 1L) "nedelja" else "nedelja"}" else "") +
+                        (if (weeks > 0) tr(" · $weeks ${if (weeks == 1L) "nedelja" else "nedelja"}", " · $weeks ${if (weeks == 1L) "week" else "weeks"}") else "") +
                         (if (wB != null && wA != null) " · ${(wA - wB).signed()}" else ""),
                     style = MaterialTheme.typography.titleSmall,
                 )
             }
-            DayPicker("Pre", days.map { it.epochDay }, before) { before = it }
-            DayPicker("Posle", days.map { it.epochDay }, after) { after = it }
+            DayPicker(tr("Pre", "Before"), days.map { it.epochDay }, before) { before = it }
+            DayPicker(tr("Posle", "After"), days.map { it.epochDay }, after) { after = it }
         }
     }
 }

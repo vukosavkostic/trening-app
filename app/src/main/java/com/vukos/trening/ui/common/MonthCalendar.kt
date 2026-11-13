@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.common
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,11 +38,14 @@ import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.YearMonth
 
-val MONTHS = listOf(
+val MONTHS: List<String> get() = if (com.vukos.trening.i18n.Lang.en) listOf(
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+) else listOf(
     "Januar", "Februar", "Mart", "April", "Maj", "Jun",
     "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar",
 )
-private val WEEKDAYS = listOf("P", "U", "S", "Č", "P", "S", "N")
+private val WEEKDAYS: List<String> get() = if (com.vukos.trening.i18n.Lang.en) listOf("M", "T", "W", "T", "F", "S", "S") else listOf("P", "U", "S", "Č", "P", "S", "N")
 
 /**
  * Oznaka dana: [filled] = pun narandzasti krug (glavna aktivnost, npr. trening),
@@ -71,9 +76,9 @@ fun MonthCalendar(
                 "${MONTHS[shown.monthValue - 1]} ${shown.year}",
                 style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(start = 4.dp),
             )
-            RoundIcon(Icons.Filled.ChevronLeft, "Prethodni mesec") { go(shown.minusMonths(1)) }
+            RoundIcon(Icons.Filled.ChevronLeft, tr("Prethodni mesec", "Previous month")) { go(shown.minusMonths(1)) }
             Spacer(Modifier.width(8.dp))
-            RoundIcon(Icons.Filled.ChevronRight, "Sledeći mesec") { go(shown.plusMonths(1)) }
+            RoundIcon(Icons.Filled.ChevronRight, tr("Sledeći mesec", "Next month")) { go(shown.plusMonths(1)) }
         }
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {

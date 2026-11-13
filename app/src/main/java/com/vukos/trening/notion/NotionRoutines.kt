@@ -1,5 +1,7 @@
 package com.vukos.trening.notion
 
+import com.vukos.trening.i18n.tr
+
 import androidx.room.withTransaction
 import com.vukos.trening.TreningApp
 import com.vukos.trening.data.Exercise
@@ -25,7 +27,7 @@ data class ImportResult(val routineId: String, val matched: Int, val created: Li
 object NotionRoutines {
     private val app get() = TreningApp.instance
     private fun client(settings: Settings) =
-        NotionClient(settings.notionToken ?: throw NotionException(401, "Notion token nije unet (Podešavanja)."))
+        NotionClient(settings.notionToken ?: throw NotionException(401, tr("Notion token nije unet (Podešavanja).", "Notion token is not set (Settings).")))
 
     /** Proverava token i pamti ID-jeve baza. */
     suspend fun connect(settings: Settings, token: String): Map<String, String> {
@@ -38,7 +40,7 @@ object NotionRoutines {
     /** Svi planovi iz Notiona; vezbe iz polja "Plan" ili, ako je prazno, iz tela stranice. */
     suspend fun list(settings: Settings): List<NotionRoutine> {
         val c = client(settings)
-        val dbId = settings.notionDatabases["Routines"] ?: throw NotionException(404, "Baza Routines nije pronađena.")
+        val dbId = settings.notionDatabases["Routines"] ?: throw NotionException(404, tr("Baza Routines nije pronađena.", "Routines database not found."))
         return c.queryDatabase(dbId).filter { !it.optBoolean("archived") }.map { page ->
             val planText = NotionClient.text(page, "Plan")
             val lines = if (planText.isNotBlank()) PlanParser.parseText(planText)

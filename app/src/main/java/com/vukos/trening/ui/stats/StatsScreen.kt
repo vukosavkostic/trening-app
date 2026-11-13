@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.stats
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -63,7 +65,11 @@ import com.vukos.trening.ui.common.StatTile
 import java.time.LocalDate
 import java.time.YearMonth
 
-private enum class Period(val label: String) { WEEK("Nedelja"), MONTH("Mesec"), YEAR("Godina") }
+private enum class Period(private val sr: String, private val en: String) {
+    WEEK("Nedelja", "Week"), MONTH("Mesec", "Month"), YEAR("Godina", "Year");
+
+    val label: String get() = tr(sr, en)
+}
 
 /** Statistika: nedelja / mesec / godina, nedeljni cilj i niz, setovi po misicima, treninzi kroz vreme. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +90,7 @@ fun StatsScreen(onBack: () -> Unit) {
 
     val (from, to, title) = when (period) {
         Period.WEEK -> TrainingStats.weekStart(today).plusWeeks(offset.toLong()).let {
-            Triple(it, it.plusDays(6), if (offset == 0) "Ova nedelja" else "${it.srDate()} – ${it.plusDays(6).srDate()}")
+            Triple(it, it.plusDays(6), if (offset == 0) tr("Ova nedelja", "This week") else "${it.srDate()} – ${it.plusDays(6).srDate()}")
         }
         Period.MONTH -> YearMonth.from(today).plusMonths(offset.toLong()).let {
             Triple(it.atDay(1), it.atEndOfMonth(), "${MONTHS[it.monthValue - 1]} ${it.year}")
@@ -98,8 +104,8 @@ fun StatsScreen(onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Statistika", style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
+            title = { Text(tr("Statistika", "Statistics"), style = MaterialTheme.typography.titleLarge) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
         )
     }) { pad ->
@@ -110,38 +116,34 @@ fun StatsScreen(onBack: () -> Unit) {
         ) {
             item { GoalCard(goal, thisWeek, streak) { g -> goal = g; settings.weeklyGoal = g } }
             item {
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    Period.entries.forEachIndexed { i, p ->
-                        SegmentedButton(
-                            selected = period == p, onClick = { period = p; offset = 0 },
-                            shape = SegmentedButtonDefaults.itemShape(i, Period.entries.size),
-                        ) { Text(p.label) }
-                    }
-                }
+                com.vukos.trening.ui.common.SegmentedToggle(
+                    Period.entries.map { it.label }, period.ordinal, { period = Period.entries[it]; offset = 0 },
+                    Modifier.padding(top = 8.dp),
+                )
             }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { offset-- }) { Icon(Icons.Filled.ChevronLeft, "Prethodni") }
+                    IconButton(onClick = { offset-- }) { Icon(Icons.Filled.ChevronLeft, tr("Prethodni", "Previous")) }
                     Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { offset++ }, enabled = offset < 0) { Icon(Icons.Filled.ChevronRight, "Sledeći") }
+                    IconButton(onClick = { offset++ }, enabled = offset < 0) { Icon(Icons.Filled.ChevronRight, tr("Sledeći", "Next")) }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("${summary.workouts}", "treninga", Modifier.weight(1f))
-                    StatTile(JournalStats.fmtMinutes(summary.minutes), "vreme", Modifier.weight(1f))
+                    StatTile("${summary.workouts}", tr("treninga", "workouts"), Modifier.weight(1f))
+                    StatTile(JournalStats.fmtMinutes(summary.minutes), tr("vreme", "time"), Modifier.weight(1f))
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("${WorkoutMath.fmtKg(summary.volumeKg / 1000)} t", "podignuto", Modifier.weight(1f))
-                    StatTile("${summary.sets}", "radnih setova", Modifier.weight(1f))
+                    StatTile("${WorkoutMath.fmtKg(summary.volumeKg / 1000)} t", tr("podignuto", "lifted"), Modifier.weight(1f))
+                    StatTile("${summary.sets}", tr("radnih setova", "working sets"), Modifier.weight(1f))
                 }
             }
-            item { SectionTitle("Setovi po mišićima") }
+            item { SectionTitle(tr("Setovi po mišićima", "Sets per muscle")) }
             item {
                 AppCard {
-                    if (muscles.isEmpty()) Text("Nema treninga u ovom periodu.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (muscles.isEmpty()) Text(tr("Nema treninga u ovom periodu.", "No workouts in this period."), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     val max = muscles.maxOfOrNull { it.second } ?: 1
                     muscles.forEach { (m, n) ->
                         Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -159,32 +161,32 @@ fun StatsScreen(onBack: () -> Unit) {
                 if (period == Period.YEAR) {
                     val data = TrainingStats.monthlyCounts(dates, from.year)
                     ActivityChart(
-                        title = "Treninzi u ${from.year}.",
-                        subtitle = "Broj treninga po mesecima",
+                        title = tr("Treninzi u ${from.year}.", "Workouts in ${from.year}"),
+                        subtitle = tr("Broj treninga po mesecima", "Workouts per month"),
                         values = data.map { it.second },
                         labels = data.map { MONTH_SHORT[it.first.monthValue - 1] },
                         highlight = if (from.year == today.year) today.monthValue - 1 else -1,
                         goal = null,
-                        unit = "mesečno",
+                        unit = tr("mesečno", "per month"),
                     )
                 } else {
                     val data = TrainingStats.weeklyCounts(dates, today, 12)
                     // Oznaka meseca samo na prvoj nedelji u mesecu; tekuca nedelja = "ova".
                     val labels = data.mapIndexed { i, (start, _) ->
                         when {
-                            i == data.lastIndex -> "ova"
+                            i == data.lastIndex -> tr("ova", "now")
                             i == 0 || start.monthValue != data[i - 1].first.monthValue -> MONTH_SHORT[start.monthValue - 1]
                             else -> ""
                         }
                     }
                     ActivityChart(
-                        title = "Aktivnost",
-                        subtitle = "Broj treninga po nedelji · poslednjih 12 nedelja",
+                        title = tr("Aktivnost", "Activity"),
+                        subtitle = tr("Broj treninga po nedelji · poslednjih 12 nedelja", "Workouts per week · last 12 weeks"),
                         values = data.map { it.second },
                         labels = labels,
                         highlight = data.lastIndex,
                         goal = goal,
-                        unit = "nedeljno",
+                        unit = tr("nedeljno", "per week"),
                     )
                 }
             }
@@ -197,12 +199,12 @@ private fun GoalCard(goal: Int, thisWeek: Int, streak: Int, onGoal: (Int) -> Uni
     AppCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Nedeljni cilj", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("$thisWeek / $goal treninga", style = MaterialTheme.typography.headlineSmall)
+                Text(tr("Nedeljni cilj", "Weekly goal"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("$thisWeek / $goal treninga", "$thisWeek / $goal workouts"), style = MaterialTheme.typography.headlineSmall)
             }
-            RoundBtn(Icons.Filled.Remove, "Manje") { if (goal > 1) onGoal(goal - 1) }
+            RoundBtn(Icons.Filled.Remove, tr("Manje", "Fewer")) { if (goal > 1) onGoal(goal - 1) }
             Spacer(Modifier.width(8.dp))
-            RoundBtn(Icons.Filled.Add, "Više") { if (goal < 14) onGoal(goal + 1) }
+            RoundBtn(Icons.Filled.Add, tr("Više", "More")) { if (goal < 14) onGoal(goal + 1) }
         }
         Spacer(Modifier.height(12.dp))
         WeekProgress(thisWeek, goal)
@@ -211,7 +213,7 @@ private fun GoalCard(goal: Int, thisWeek: Int, streak: Int, onGoal: (Int) -> Uni
             Icon(Icons.Filled.LocalFireDepartment, null, tint = if (streak > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(6.dp))
             Text(
-                when (streak) { 0 -> "Ispuni cilj ove nedelje i počni niz"; 1 -> "1 nedelja zaredom"; else -> "$streak nedelja zaredom" },
+                when (streak) { 0 -> tr("Ispuni cilj ove nedelje i počni niz", "Hit your goal this week to start a streak"); 1 -> tr("1 nedelja zaredom", "1 week in a row"); else -> tr("$streak nedelja zaredom", "$streak weeks in a row") },
                 style = MaterialTheme.typography.titleSmall,
             )
         }
@@ -239,7 +241,9 @@ private fun RoundBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc
     ) { Icon(icon, desc, Modifier.size(18.dp)) }
 }
 
-private val MONTH_SHORT = listOf("jan", "feb", "mar", "apr", "maj", "jun", "jul", "avg", "sep", "okt", "nov", "dec")
+private val MONTH_SHORT: List<String> get() = if (com.vukos.trening.i18n.Lang.en)
+    listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+else listOf("jan", "feb", "mar", "apr", "maj", "jun", "jul", "avg", "sep", "okt", "nov", "dec")
 
 /**
  * Grafikon aktivnosti: naslov i objasnjenje, tri brojke (prosek, najbolje, cilj ispunjen),
@@ -266,15 +270,15 @@ private fun ActivityChart(
         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onVar)
         Spacer(Modifier.height(16.dp))
         Row {
-            MiniStat(String.format(java.util.Locale.US, "%.1f", avg).replace('.', ','), "prosek $unit", Modifier.weight(1f))
-            MiniStat("$best", "najviše", Modifier.weight(1f))
-            if (goal != null) MiniStat("$met/${closed.size}", "nedelja sa ciljem", Modifier.weight(1f))
+            MiniStat(String.format(java.util.Locale.US, "%.1f", avg).replace('.', ','), tr("prosek $unit", "average $unit"), Modifier.weight(1f))
+            MiniStat("$best", tr("najviše", "best"), Modifier.weight(1f))
+            if (goal != null) MiniStat("$met/${closed.size}", tr("nedelja sa ciljem", "weeks on goal"), Modifier.weight(1f))
         }
         Spacer(Modifier.height(18.dp))
         if (total == 0) {
             Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center) {
-                Text("Još nema treninga u ovom periodu.\nZavrši trening i ovde se pojavljuje stubić.",
+                Text(tr("Još nema treninga u ovom periodu.\nZavrši trening i ovde se pojavljuje stubić.", "No workouts in this period yet.\nFinish a workout and a bar appears here."),
                     style = MaterialTheme.typography.bodySmall, color = onVar, textAlign = TextAlign.Center)
             }
             return@AppCard
@@ -327,10 +331,10 @@ private fun ActivityChart(
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(18.dp).height(2.dp).background(Color.White.copy(alpha = 0.5f)))
-                Text("  cilj: $goal treninga nedeljno", style = MaterialTheme.typography.labelMedium, color = onVar)
+                Text(tr("  cilj: $goal treninga nedeljno", "  goal: $goal workouts per week"), style = MaterialTheme.typography.labelMedium, color = onVar)
                 Spacer(Modifier.width(14.dp))
                 Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(accent))
-                Text("  ova nedelja", style = MaterialTheme.typography.labelMedium, color = onVar)
+                Text(tr("  ova nedelja", "  this week"), style = MaterialTheme.typography.labelMedium, color = onVar)
             }
         }
     }

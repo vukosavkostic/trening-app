@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.journal
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -63,9 +65,9 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
             IconBadge(Icons.Filled.Medication, SupplementPurple, 40.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("Suplementi", style = MaterialTheme.typography.titleMedium)
+                Text(tr("Suplementi", "Supplements"), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    if (entries.isEmpty()) "Ništa nije uneto" else "${entries.size} uneto",
+                    if (entries.isEmpty()) tr("Ništa nije uneto", "Nothing logged") else tr("${entries.size} uneto", "${entries.size} logged"),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -73,14 +75,14 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
                 Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onReminders),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(if (reminders > 0) Icons.Filled.NotificationsActive else Icons.Filled.NotificationAdd, "Podsetnici",
+                Icon(if (reminders > 0) Icons.Filled.NotificationsActive else Icons.Filled.NotificationAdd, tr("Podsetnici", "Reminders"),
                     tint = if (reminders > 0) SupplementPurple else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(8.dp))
             Box(
                 Modifier.size(40.dp).clip(CircleShape).background(SupplementPurple).clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Add, "Dodaj suplement", tint = Color.Black) }
+            ) { Icon(Icons.Filled.Add, tr("Dodaj suplement", "Add supplement"), tint = Color.Black) }
         }
         if (entries.isNotEmpty()) {
             Spacer(Modifier.size(12.dp))
@@ -98,7 +100,7 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
                 }
             }
         }
-        if (copyCount > 0) OutlinePill("Isto kao juče ($copyCount)", onCopy, Modifier.fillMaxWidth().padding(top = 10.dp), Icons.Filled.ContentCopy)
+        if (copyCount > 0) OutlinePill(tr("Isto kao juče ($copyCount)", "Same as yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 10.dp), Icons.Filled.ContentCopy)
     }
 }
 
@@ -125,23 +127,23 @@ fun SupplementDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial != null) "Izmena suplementa" else if (picked == null) "Dodaj suplement" else picked!!.name) },
+        title = { Text(if (initial != null) tr("Izmena suplementa", "Edit supplement") else if (picked == null) tr("Dodaj suplement", "Add supplement") else picked!!.name) },
         text = {
             val p = picked
             if (p == null) {
                 SupplementPicker(query, { query = it }, history, ::pick)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (initial == null) TextButton(onClick = { picked = null }) { Text("← Izaberi drugi") }
-                    OutlinedTextField(dose, { dose = it.take(30) }, label = { Text("Doza") }, placeholder = { Text("npr. 5 g, 2 kapsule") },
+                    if (initial == null) TextButton(onClick = { picked = null }) { Text(tr("← Izaberi drugi", "← Choose another")) }
+                    OutlinedTextField(dose, { dose = it.take(30) }, label = { Text(tr("Doza", "Dose")) }, placeholder = { Text(tr("npr. 5 g, 2 kapsule", "e.g. 5 g, 2 capsules")) },
                         singleLine = true, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(kcal, { kcal = it.filter(Char::isDigit).take(4) }, label = { Text("kcal (opc.)") }, singleLine = true,
+                        OutlinedTextField(kcal, { kcal = it.filter(Char::isDigit).take(4) }, label = { Text(tr("kcal (opc.)", "kcal (opt.)")) }, singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f))
                         OutlinedTextField(prot, { prot = it.filter(Char::isDigit).take(3) }, label = { Text("protein g") }, singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f))
                     }
-                    Text("Kalorije i protein se računaju u dnevni cilj.", style = MaterialTheme.typography.bodySmall,
+                    Text(tr("Kalorije i protein se računaju u dnevni cilj.", "Calories and protein count toward your daily goal."), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -149,12 +151,12 @@ fun SupplementDialog(
         confirmButton = {
             if (picked != null) TextButton(onClick = {
                 onSave(Supplements.entryText(picked!!.name, dose), kcal.toIntOrNull(), prot.toIntOrNull())
-            }) { Text("Sačuvaj") }
+            }) { Text(tr("Sačuvaj", "Save")) }
         },
         dismissButton = {
             Row {
-                if (onDelete != null) TextButton(onClick = onDelete) { Text("Obriši", color = MaterialTheme.colorScheme.error) }
-                TextButton(onClick = onDismiss) { Text("Otkaži") }
+                if (onDelete != null) TextButton(onClick = onDelete) { Text(tr("Obriši", "Delete"), color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) }
             }
         },
     )
@@ -166,7 +168,7 @@ fun SupplementPicker(query: String, onQuery: (String) -> Unit, history: List<Foo
     val results = remember(query, history) { Supplements.search(query, history) }
     Column {
         OutlinedTextField(
-            query, onQuery, singleLine = true, placeholder = { Text("Traži: kreatin, omega, protein…") },
+            query, onQuery, singleLine = true, placeholder = { Text(tr("Traži: kreatin, omega, protein…", "Search: creatine, omega, protein…")) },
             leadingIcon = { Icon(Icons.Filled.Search, null) }, shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -181,13 +183,13 @@ fun SupplementPicker(query: String, onQuery: (String) -> Unit, history: List<Foo
                 ) {
                     Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(10.dp))
-                    Text("Dodaj novi: „${query.trim()}“", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)
+                    Text(tr("Dodaj novi: „${query.trim()}“", "Add new: “${query.trim()}”"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)
                 }
             }
             itemsIndexed(results, key = { _, it -> "${it.category}-${it.name}" }) { i, d ->
                 Column {
                     if (query.isBlank() && (i == 0 || results[i - 1].category != d.category)) {
-                        Text(d.category.uppercase(), style = MaterialTheme.typography.labelSmall,
+                        Text(Supplements.categoryLabel(d.category).uppercase(), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp, start = 8.dp))
                     }
                     Row(

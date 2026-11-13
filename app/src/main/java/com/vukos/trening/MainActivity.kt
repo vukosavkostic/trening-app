@@ -1,5 +1,7 @@
 package com.vukos.trening
 
+import com.vukos.trening.i18n.tr
+
 import android.Manifest
 import android.content.Intent
 import android.os.Build
@@ -60,10 +62,12 @@ import com.vukos.trening.ui.exercises.ExerciseListScreen
 import com.vukos.trening.ui.exercises.NewExerciseScreen
 import com.vukos.trening.ui.theme.TreningTheme
 
-private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
-    JOURNAL("journal", "Dnevnik", Icons.Filled.MenuBook),
-    ROUTINES("routines", "Trening", Icons.Filled.FitnessCenter),
-    BODY("body", "Profil", Icons.Filled.Person),
+private enum class Tab(val route: String, private val sr: String, private val en: String, val icon: ImageVector) {
+    JOURNAL("journal", "Dnevnik", "Journal", Icons.Filled.MenuBook),
+    ROUTINES("routines", "Trening", "Workout", Icons.Filled.FitnessCenter),
+    BODY("body", "Profil", "Profile", Icons.Filled.Person);
+
+    val label: String get() = tr(sr, en)
 }
 
 class MainActivity : ComponentActivity() {
@@ -154,7 +158,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
             composable("notion_help") {
                 com.vukos.trening.ui.help.NotionHelpScreen(
                     onClose = { nav.popBackStack() },
-                    onOpenSettings = { nav.navigate("settings") },
+                    onOpenSettings = { nav.navigate("settings_notion") },
                     onOpenNotionPlans = { nav.navigate("notion_routines") },
                 )
             }
@@ -198,11 +202,25 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 NotionRoutinesScreen(
                     onHelp = { nav.navigate("notion_help") },
                     onBack = { nav.popBackStack() },
-                    onSettings = { nav.navigate("settings") },
+                    onSettings = { nav.navigate("settings_notion") },
                     onOpenRoutine = { nav.navigate("routine/$it") },
                 )
             }
-            composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }, onHelp = { nav.navigate("notion_help") }) }
+            composable("settings") {
+                SettingsScreen(
+                    onBack = { nav.popBackStack() },
+                    onNotion = { nav.navigate("settings_notion") },
+                    onBackup = { nav.navigate("settings_backup") },
+                    onGoals = { nav.navigate("settings_goals") },
+                    onReminders = { nav.navigate("supp_reminders") },
+                    onHelp = { nav.navigate("notion_help") },
+                )
+            }
+            composable("settings_notion") {
+                com.vukos.trening.ui.settings.NotionSettingsScreen(onBack = { nav.popBackStack() }, onHelp = { nav.navigate("notion_help") })
+            }
+            composable("settings_backup") { com.vukos.trening.ui.settings.BackupScreen(onBack = { nav.popBackStack() }) }
+            composable("settings_goals") { com.vukos.trening.ui.settings.GoalsScreen(onBack = { nav.popBackStack() }) }
             composable(Tab.BODY.route) {
                 BodyScreen(
                     onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },

@@ -21,6 +21,7 @@ class TreningApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        com.vukos.trening.i18n.Lang.init(this)
         appScope.launch { ExerciseSeed.ensureSeeded(this@TreningApp, db.exercises()) }
         // Sinhronizacija: kad god postoje neposlate izmene (i Notion je povezan), zakazi slanje.
         SyncWorker.schedulePeriodic(this)

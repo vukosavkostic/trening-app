@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,10 +72,10 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
             actions = {
-                if (entry != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Obriši merenje") }
-                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Izmeni") }
+                if (entry != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, tr("Obriši merenje", "Delete check-in")) }
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Izmeni", "Edit")) }
             },
         )
     }) { pad ->
@@ -82,20 +84,20 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             com.vukos.trening.ui.common.AppCard(padding = androidx.compose.foundation.layout.PaddingValues(24.dp)) {
-                Text("Kilaža", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                Text(entry?.weightKg?.kg() ?: "nije uneta", style = MaterialTheme.typography.displaySmall)
+                Text(tr("Kilaža", "Weight"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                Text(entry?.weightKg?.kg() ?: tr("nije uneta", "not entered"), style = MaterialTheme.typography.displaySmall)
                 val w = entry?.weightKg
                 if (w != null && previous != null) {
                     Spacer(Modifier.height(8.dp))
                     com.vukos.trening.ui.common.Chip(
-                        (w - previous.weightKg!!).signed() + " od " + LocalDate.ofEpochDay(previous.epochDay).srDate()
+                        (w - previous.weightKg!!).signed() + tr(" od ", " since ") + LocalDate.ofEpochDay(previous.epochDay).srDate()
                     )
                 }
             }
 
             entry?.let { com.vukos.trening.data.Measurements.of(it) }?.takeIf { !it.isEmpty }?.let { m ->
                 com.vukos.trening.ui.common.AppCard {
-                    Text("Mere", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Mere", "Measurements"), style = MaterialTheme.typography.titleMedium)
                     com.vukos.trening.data.Measurements.FIELDS.forEach { (label, unit, get) ->
                         get(m)?.let { v ->
                             Row(Modifier.padding(top = 8.dp)) {
@@ -107,11 +109,11 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
                 }
             }
 
-            Text("Slike", style = MaterialTheme.typography.titleLarge)
+            Text(tr("Slike", "Photos"), style = MaterialTheme.typography.titleLarge)
             if (photos.isEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.NoPhotography, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("  Ovog dana nema slika.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("  Ovog dana nema slika.", "  No photos for this day."), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -138,15 +140,15 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
 
     if (confirmDelete) androidx.compose.material3.AlertDialog(
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Obrisati merenje?") },
-        text = { Text("Kilaža i slike za ${day.srDate()} se trajno brišu sa telefona.") },
+        title = { Text(tr("Obrisati merenje?", "Delete check-in?")) },
+        text = { Text(tr("Kilaža i slike za ${day.srDate()} se trajno brišu sa telefona.", "Weight and photos for ${day.srDate()} will be permanently deleted from this phone.")) },
         confirmButton = {
             androidx.compose.material3.TextButton(onClick = {
                 confirmDelete = false
                 scope.launch { com.vukos.trening.data.BodyRepo.delete(day); onBack() }
-            }) { Text("Obriši", color = MaterialTheme.colorScheme.error) }
+            }) { Text(tr("Obriši", "Delete"), color = MaterialTheme.colorScheme.error) }
         },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Otkaži") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text(tr("Otkaži", "Cancel")) } },
     )
 
     // Preko celog ekrana, prevlacenje levo/desno izmedju poza.

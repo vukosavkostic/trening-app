@@ -1,5 +1,7 @@
 package com.vukos.trening.reminders
 
+import com.vukos.trening.i18n.tr
+
 import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
@@ -70,7 +72,7 @@ object Reminders {
     )
 
     fun createChannel(context: Context) {
-        val ch = NotificationChannel(CHANNEL, "Merenje (kilaža i slike)", NotificationManager.IMPORTANCE_HIGH)
+        val ch = NotificationChannel(CHANNEL, tr("Merenje (kilaža i slike)", "Check-in (weight and photos)"), NotificationManager.IMPORTANCE_HIGH)
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
     }
 
@@ -80,11 +82,11 @@ object Reminders {
             PackageManager.PERMISSION_GRANTED
         ) return
         val what = when {
-            due.weightMissing && due.photosMissing -> "kilaža + 3 slike"
-            due.photosMissing -> "3 slike (spreda, bok, leđa)"
-            else -> "kilaža"
+            due.weightMissing && due.photosMissing -> tr("kilaža + 3 slike", "weight + 3 photos")
+            due.photosMissing -> tr("3 slike (spreda, bok, leđa)", "3 photos (front, side, back)")
+            else -> tr("kilaža", "weight")
         }
-        val title = if (due.overdue) "Propušteno merenje" else "Danas je merenje"
+        val title = if (due.overdue) tr("Propušteno merenje", "Missed check-in") else tr("Danas je merenje", "Check-in today")
         val open = PendingIntent.getActivity(
             context, 2,
             Intent(context, MainActivity::class.java)
@@ -95,7 +97,7 @@ object Reminders {
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
-            .setContentText("Unesi: $what")
+            .setContentText(tr("Unesi: $what", "Log: $what"))
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()

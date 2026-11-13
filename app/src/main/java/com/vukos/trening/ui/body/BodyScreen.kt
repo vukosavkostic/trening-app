@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -74,9 +76,9 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
     }
 
     Scaffold(topBar = {
-        TabTopBar("Profil") {
-            IconButton(onClick = onOpenChart) { Icon(Icons.Filled.ShowChart, "Grafikon kilaže") }
-            IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Podešavanja") }
+        TabTopBar(tr("Profil", "Profile")) {
+            IconButton(onClick = onOpenChart) { Icon(Icons.Filled.ShowChart, tr("Grafikon kilaže", "Weight chart")) }
+            IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, tr("Podešavanja", "Settings")) }
         }
     }) { pad ->
         LazyColumn(
@@ -85,17 +87,17 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (stats.current == null) item {
-                EmptyState(Icons.Filled.MonitorWeight, "Prvo merenje",
-                    "Unesi kilažu da bi pratio napredak. Merenje je jednom nedeljno (nedeljom), a svake druge nedelje i 3 slike.") {
-                    PrimaryPill("Unesi merenje", onNew, Modifier.fillMaxWidth(), Icons.Filled.Add)
+                EmptyState(Icons.Filled.MonitorWeight, tr("Prvo merenje", "First check-in"),
+                    tr("Unesi kilažu da bi pratio napredak. Merenje je jednom nedeljno (nedeljom), a svake druge nedelje i 3 slike.", "Log your weight to track progress. Check-in is once a week (Sunday), plus 3 photos every other week.")) {
+                    PrimaryPill(tr("Unesi merenje", "Log check-in"), onNew, Modifier.fillMaxWidth(), Icons.Filled.Add)
                 }
             } else {
                 item { CurrentWeightCard(stats, onOpenChart) }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatTile(stats.change30.signed(), "30 dana", Modifier.weight(1f))
-                        StatTile(stats.totalChange.signed(), "ukupno", Modifier.weight(1f))
-                        StatTile("${stats.count}", if (stats.photoDays > 0) "merenja, ${stats.photoDays} sa slikama" else "merenja", Modifier.weight(1f))
+                        StatTile(stats.change30.signed(), tr("30 dana", "30 days"), Modifier.weight(1f))
+                        StatTile(stats.totalChange.signed(), tr("ukupno", "total"), Modifier.weight(1f))
+                        StatTile("${stats.count}", if (stats.photoDays > 0) tr("merenja, ${stats.photoDays} sa slikama", "check-ins, ${stats.photoDays} with photos") else tr("merenja", "check-ins"), Modifier.weight(1f))
                     }
                 }
                 if (stats.count >= 2) item { WeightChart(entries, Modifier.fillMaxWidth(), onClick = onOpenChart) }
@@ -105,7 +107,7 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
             val measured = entries.filter { !Measurements.of(it).isEmpty }.sortedBy { it.epochDay }
             if (measured.isNotEmpty()) item {
                 AppCard {
-                    Text("Mere", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Mere", "Measurements"), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Measurements.FIELDS.forEach { (label, unit, get) ->
                         val vals = measured.mapNotNull { get(Measurements.of(it)) }
@@ -130,8 +132,8 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                         IconBadge(Icons.Filled.Compare)
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Uporedi slike", style = MaterialTheme.typography.titleMedium)
-                            Text("Pre i posle, jedna preko druge", style = MaterialTheme.typography.bodySmall,
+                            Text(tr("Uporedi slike", "Compare photos"), style = MaterialTheme.typography.titleMedium)
+                            Text(tr("Pre i posle, jedna preko druge", "Before and after, one over the other"), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -139,7 +141,7 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                 }
             }
             if (entries.isNotEmpty()) {
-                item { SectionTitle("Istorija merenja") }
+                item { SectionTitle(tr("Istorija merenja", "Check-in history")) }
                 itemsIndexed(entries, key = { _, e -> e.id }) { i, e ->
                     val day = LocalDate.ofEpochDay(e.epochDay)
                     val first = i == 0
@@ -159,7 +161,7 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                             Text(day.srRelative(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if ((photoCount[e.id] ?: 0) > 0) {
-                            Icon(Icons.Filled.PhotoCamera, "Ima slike", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Filled.PhotoCamera, tr("Ima slike", "Has photos"), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(12.dp))
                         }
                         Column(horizontalAlignment = Alignment.End) {
@@ -176,23 +178,23 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
 @Composable
 private fun CurrentWeightCard(s: BodyStats, onOpenChart: () -> Unit) {
     AppCard(onClick = onOpenChart, padding = PaddingValues(24.dp)) {
-        Text("Trenutna kilaža", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(tr("Trenutna kilaža", "Current weight"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(s.current!!.kg().removeSuffix(" kg"), style = MaterialTheme.typography.displaySmall)
             Text(" kg", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 4.dp))
             Spacer(Modifier.weight(1f))
-            s.lastChange?.let { Chip(it.signed() + " od prošlog") }
+            s.lastChange?.let { Chip(it.signed() + tr(" od prošlog", " since last")) }
         }
         s.currentDay?.let {
-            Text("izmereno ${it.srRelative()} · ${it.srDate()}", style = MaterialTheme.typography.bodySmall,
+            Text(tr("izmereno ${it.srRelative()} · ${it.srDate()}", "measured ${it.srRelative()} · ${it.srDate()}"), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
         }
         Row(Modifier.padding(top = 16.dp)) {
-            Text("Najniža ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Najniža ", "Lowest "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(s.min?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
-            Text("   ·   Najviša ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("   ·   Najviša ", "   ·   Highest "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(s.max?.kg() ?: "—", style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -206,12 +208,12 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
     val day = pending?.checkInDay ?: CheckInSchedule.nextCheckInDay(today)
     val photos = pending?.photosMissing ?: CheckInSchedule.isPhotoDay(day)
     val title = when {
-        pending?.overdue == true -> "Propušteno merenje"
-        pending != null -> "Danas je merenje"
-        else -> "Sledeće merenje"
+        pending?.overdue == true -> tr("Propušteno merenje", "Missed check-in")
+        pending != null -> tr("Danas je merenje", "Check-in today")
+        else -> tr("Sledeće merenje", "Next check-in")
     }
     val what = if (pending != null) pending.whatMissing().replaceFirstChar { it.uppercase() }
-        else if (photos) "Kilaža i 3 slike (spreda, bok, leđa)" else "Kilaža"
+        else if (photos) tr("Kilaža i 3 slike (spreda, bok, leđa)", "Weight and 3 photos (front, side, back)") else tr("Kilaža", "Weight")
     AppCard(padding = PaddingValues(24.dp)) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             IconBadge(if (pending?.overdue == true) Icons.Filled.Warning else Icons.Filled.MonitorWeight,
@@ -225,10 +227,10 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(20.dp))
-            if (pending != null) PrimaryPill("Unesi merenje", onNew, Modifier.fillMaxWidth())
-            else OutlinePill("Unesi merenje", onNew, Modifier.fillMaxWidth())
+            if (pending != null) PrimaryPill(tr("Unesi merenje", "Log check-in"), onNew, Modifier.fillMaxWidth())
+            else OutlinePill(tr("Unesi merenje", "Log check-in"), onNew, Modifier.fillMaxWidth())
             Spacer(Modifier.height(14.dp))
-            LockNote("Slike su šifrovane i vidi ih samo ova aplikacija", center = true)
+            LockNote(tr("Slike su šifrovane i vidi ih samo ova aplikacija", "Photos are encrypted and only this app can see them"), center = true)
         }
     }
 }

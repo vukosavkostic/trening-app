@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -180,4 +182,69 @@ fun LockNote(text: String, modifier: Modifier = Modifier, center: Boolean = fals
         annotated, modifier, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant,
         inlineContent = inline, textAlign = if (center) TextAlign.Center else TextAlign.Start,
     )
+}
+
+/** Prekidac sa dve ili vise opcija (jedan red, jednake sirine, bez prelamanja). */
+@Composable
+fun SegmentedToggle(options: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp)
+    ) {
+        options.forEachIndexed { i, label ->
+            val sel = i == selected
+            Box(
+                Modifier.weight(1f).fillMaxSize().clip(RoundedCornerShape(10.dp))
+                    .background(if (sel) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent)
+                    .clickable { onSelect(i) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    label, style = MaterialTheme.typography.labelLarge, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = if (sel) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/** Naslov grupe u podesavanjima ("Opste", "Podaci"...). */
+@Composable
+fun GroupHeader(text: String) {
+    Text(text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 20.dp, bottom = 10.dp, start = 4.dp))
+}
+
+/** Grupa redova (zaobljeni kontejner sa tankim razdelnicima). */
+@Composable
+fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer), content = content)
+}
+
+/** Red podesavanja: naziv, vrednost desno i strelica / prekidac / spoljni link. */
+@Composable
+fun SettingsRow(
+    title: String,
+    value: String? = null,
+    onClick: (() -> Unit)? = null,
+    divider: Boolean = true,
+    external: Boolean = false,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    Row(
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontSize = androidx.compose.ui.unit.TextUnit(17f, androidx.compose.ui.unit.TextUnitType.Sp)),
+            modifier = Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        if (value != null) Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp, end = 8.dp))
+        when {
+            trailing != null -> trailing()
+            external -> Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+            onClick != null -> Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    if (divider) Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.background.copy(alpha = 0.6f)))
 }

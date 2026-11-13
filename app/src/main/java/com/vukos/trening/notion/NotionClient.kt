@@ -1,5 +1,7 @@
 package com.vukos.trening.notion
 
+import com.vukos.trening.i18n.tr
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -51,7 +53,7 @@ class NotionClient(private val token: String) {
                     }
                 }
             }
-            throw NotionException(429, "Notion je preopterećen, pokušaj kasnije.")
+            throw NotionException(429, tr("Notion je preopterećen, pokušaj kasnije.", "Notion is busy, try again later."))
         }
 
     /** Svi blokovi (decu) stranice, sa paginacijom. */
@@ -96,14 +98,14 @@ class NotionClient(private val token: String) {
         val pages = mutableListOf<JSONObject>()
         search.getJSONArray("results").forEachObj { pages += it }
         val page = pages.firstOrNull { titleOf(it) == "Trening" }
-            ?: throw NotionException(404, "Stranica \"Trening\" nije podeljena sa integracijom (••• → Connections).")
+            ?: throw NotionException(404, tr("Stranica \"Trening\" nije podeljena sa integracijom (••• → Connections).", "The \"Trening\" page is not shared with the integration (••• → Connections)."))
         val dbs = mutableMapOf<String, String>()
         for (b in children(page.getString("id"))) {
             if (b.optString("type") == "child_database") {
                 dbs[b.getJSONObject("child_database").optString("title")] = b.getString("id")
             }
         }
-        if ("Routines" !in dbs) throw NotionException(404, "Na stranici Trening nije pronađena baza Routines.")
+        if ("Routines" !in dbs) throw NotionException(404, tr("Na stranici Trening nije pronađena baza Routines.", "The Routines database was not found on the Trening page."))
         return dbs
     }
 

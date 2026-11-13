@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.workout
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -146,7 +148,7 @@ fun ActiveWorkoutScreen(
         TopAppBar(
             title = {
                 Column(Modifier.padding(end = 12.dp)) {
-                    Text(workout?.name ?: "Trening", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
+                    Text(workout?.name ?: tr("Trening", "Workout"), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Početak ${start?.let { "%02d:%02d".format(it.hour, it.minute) } ?: ""}",
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -158,12 +160,12 @@ fun ActiveWorkoutScreen(
                     onClick = { dialog = "finish" }, modifier = Modifier.padding(end = 2.dp).height(40.dp),
                     shape = androidx.compose.foundation.shape.CircleShape, contentPadding = PaddingValues(horizontal = 18.dp),
                 ) {
-                    Text("Završi", style = MaterialTheme.typography.labelLarge)
+                    Text(tr("Završi", "Finish"), style = MaterialTheme.typography.labelLarge)
                 }
                 Box {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Još") }
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, tr("Još", "More")) }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(text = { Text("Odbaci trening") }, onClick = { menu = false; dialog = "discard" })
+                        DropdownMenuItem(text = { Text(tr("Odbaci trening", "Discard workout")) }, onClick = { menu = false; dialog = "discard" })
                     }
                 }
             },
@@ -175,9 +177,9 @@ fun ActiveWorkoutScreen(
         ) {
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", "volumen", Modifier.weight(1f), MaterialTheme.colorScheme.primary)
-                    StatTile("${WorkoutMath.doneCount(sets)} / ${sets.size}", "setova", Modifier.weight(1f))
-                    StatTile("${groups.size}", "vežbi", Modifier.weight(1f))
+                    StatTile("${WorkoutMath.fmtKg(WorkoutMath.volume(sets))} kg", tr("volumen", "volume"), Modifier.weight(1f), MaterialTheme.colorScheme.primary)
+                    StatTile("${WorkoutMath.doneCount(sets)} / ${sets.size}", tr("setova", "sets"), Modifier.weight(1f))
+                    StatTile("${groups.size}", tr("vežbi", "exercises"), Modifier.weight(1f))
                 }
             }
             groups.forEach { (pos, groupSets) ->
@@ -199,7 +201,7 @@ fun ActiveWorkoutScreen(
             }
             item {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinePill("Dodaj vežbu", onPickExercises, Modifier.fillMaxWidth(), Icons.Filled.Add)
+                    OutlinePill(tr("Dodaj vežbu", "Add exercise"), onPickExercises, Modifier.fillMaxWidth(), Icons.Filled.Add)
                 }
             }
         }
@@ -211,12 +213,12 @@ fun ActiveWorkoutScreen(
             val notDone = sets.size - done
             AlertDialog(
                 onDismissRequest = { dialog = null },
-                title = { Text(if (done == 0) "Nema unetih setova" else "Završi trening?") },
+                title = { Text(if (done == 0) tr("Nema unetih setova", "No sets logged") else tr("Završi trening?", "Finish workout?")) },
                 text = {
                     Column {
                         Text(
-                            if (done == 0) "Upiši kilažu i ponavljanja bar za jedan set, ili odbaci trening."
-                            else "Čuva se $done setova." + if (notDone > 0) "\nPrazni setovi ($notDone) se ne čuvaju." else ""
+                            if (done == 0) tr("Upiši kilažu i ponavljanja bar za jedan set, ili odbaci trening.", "Enter weight and reps for at least one set, or discard the workout.")
+                            else tr("Čuva se $done setova.", "$done sets will be saved.") + if (notDone > 0) tr("\nPrazni setovi ($notDone) se ne čuvaju.", "\nEmpty sets ($notDone) are not saved.") else ""
                         )
                         if (done > 0 && planUpdate != null) {
                             Spacer(Modifier.height(16.dp))
@@ -228,7 +230,7 @@ fun ActiveWorkoutScreen(
                             ) {
                                 androidx.compose.material3.Checkbox(checked = updatePlan, onCheckedChange = { updatePlan = it })
                                 Column(Modifier.padding(top = 10.dp)) {
-                                    Text("Ažuriraj plan „${workout?.name}“", style = MaterialTheme.typography.titleSmall)
+                                    Text(tr("Ažuriraj plan „${workout?.name}“", "Update plan “${workout?.name}”"), style = MaterialTheme.typography.titleSmall)
                                     planChanges(planUpdate, byId).forEach {
                                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
@@ -248,21 +250,21 @@ fun ActiveWorkoutScreen(
                                 onFinished(workoutId)
                             }
                         }
-                    }) { Text("Završi") }
-                    else TextButton(onClick = { dialog = "discard" }) { Text("Odbaci") }
+                    }) { Text(tr("Završi", "Finish")) }
+                    else TextButton(onClick = { dialog = "discard" }) { Text(tr("Odbaci", "Discard")) }
                 },
-                dismissButton = { TextButton(onClick = { dialog = null }) { Text("Nazad") } },
+                dismissButton = { TextButton(onClick = { dialog = null }) { Text(tr("Nazad", "Back")) } },
             )
         }
         "leave" -> AlertDialog(
             onDismissRequest = { dialog = null },
-            title = { Text("Trening je u toku") },
-            text = { Text("Sve što si uneo je sačuvano. Završi trening kad budeš gotov, ili ga odbaci.") },
-            confirmButton = { TextButton(onClick = { dialog = "finish" }) { Text("Završi") } },
+            title = { Text(tr("Trening je u toku", "Workout in progress")) },
+            text = { Text(tr("Sve što si uneo je sačuvano. Završi trening kad budeš gotov, ili ga odbaci.", "Everything you entered is saved. Finish the workout when you are done, or discard it.")) },
+            confirmButton = { TextButton(onClick = { dialog = "finish" }) { Text(tr("Završi", "Finish")) } },
             dismissButton = {
                 Row {
-                    TextButton(onClick = { dialog = "discard" }) { Text("Odbaci", color = MaterialTheme.colorScheme.error) }
-                    TextButton(onClick = { dialog = null }) { Text("Nastavi") }
+                    TextButton(onClick = { dialog = "discard" }) { Text(tr("Odbaci", "Discard"), color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { dialog = null }) { Text(tr("Nastavi", "Continue")) }
                 }
             },
         )
@@ -277,12 +279,12 @@ fun ActiveWorkoutScreen(
     when (dialog) {
         "discard" -> AlertDialog(
             onDismissRequest = { dialog = null },
-            title = { Text("Odbaci trening?") },
-            text = { Text("Svi uneti setovi ovog treninga se brišu.") },
+            title = { Text(tr("Odbaci trening?", "Discard workout?")) },
+            text = { Text(tr("Svi uneti setovi ovog treninga se brišu.", "All sets of this workout will be deleted.")) },
             confirmButton = {
-                TextButton(onClick = { dialog = null; scope.launch { WorkoutRepo.discard(workoutId); onClose() } }) { Text("Odbaci") }
+                TextButton(onClick = { dialog = null; scope.launch { WorkoutRepo.discard(workoutId); onClose() } }) { Text(tr("Odbaci", "Discard")) }
             },
-            dismissButton = { TextButton(onClick = { dialog = null }) { Text("Nazad") } },
+            dismissButton = { TextButton(onClick = { dialog = null }) { Text(tr("Nazad", "Back")) } },
         )
     }
 }
@@ -292,9 +294,9 @@ private fun planChanges(u: PlanUpdate, byId: Map<String, Exercise>): List<String
     fun n(id: String) = byId[id]?.name ?: "?"
     u.added.forEach { add("+ ${n(it)}") }
     u.removed.forEach { add("− ${n(it)}") }
-    u.setChanges.forEach { (id, a, b) -> add("${n(id)}: $a → $b setova") }
-    if (u.reordered) add("novi redosled vežbi")
-    add("kilaže iz ovog treninga postaju cilj")
+    u.setChanges.forEach { (id, a, b) -> add(tr("${n(id)}: $a → $b setova", "${n(id)}: $a → $b sets")) }
+    if (u.reordered) add(tr("novi redosled vežbi", "new exercise order"))
+    add(tr("kilaže iz ovog treninga postaju cilj", "weights from this workout become the target"))
 }
 
 @Composable
@@ -302,15 +304,15 @@ private fun NoteDialog(exercise: Exercise, onDismiss: () -> Unit, onSave: (Strin
     var text by remember { mutableStateOf(exercise.notes) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Beleška: ${exercise.name}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        title = { Text(tr("Beleška: ${exercise.name}", "Note: ${exercise.name}"), maxLines = 2, overflow = TextOverflow.Ellipsis) },
         text = {
             androidx.compose.material3.OutlinedTextField(
-                text, { text = it.take(300) }, placeholder = { Text("npr. sedište na 4, uži hvat") },
+                text, { text = it.take(300) }, placeholder = { Text(tr("npr. sedište na 4, uži hvat", "e.g. seat at 4, narrow grip")) },
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
             )
         },
-        confirmButton = { TextButton(onClick = { onSave(text) }) { Text("Sačuvaj") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Otkaži") } },
+        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(tr("Sačuvaj", "Save")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) } },
     )
 }
 
@@ -354,19 +356,19 @@ private fun ExerciseBlock(
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 target?.let { t ->
                     Text(
-                        "Cilj: ${t.targetSets}×${t.repsMin ?: ""}${if (t.repsMax != null && t.repsMax != t.repsMin) "–${t.repsMax}" else ""}" +
+                        tr("Cilj: ${t.targetSets}×${t.repsMin ?: ""}${if (t.repsMax != null && t.repsMax != t.repsMin) "–${t.repsMax}" else ""}", "Target: ${t.targetSets}×${t.repsMin ?: ""}${if (t.repsMax != null && t.repsMax != t.repsMin) "–${t.repsMax}" else ""}") +
                             (t.targetKg?.let { " @ ${WorkoutMath.fmtKg(it)} kg" } ?: ""),
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
             Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opcije vežbe") }
+                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, tr("Opcije vežbe", "Exercise options")) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text(if (exercise?.notes.isNullOrBlank()) "Dodaj belešku" else "Izmeni belešku") },
+                    DropdownMenuItem(text = { Text(if (exercise?.notes.isNullOrBlank()) tr("Dodaj belešku", "Add note") else tr("Izmeni belešku", "Edit note")) },
                         onClick = { menu = false; onNote() })
-                    DropdownMenuItem(text = { Text("Statistika vežbe") }, onClick = { menu = false; onOpen() })
-                    DropdownMenuItem(text = { Text("Ukloni vežbu", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; onRemove() })
+                    DropdownMenuItem(text = { Text(tr("Statistika vežbe", "Exercise stats")) }, onClick = { menu = false; onOpen() })
+                    DropdownMenuItem(text = { Text(tr("Ukloni vežbu", "Remove exercise"), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; onRemove() })
                 }
             }
         }
@@ -391,23 +393,23 @@ private fun ExerciseBlock(
                 Icon(Icons.Filled.TrendingUp, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Prošli put si ispunio sva ponavljanja: probaj ${WorkoutMath.fmtKg(kg)} kg (+${WorkoutMath.fmtKg(WorkoutMath.PROGRESSION_STEP_KG)})",
+                    tr("Prošli put si ispunio sva ponavljanja: probaj ${WorkoutMath.fmtKg(kg)} kg (+${WorkoutMath.fmtKg(WorkoutMath.PROGRESSION_STEP_KG)})", "You hit all reps last time: try ${WorkoutMath.fmtKg(kg)} kg (+${WorkoutMath.fmtKg(WorkoutMath.PROGRESSION_STEP_KG)})"),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 4.dp)) {
             Header("Set", Modifier.width(36.dp))
-            Header("Prethodno", Modifier.weight(1.3f))
+            Header(tr("Prethodno", "Previous"), Modifier.weight(1.3f))
             Header("kg", Modifier.weight(1f))
-            Header("Ponav.", Modifier.weight(1f))
+            Header(tr("Ponav.", "Reps"), Modifier.weight(1f))
             Header("✓", Modifier.width(44.dp))
         }
         sets.forEach { s ->
             androidx.compose.runtime.key(s.id) { SetRow(s, labels[s.id] ?: "${s.setIndex}", previous, target, onUpdate, onDelete) }
         }
         TextButton(onClick = onAddSet, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-            Icon(Icons.Filled.Add, null); Text("  Dodaj set")
+            Icon(Icons.Filled.Add, null); Text(tr("  Dodaj set", "  Add set"))
         }
     }
 }
@@ -465,7 +467,7 @@ private fun SetRow(
                     )
                 }
                 androidx.compose.material3.HorizontalDivider()
-                DropdownMenuItem(text = { Text("Obriši set", color = MaterialTheme.colorScheme.error) },
+                DropdownMenuItem(text = { Text(tr("Obriši set", "Delete set"), color = MaterialTheme.colorScheme.error) },
                     onClick = { typeMenu = false; onDelete(set) })
             }
         }
@@ -497,7 +499,7 @@ private fun SetRow(
                         }
                     },
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Check, "Urađeno", tint = if (set.done) Color.White else MaterialTheme.colorScheme.onSurfaceVariant) }
+            ) { Icon(Icons.Filled.Check, tr("Urađeno", "Done"), tint = if (set.done) Color.White else MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 

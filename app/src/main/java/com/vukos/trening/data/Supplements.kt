@@ -19,6 +19,13 @@ object Supplements {
     const val MEAL = "Suplementi"
     const val SEP = " · "
 
+    /** Naziv kategorije za prikaz (u podacima ostaje srpski). */
+    fun categoryLabel(c: String): String = if (!com.vukos.trening.i18n.Lang.en) c else when (c) {
+        "Performanse" -> "Performance"; "Protein" -> "Protein"; "Oporavak i san" -> "Recovery & sleep"
+        "Vitamini i minerali" -> "Vitamins & minerals"; "Zdravlje i ostalo" -> "Health & other"; "Skoro korišćeno" -> "Recently used"
+        else -> c
+    }
+
     val CATEGORIES = listOf("Performanse", "Protein", "Oporavak i san", "Vitamini i minerali", "Zdravlje i ostalo")
 
     /** Najcesci trening suplementi (doze su uobicajene pocetne vrednosti; menjaju se pri unosu). */

@@ -27,6 +27,10 @@ private val Colors = darkColorScheme(
     primaryContainer = Color(0xFF3A1D10),
     onPrimaryContainer = Color(0xFFFFB693),
     secondary = Color(0xFFB0B0B0),
+    // Izabrani cipovi / segmenti: neutralno (bez podrazumevane ljubicaste).
+    secondaryContainer = Color(0xFF34343A),
+    onSecondaryContainer = Color(0xFFF4F4F5),
+    tertiary = Accent,
     background = Color(0xFF0E0E10),
     onBackground = Color(0xFFF4F4F5),
     surface = Color(0xFF0E0E10),

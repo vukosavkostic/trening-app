@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,26 +39,38 @@ import com.vukos.trening.ui.theme.Danger
 import java.time.LocalDate
 import java.util.Locale
 
-private val DAYS = listOf("pon", "uto", "sre", "čet", "pet", "sub", "ned")
+private val en get() = com.vukos.trening.i18n.Lang.en
+private val DAYS get() = if (en) listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") else listOf("pon", "uto", "sre", "čet", "pet", "sub", "ned")
+private val DAYS_FULL get() = if (en) listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+    else listOf("ponedeljak", "utorak", "sreda", "četvrtak", "petak", "subota", "nedelja")
+private val MONTHS_GEN get() = if (en) listOf("January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December")
+    else listOf("januara", "februara", "marta", "aprila", "maja", "juna", "jula", "avgusta", "septembra", "oktobra", "novembra", "decembra")
 
-fun LocalDate.sr(): String = "${DAYS[dayOfWeek.value - 1]} $dayOfMonth.$monthValue.$year."
-fun LocalDate.srShort(): String = "$dayOfMonth.$monthValue."
+fun LocalDate.sr(): String = if (en) "${DAYS[dayOfWeek.value - 1]} $dayOfMonth/$monthValue/$year" else "${DAYS[dayOfWeek.value - 1]} $dayOfMonth.$monthValue.$year."
+fun LocalDate.srShort(): String = if (en) "$dayOfMonth/$monthValue" else "$dayOfMonth.$monthValue."
 
-private val DAYS_FULL = listOf("ponedeljak", "utorak", "sreda", "četvrtak", "petak", "subota", "nedelja")
-private val MONTHS_GEN = listOf("januara", "februara", "marta", "aprila", "maja", "juna",
-    "jula", "avgusta", "septembra", "oktobra", "novembra", "decembra")
+/** "12. novembra" / "November 12" (godina samo ako nije tekuca). */
+fun LocalDate.srDate(): String = if (en)
+    "${MONTHS_GEN[monthValue - 1]} $dayOfMonth" + if (year != LocalDate.now().year) ", $year" else ""
+else "$dayOfMonth. ${MONTHS_GEN[monthValue - 1]}" + if (year != LocalDate.now().year) " $year." else ""
 
-/** "12. novembra" (godina samo ako nije tekuca). */
-fun LocalDate.srDate(): String =
-    "$dayOfMonth. ${MONTHS_GEN[monthValue - 1]}" + if (year != LocalDate.now().year) " $year." else ""
-
-/** "četvrtak, 12. novembra" */
+/** "četvrtak, 12. novembra" / "Thursday, November 12" */
 fun LocalDate.srLong(): String = "${DAYS_FULL[dayOfWeek.value - 1]}, ${srDate()}"
 
 /** "danas", "sutra", "za 3 dana", "pre 2 dana"... */
 fun LocalDate.srRelative(today: LocalDate = LocalDate.now()): String {
     val d = toEpochDay() - today.toEpochDay()
-    return when {
+    return if (en) when {
+        d == 0L -> "today"
+        d == 1L -> "tomorrow"
+        d == -1L -> "yesterday"
+        d > 1 -> "in $d days"
+        d > -7 -> "${-d} days ago"
+        d > -14 -> "a week ago"
+        d > -60 -> "${-d / 7} weeks ago"
+        else -> "${-d / 30} months ago"
+    } else when {
         d == 0L -> "danas"
         d == 1L -> "sutra"
         d == -1L -> "juče"
@@ -72,9 +86,9 @@ fun Double.kg(): String = String.format(Locale.US, "%.1f", this).removeSuffix(".
 fun parseKg(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it in 20.0..400.0 }
 
 fun CheckInSchedule.Due.whatMissing(): String = when {
-    weightMissing && photosMissing -> "kilaža + 3 slike"
-    photosMissing -> "3 slike (spreda, bok, leđa)"
-    else -> "kilaža"
+    weightMissing && photosMissing -> tr("kilaža + 3 slike", "weight + 3 photos")
+    photosMissing -> tr("3 slike (spreda, bok, leđa)", "3 photos (front, side, back)")
+    else -> tr("kilaža", "weight")
 }
 
 /**
@@ -102,11 +116,11 @@ fun CheckInBanner(due: CheckInSchedule.Due?, topInset: Boolean = true, onClick: 
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (due.overdue) "Propušteno merenje" else "Danas je merenje",
+                    if (due.overdue) tr("Propušteno merenje", "Missed check-in") else tr("Danas je merenje", "Check-in today"),
                     color = Color.White, style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    (if (due.overdue) "${due.checkInDay.srDate()} · " else "") + "unesi ${due.whatMissing()}",
+                    (if (due.overdue) "${due.checkInDay.srDate()} · " else "") + tr("unesi ${due.whatMissing()}", "log ${due.whatMissing()}"),
                     color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -136,13 +150,13 @@ fun WeightChart(
             .padding(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Kilaža", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(tr("Kilaža", "Weight"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             val diff = pts.last().weightKg!! - pts.first().weightKg!!
             Text(
-                (if (diff >= 0) "+" else "−") + kotlin.math.abs(diff).kg() + " od ${LocalDate.ofEpochDay(pts.first().epochDay).srShort()}",
+                (if (diff >= 0) "+" else "−") + kotlin.math.abs(diff).kg() + tr(" od ${LocalDate.ofEpochDay(pts.first().epochDay).srShort()}", " since ${LocalDate.ofEpochDay(pts.first().epochDay).srShort()}"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
             )
-            if (onClick != null) Icon(Icons.Filled.ChevronRight, "Otvori grafikon", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (onClick != null) Icon(Icons.Filled.ChevronRight, tr("Otvori grafikon", "Open chart"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(12.dp))
         Row {

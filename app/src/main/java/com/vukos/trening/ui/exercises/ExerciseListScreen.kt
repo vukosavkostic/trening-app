@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.exercises
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -85,17 +87,17 @@ fun ExerciseListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (selectionMode) "Izaberi vežbe" else "Vežbe") },
+                title = { Text(if (selectionMode) tr("Izaberi vežbe", "Choose exercises") else tr("Vežbe", "Exercises")) },
                 navigationIcon = {
                     if (onBack != null) IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back"))
                     }
                 },
                 actions = {
                     TextButton(onClick = onNew) {
                         Icon(Icons.Filled.Add, null)
                         Spacer(Modifier.width(4.dp))
-                        Text("Nova vežba")
+                        Text(tr("Nova vežba", "New exercise"))
                     }
                 },
             )
@@ -107,7 +109,7 @@ fun ExerciseListScreen(
                     enabled = selected.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text(if (selected.isEmpty()) "Izaberi vežbe" else "Dodaj (${selected.size})") }
+                ) { Text(if (selected.isEmpty()) tr("Izaberi vežbe", "Choose exercises") else tr("Dodaj (${selected.size})", "Add (${selected.size})")) }
             }
         },
     ) { pad ->
@@ -115,10 +117,10 @@ fun ExerciseListScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Pretraži vežbe (npr. bench, row, squat)") },
+                placeholder = { Text(tr("Pretraži vežbe (npr. bench, row, squat)", "Search exercises (e.g. bench, row, squat)")) },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 trailingIcon = {
-                    if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, "Obriši") }
+                    if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, tr("Obriši", "Delete")) }
                 },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -132,7 +134,7 @@ fun ExerciseListScreen(
             ChipRow(MuscleGroup.entries, { it.label }, muscles)
             ChipRow(EquipmentGroup.entries, { it.label }, equipment)
             Text(
-                "${results.size} vežbi",
+                tr("${results.size} vežbi", "${results.size} exercises"),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),

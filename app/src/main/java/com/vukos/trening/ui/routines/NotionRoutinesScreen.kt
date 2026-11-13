@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.routines
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,16 +73,16 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
         error = null; items = null
         runCatching { NotionRoutines.list(app.settings) }
             .onSuccess { items = it }
-            .onFailure { error = it.message ?: "Greška pri učitavanju." }
+            .onFailure { error = it.message ?: tr("Greška pri učitavanju.", "Loading failed.") }
     }
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Notion treninzi") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
+            title = { Text(tr("Notion treninzi", "Notion workouts")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
             actions = {
-                IconButton(onClick = onHelp) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "Uputstvo") }
-                IconButton(onClick = { reload++ }) { Icon(Icons.Filled.Refresh, "Osveži") }
+                IconButton(onClick = onHelp) { Icon(Icons.AutoMirrored.Filled.HelpOutline, tr("Uputstvo", "Guide")) }
+                IconButton(onClick = { reload++ }) { Icon(Icons.Filled.Refresh, tr("Osveži", "Refresh")) }
             },
         )
     }) { pad ->
@@ -88,28 +90,28 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
             when {
                 error == "notoken" -> Column(Modifier.padding(16.dp)) {
                     com.vukos.trening.ui.common.EmptyState(
-                        Icons.AutoMirrored.Filled.HelpOutline, "Notion nije povezan",
-                        "Uz Notion imaš rezervnu kopiju u oblaku, pregled na računaru, a AI može da ti napravi plan treninga koji ovde uvučeš jednim klikom.",
+                        Icons.AutoMirrored.Filled.HelpOutline, tr("Notion nije povezan", "Notion is not connected"),
+                        tr("Uz Notion imaš rezervnu kopiju u oblaku, pregled na računaru, a AI može da ti napravi plan treninga koji ovde uvučeš jednim klikom.", "With Notion you get a cloud copy, a view on your computer, and AI can build a workout plan you pull in here with one tap."),
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            com.vukos.trening.ui.common.PrimaryPill("Uputstvo korak po korak", onHelp, Modifier.fillMaxWidth())
-                            com.vukos.trening.ui.common.OutlinePill("Već imam token", onSettings, Modifier.fillMaxWidth())
+                            com.vukos.trening.ui.common.PrimaryPill(tr("Uputstvo korak po korak", "Step-by-step guide"), onHelp, Modifier.fillMaxWidth())
+                            com.vukos.trening.ui.common.OutlinePill(tr("Već imam token", "I already have a token"), onSettings, Modifier.fillMaxWidth())
                         }
                     }
                 }
                 error?.contains("Trening") == true || error?.contains("401") == true -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Ne mogu da učitam planove iz Notiona.", fontWeight = FontWeight.SemiBold)
+                    Text(tr("Ne mogu da učitam planove iz Notiona.", "Could not load plans from Notion."), fontWeight = FontWeight.SemiBold)
                     Text(error!!, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = onHelp) { Text("Pogledaj uputstvo") }
+                    Button(onClick = onHelp) { Text(tr("Pogledaj uputstvo", "See the guide")) }
                 }
                 error != null -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Ne mogu da učitam planove iz Notiona.", fontWeight = FontWeight.SemiBold)
+                    Text(tr("Ne mogu da učitam planove iz Notiona.", "Could not load plans from Notion."), fontWeight = FontWeight.SemiBold)
                     Text(error!!, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = { reload++ }) { Text("Pokušaj ponovo") }
+                    Button(onClick = { reload++ }) { Text(tr("Pokušaj ponovo", "Try again")) }
                 }
                 items == null -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 items!!.isEmpty() -> Text(
-                    "U Notion bazi Routines još nema planova.\nDodaj stranicu sa vežbama, jedna po redu, npr.\n\"Dumbbell Bench Press 3x8-12\".",
+                    tr("U Notion bazi Routines još nema planova.\nDodaj stranicu sa vežbama, jedna po redu, npr.\n\"Dumbbell Bench Press 3x8-12\".", "There are no plans in the Notion Routines database yet.\nAdd a page with exercises, one per line, e.g.\n\"Dumbbell Bench Press 3x8-12\"."),
                     Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 else -> LazyColumn(
@@ -126,7 +128,7 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                                 Column(Modifier.weight(1f)) {
                                     Text(nr.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                                     Text(
-                                        "${nr.lines.size} vežbi",
+                                        tr("${nr.lines.size} vežbi", "${nr.lines.size} exercises"),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         style = MaterialTheme.typography.bodySmall,
                                     )
@@ -134,7 +136,7 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                                 when {
                                     added -> TextButton(onClick = { onOpenRoutine(nr.appId!!) }) {
                                         Icon(Icons.Filled.CheckCircle, null, tint = com.vukos.trening.ui.theme.Success)
-                                        Text("  Dodato")
+                                        Text(tr("  Dodato", "  Added"))
                                     }
                                     importing == nr.pageId -> CircularProgressIndicator(Modifier.padding(8.dp))
                                     else -> Button(
@@ -147,11 +149,11 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                                                         result = nr.name to r
                                                         items = items?.map { if (it.pageId == nr.pageId) it.copy(appId = r.routineId) else it }
                                                     }
-                                                    .onFailure { error = "Dodavanje nije uspelo: ${it.message}" }
+                                                    .onFailure { error = tr("Dodavanje nije uspelo: ${it.message}", "Adding failed: ${it.message}") }
                                                 importing = null
                                             }
                                         },
-                                    ) { Text("Dodaj") }
+                                    ) { Text(tr("Dodaj", "Add")) }
                                 }
                             }
                             nr.lines.take(6).forEach { l ->
@@ -162,9 +164,9 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                                     modifier = Modifier.padding(top = 2.dp),
                                 )
                             }
-                            if (nr.lines.size > 6) Text("… još ${nr.lines.size - 6}", style = MaterialTheme.typography.bodySmall,
+                            if (nr.lines.size > 6) Text(tr("… još ${nr.lines.size - 6}", "… ${nr.lines.size - 6} more"), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (nr.lines.isEmpty()) Text("Nema vežbi (lista na stranici ili polje Plan).",
+                            if (nr.lines.isEmpty()) Text(tr("Nema vežbi (lista na stranici ili polje Plan).", "No exercises (list on the page or the Plan field)."),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -176,15 +178,15 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
     result?.let { (name, r) ->
         AlertDialog(
             onDismissRequest = { result = null },
-            title = { Text("Dodato: $name") },
+            title = { Text(tr("Dodato: $name", "Added: $name")) },
             text = {
                 Text(
-                    "Uparenih vežbi: ${r.matched}." +
+                    tr("Uparenih vežbi: ${r.matched}.", "Matched exercises: ${r.matched}.") +
                         if (r.created.isEmpty()) "" else
-                            "\n\nNisu pronađene u bazi, pa su dodate kao tvoje vežbe:\n" + r.created.joinToString("\n") { "• $it" }
+                            tr("\n\nNisu pronađene u bazi, pa su dodate kao tvoje vežbe:\n", "\n\nNot found in the database, added as your own exercises:\n") + r.created.joinToString("\n") { "• $it" }
                 )
             },
-            confirmButton = { TextButton(onClick = { result = null; onOpenRoutine(r.routineId) }) { Text("Otvori plan") } },
+            confirmButton = { TextButton(onClick = { result = null; onOpenRoutine(r.routineId) }) { Text(tr("Otvori plan", "Open plan")) } },
             dismissButton = { TextButton(onClick = { result = null }) { Text("OK") } },
         )
     }

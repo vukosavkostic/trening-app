@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.journal
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -133,8 +135,8 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
     val dayWeight = body.firstOrNull { it.epochDay == selectedDay && it.weightKg != null }
 
     Scaffold(topBar = {
-        TabTopBar("Dnevnik") {
-            androidx.compose.material3.IconButton(onClick = onOpenStats) { Icon(Icons.Filled.BarChart, "Statistika") }
+        TabTopBar(tr("Dnevnik", "Journal")) {
+            androidx.compose.material3.IconButton(onClick = onOpenStats) { Icon(Icons.Filled.BarChart, tr("Statistika", "Statistics")) }
         }
     }) { pad ->
         LazyColumn(
@@ -152,23 +154,23 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("${insights.workouts}", "treninga", Modifier.weight(1f))
-                    StatTile(JournalStats.fmtMinutes(insights.minutes), "u teretani", Modifier.weight(1f))
-                    StatTile("${WorkoutMath.fmtKg(insights.volumeKg / 1000)} t", "podignuto", Modifier.weight(1f))
+                    StatTile("${insights.workouts}", tr("treninga", "workouts"), Modifier.weight(1f))
+                    StatTile(JournalStats.fmtMinutes(insights.minutes), tr("u teretani", "in the gym"), Modifier.weight(1f))
+                    StatTile("${WorkoutMath.fmtKg(insights.volumeKg / 1000)} t", tr("podignuto", "lifted"), Modifier.weight(1f))
                 }
             }
             item {
-                SectionTitle(if (selected == LocalDate.now()) "Danas" else selected.srLong().replaceFirstChar { it.uppercase() })
+                SectionTitle(if (selected == LocalDate.now()) tr("Danas", "Today") else selected.srLong().replaceFirstChar { it.uppercase() })
             }
             if (dayWorkouts.isEmpty()) item {
-                InfoRow(Icons.Filled.FitnessCenter, MaterialTheme.colorScheme.onSurfaceVariant, "Trening",
-                    if (selected.isAfter(LocalDate.now())) "—" else "Bez treninga", null)
+                InfoRow(Icons.Filled.FitnessCenter, MaterialTheme.colorScheme.onSurfaceVariant, tr("Trening", "Workout"),
+                    if (selected.isAfter(LocalDate.now())) "—" else tr("Bez treninga", "No workout"), null)
             }
             items(dayWorkouts, key = { it.id }) { w ->
                 WorkoutCard(w, setsByWorkout[w.id].orEmpty(), names) { onOpenWorkout(w.id) }
             }
             dayWeight?.let { e ->
-                item { InfoRow(Icons.Filled.MonitorWeight, WeightBlue, "Kilaža", e.weightKg!!.kg()) { onOpenBodyDay(selected) } }
+                item { InfoRow(Icons.Filled.MonitorWeight, WeightBlue, tr("Kilaža", "Weight"), e.weightKg!!.kg()) { onOpenBodyDay(selected) } }
             }
             item {
                 FoodCard(
@@ -260,39 +262,39 @@ private fun FoodCard(
             IconBadge(Icons.Filled.Restaurant, FoodGreen, 40.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("Ishrana", style = MaterialTheme.typography.titleMedium)
+                Text(tr("Ishrana", "Food"), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    if (food.isEmpty()) "Još ništa nije uneto" else "${food.size} ${if (food.size == 1) "unos" else "unosa"}",
+                    if (food.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else tr("${food.size} ${if (food.size == 1) "unos" else "unosa"}", "${food.size} ${if (food.size == 1) "entry" else "entries"}"),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Box(
                 Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary).clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Add, "Dodaj obrok", tint = Color.White) }
+            ) { Icon(Icons.Filled.Add, tr("Dodaj obrok", "Add meal"), tint = Color.White) }
         }
         Spacer(Modifier.height(14.dp))
         if (kcalGoal > 0 || proteinGoal > 0) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClick = onGoals).padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly) {
                 if (kcalGoal > 0) GoalRing(kcal, kcalGoal, "kcal", MaterialTheme.colorScheme.primary)
-                if (proteinGoal > 0) GoalRing(prot, proteinGoal, "g proteina", FoodGreen)
+                if (proteinGoal > 0) GoalRing(prot, proteinGoal, tr("g proteina", "g protein"), FoodGreen)
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (kcal > 0 || prot > 0) Text(
-                    listOfNotNull(kcal.takeIf { it > 0 }?.let { "$it kcal" }, prot.takeIf { it > 0 }?.let { "$it g proteina" }).joinToString(" · "),
+                    listOfNotNull(kcal.takeIf { it > 0 }?.let { "$it kcal" }, prot.takeIf { it > 0 }?.let { tr("$it g proteina", "$it g protein") }).joinToString(" · "),
                     style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
                 ) else Spacer(Modifier.weight(1f))
-                TextButton(onClick = onGoals) { Text("Postavi dnevni cilj") }
+                TextButton(onClick = onGoals) { Text(tr("Postavi dnevni cilj", "Set a daily goal")) }
             }
         }
-        if (copyCount > 0) OutlinePill("Kopiraj juče ($copyCount)", onCopy, Modifier.fillMaxWidth().padding(top = 8.dp), Icons.Filled.ContentCopy)
+        if (copyCount > 0) OutlinePill(tr("Kopiraj juče ($copyCount)", "Copy yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 8.dp), Icons.Filled.ContentCopy)
         MEALS.forEach { meal ->
             val entries = food.filter { it.meal == meal }
             if (entries.isNotEmpty()) {
                 Spacer(Modifier.height(14.dp))
-                Text(meal.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(com.vukos.trening.data.mealLabel(meal).uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 entries.forEach { f ->
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onEdit(f) }.padding(vertical = 8.dp),
@@ -332,7 +334,7 @@ private fun GoalRing(value: Int, goal: Int, unit: String, color: Color) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            if (value >= goal) "$unit ✓" else "još ${goal - value} $unit",
+            if (value >= goal) "$unit ✓" else tr("još ${goal - value} $unit", "${goal - value} $unit to go"),
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -344,18 +346,18 @@ private fun GoalsDialog(kcal: Int, protein: Int, onDismiss: () -> Unit, onSave: 
     var p by remember { mutableStateOf(protein.takeIf { it > 0 }?.toString() ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Dnevni cilj") },
+        title = { Text(tr("Dnevni cilj", "Daily goal")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Ostavi prazno ako ne pratiš.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(k, { k = it.filter(Char::isDigit).take(5) }, label = { Text("Kalorije (kcal)") }, singleLine = true,
+                Text(tr("Ostavi prazno ako ne pratiš.", "Leave empty if you do not track it."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(k, { k = it.filter(Char::isDigit).take(5) }, label = { Text(tr("Kalorije (kcal)", "Calories (kcal)")) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(p, { p = it.filter(Char::isDigit).take(4) }, label = { Text("Protein (g)") }, singleLine = true,
+                OutlinedTextField(p, { p = it.filter(Char::isDigit).take(4) }, label = { Text(tr("Protein (g)", "Protein (g)")) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(k.toIntOrNull() ?: 0, p.toIntOrNull() ?: 0) }) { Text("Sačuvaj") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Otkaži") } },
+        confirmButton = { TextButton(onClick = { onSave(k.toIntOrNull() ?: 0, p.toIntOrNull() ?: 0) }) { Text(tr("Sačuvaj", "Save")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) } },
     )
 }
 
@@ -399,25 +401,25 @@ private fun FoodDialog(
         com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, opts).startScan()
             .addOnSuccessListener { b ->
                 val code = b.rawValue ?: return@addOnSuccessListener
-                scanMsg = "Tražim proizvod…"
+                scanMsg = tr("Tražim proizvod…", "Looking up product…")
                 scope.launch {
                     val pr = runCatching { OpenFoodFacts.lookup(code) }.getOrNull()
-                    if (pr == null) scanMsg = "Proizvod $code nije pronađen u bazi Open Food Facts. Upiši ručno."
+                    if (pr == null) scanMsg = tr("Proizvod $code nije pronađen u bazi Open Food Facts. Upiši ručno.", "Product $code was not found in Open Food Facts. Enter it manually.")
                     else { product = pr; text = pr.name; scanMsg = null; applyGrams(grams) }
                 }
             }
-            .addOnFailureListener { scanMsg = "Skener nije dostupan: ${it.message}" }
+            .addOnFailureListener { scanMsg = tr("Skener nije dostupan: ${it.message}", "Scanner unavailable: ${it.message}") }
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Novi obrok" else "Izmena obroka") },
+        title = { Text(if (initial == null) tr("Novi obrok", "New meal") else tr("Izmena obroka", "Edit meal")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MEALS.forEach { m -> FilterChip(selected = meal == m, onClick = { meal = m }, label = { Text(m) }) }
+                    MEALS.forEach { m -> FilterChip(selected = meal == m, onClick = { meal = m }, label = { Text(com.vukos.trening.data.mealLabel(m)) }) }
                 }
                 if (suggestions.isNotEmpty()) {
-                    Text("Često", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Često", "Frequent"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         suggestions.forEach { sg ->
                             androidx.compose.material3.SuggestionChip(
@@ -427,20 +429,20 @@ private fun FoodDialog(
                         }
                     }
                 }
-                OutlinedTextField(text, { text = it }, label = { Text("Šta si jeo/la") }, modifier = Modifier.fillMaxWidth())
-                TextButton(onClick = ::scan) { Icon(Icons.Filled.QrCodeScanner, null); Text("  Skeniraj barkod") }
+                OutlinedTextField(text, { text = it }, label = { Text(tr("Šta si jeo/la", "What did you eat")) }, modifier = Modifier.fillMaxWidth())
+                TextButton(onClick = ::scan) { Icon(Icons.Filled.QrCodeScanner, null); Text(tr("  Skeniraj barkod", "  Scan barcode")) }
                 scanMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 product?.let { pr ->
                     Text(
-                        "Na 100 g: " + listOfNotNull(pr.kcal100?.let { "${Math.round(it)} kcal" }, pr.protein100?.let { "${WorkoutMath.fmtKg(it)} g proteina" })
-                            .joinToString(" · ").ifEmpty { "nema podataka o vrednostima" },
+                        tr("Na 100 g: ", "Per 100 g: ") + listOfNotNull(pr.kcal100?.let { "${Math.round(it)} kcal" }, pr.protein100?.let { tr("${WorkoutMath.fmtKg(it)} g proteina", "${WorkoutMath.fmtKg(it)} g protein") })
+                            .joinToString(" · ").ifEmpty { tr("nema podataka o vrednostima", "no nutrition data") },
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    OutlinedTextField(grams, { applyGrams(it.filter(Char::isDigit).take(4)) }, label = { Text("Količina (g)") },
+                    OutlinedTextField(grams, { applyGrams(it.filter(Char::isDigit).take(4)) }, label = { Text(tr("Količina (g)", "Amount (g)")) },
                         singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(kcal, { kcal = it.filter(Char::isDigit).take(5) }, label = { Text("kcal (opc.)") },
+                    OutlinedTextField(kcal, { kcal = it.filter(Char::isDigit).take(5) }, label = { Text(tr("kcal (opc.)", "kcal (opt.)")) },
                         singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                     OutlinedTextField(prot, { prot = it.filter(Char::isDigit).take(4) }, label = { Text("protein g") },
                         singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
@@ -448,12 +450,12 @@ private fun FoodDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = text.isNotBlank(), onClick = { onSave(meal, text.trim(), kcal.toIntOrNull(), prot.toIntOrNull()) }) { Text("Sačuvaj") }
+            TextButton(enabled = text.isNotBlank(), onClick = { onSave(meal, text.trim(), kcal.toIntOrNull(), prot.toIntOrNull()) }) { Text(tr("Sačuvaj", "Save")) }
         },
         dismissButton = {
             Row {
-                if (onDelete != null) TextButton(onClick = onDelete) { Text("Obriši", color = MaterialTheme.colorScheme.error) }
-                TextButton(onClick = onDismiss) { Text("Otkaži") }
+                if (onDelete != null) TextButton(onClick = onDelete) { Text(tr("Obriši", "Delete"), color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) }
             }
         },
     )

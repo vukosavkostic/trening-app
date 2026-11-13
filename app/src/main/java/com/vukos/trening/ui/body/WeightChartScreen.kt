@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import com.vukos.trening.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,8 +50,8 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Grafikon kilaže") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
+            title = { Text(tr("Grafikon kilaže", "Weight chart")) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
         )
     }) { pad ->
         LazyColumn(
@@ -67,7 +69,7 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
             item {
                 if (shown.size >= 2) WeightChart(shown, Modifier.fillMaxWidth(), chartHeight = 260.dp)
                 else Text(
-                    "Za grafikon trebaju bar 2 merenja u izabranom periodu.",
+                    tr("Za grafikon trebaju bar 2 merenja u izabranom periodu.", "The chart needs at least 2 check-ins in the selected period."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 24.dp),
                 )

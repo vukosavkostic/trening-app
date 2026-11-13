@@ -1,5 +1,7 @@
 package com.vukos.trening.data
 
+import com.vukos.trening.i18n.tr
+
 import java.time.LocalDate
 
 /** Statistika kilaze iz merenja (cista funkcija, testira se bez Androida). */
@@ -43,8 +45,10 @@ data class BodyStats(
 }
 
 /** Opseg za grafikon. */
-enum class ChartRange(val label: String, val days: Long?) {
-    M1("1M", 31), M3("3M", 92), M6("6M", 183), Y1("1G", 366), ALL("Sve", null);
+enum class ChartRange(private val sr: String, private val en: String, val days: Long?) {
+    M1("1M", "1M", 31), M3("3M", "3M", 92), M6("6M", "6M", 183), Y1("1G", "1Y", 366), ALL("Sve", "All", null);
+
+    val label: String get() = tr(sr, en)
 
     fun filter(entries: List<BodyEntry>, today: LocalDate): List<BodyEntry> =
         if (days == null) entries else entries.filter { it.epochDay >= today.toEpochDay() - days }

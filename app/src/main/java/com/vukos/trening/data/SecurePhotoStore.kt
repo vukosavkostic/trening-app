@@ -1,5 +1,7 @@
 package com.vukos.trening.data
 
+import com.vukos.trening.i18n.tr
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -53,8 +55,10 @@ object SecurePhotoStore {
 }
 
 /** Tri poze za slike tela. */
-enum class Pose(val key: String, val label: String) {
-    FRONT("front", "Spreda"),
-    SIDE("side", "Bok"),
-    BACK("back", "Leđa"),
+enum class Pose(val key: String, private val sr: String, private val en: String) {
+    FRONT("front", "Spreda", "Front"),
+    SIDE("side", "Bok", "Side"),
+    BACK("back", "Leđa", "Back");
+
+    val label: String get() = tr(sr, en)
 }

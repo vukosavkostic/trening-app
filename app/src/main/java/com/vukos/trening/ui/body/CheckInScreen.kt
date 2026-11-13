@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import com.vukos.trening.i18n.tr
+
 import android.app.Activity
 import android.content.Context
 import android.net.Uri
@@ -137,8 +139,8 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Merenje") },
-            navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Filled.Close, "Zatvori") } },
+            title = { Text(tr("Merenje", "Check-in")) },
+            navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Filled.Close, tr("Zatvori", "Close")) } },
         )
     }) { pad ->
         Column(
@@ -156,14 +158,14 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                     Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium)
                     Text(day.srRelative(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text("Promeni", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                Text(tr("Promeni", "Change"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
             }
 
             OutlinedTextField(
                 value = weightText,
                 onValueChange = { weightText = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(6) },
-                label = { Text("Kilaža") },
-                placeholder = { Text("npr. 82,4", style = MaterialTheme.typography.headlineMedium) },
+                label = { Text(tr("Kilaža", "Weight")) },
+                placeholder = { Text(tr("npr. 82,4", "e.g. 82.4"), style = MaterialTheme.typography.headlineMedium) },
                 suffix = { Text("kg", style = MaterialTheme.typography.titleLarge) },
                 textStyle = MaterialTheme.typography.headlineMedium,
                 shape = RoundedCornerShape(20.dp),
@@ -178,8 +180,8 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                     .clickable { showMeasures = !showMeasures }.padding(16.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Mere tela", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Text(if (showMeasures) "Sakrij" else "Dodaj (opciono)", color = MaterialTheme.colorScheme.primary,
+                    Text(tr("Mere tela", "Body measurements"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(if (showMeasures) tr("Sakrij", "Hide") else tr("Dodaj (opciono)", "Add (optional)"), color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelLarge)
                 }
                 if (showMeasures) {
@@ -204,11 +206,11 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
 
             Column {
                 Text(
-                    if (photoWeek) "Slike (ove sedmice obavezno)" else "Slike (opciono ove sedmice)",
+                    if (photoWeek) tr("Slike (ove sedmice obavezno)", "Photos (due this week)") else tr("Slike (opciono ove sedmice)", "Photos (optional this week)"),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(4.dp))
-                com.vukos.trening.ui.common.LockNote("Šifrovano, samo u aplikaciji. Ne ide u galeriju ni u Notion.")
+                com.vukos.trening.ui.common.LockNote(tr("Šifrovano, samo u aplikaciji. Ne ide u galeriju ni u Notion.", "Encrypted, only inside the app. Never goes to the gallery or Notion."))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Pose.entries.forEach { pose ->
@@ -245,12 +247,12 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                                 Reminders.cancelNotification(context)
                                 onDone()
                             }
-                            .onFailure { error = "Greška pri čuvanju: ${it.message}"; saving = false }
+                            .onFailure { error = tr("Greška pri čuvanju: ${it.message}", "Error while saving: ${it.message}"); saving = false }
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = androidx.compose.foundation.shape.CircleShape,
-            ) { Text(if (saving) "Čuvam…" else "Sačuvaj merenje", style = MaterialTheme.typography.labelLarge) }
+            ) { Text(if (saving) tr("Čuvam…", "Saving…") else tr("Sačuvaj merenje", "Save check-in"), style = MaterialTheme.typography.labelLarge) }
         }
     }
 
@@ -258,25 +260,25 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
         val hasPhoto = newPhotos[pose] != null || existingPhotos[pose.key] != null
         AlertDialog(
             onDismissRequest = { actionFor = null },
-            title = { Text("Slika: ${pose.label}") },
+            title = { Text(tr("Slika: ${pose.label}", "Photo: ${pose.label}")) },
             text = {
                 Column {
-                    if (hasPhoto) TextButton(onClick = { actionFor = null; viewing = pose }) { Text("Pogledaj") }
+                    if (hasPhoto) TextButton(onClick = { actionFor = null; viewing = pose }) { Text(tr("Pogledaj", "View")) }
                     TextButton(onClick = {
                         actionFor = null
                         val uri = captureUri(context, pose)
                         pendingCapture = pose to uri
                         takePicture.launch(uri)
-                    }) { Text(if (hasPhoto) "Slikaj ponovo" else "Slikaj kamerom") }
+                    }) { Text(if (hasPhoto) tr("Slikaj ponovo", "Retake") else tr("Slikaj kamerom", "Take photo")) }
                     TextButton(onClick = {
                         actionFor = null
                         pickFor = pose
                         pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }) { Text("Izaberi iz galerije") }
+                    }) { Text(tr("Izaberi iz galerije", "Choose from gallery")) }
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { actionFor = null }) { Text("Otkaži") } },
+            dismissButton = { TextButton(onClick = { actionFor = null }) { Text(tr("Otkaži", "Cancel")) } },
         )
     }
 
@@ -302,7 +304,7 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                     showDate = false
                 }) { Text("OK") }
             },
-            dismissButton = { TextButton(onClick = { showDate = false }) { Text("Otkaži") } },
+            dismissButton = { TextButton(onClick = { showDate = false }) { Text(tr("Otkaži", "Cancel")) } },
         ) { DatePicker(state) }
     }
 }
@@ -316,7 +318,7 @@ private fun PhotoSlot(pose: Pose, newUri: Uri?, existing: BodyPhoto?, modifier: 
             contentAlignment = Alignment.Center,
         ) {
             if (newUri == null && existing == null) {
-                Icon(Icons.Filled.AddAPhoto, "Dodaj sliku", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Filled.AddAPhoto, tr("Dodaj sliku", "Add photo"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 PhotoContent(newUri, existing, ContentScale.Crop, Modifier.fillMaxSize())
             }
