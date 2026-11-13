@@ -12,6 +12,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -64,7 +65,9 @@ data class SuppReminder(
  * suplement u Dnevnik. Ako je suplement tog dana vec unet, podsetnik se preskace.
  */
 object SupplementReminders {
-    const val CHANNEL = "supplements"
+    // Novi kanal (visok prioritet = iskace na ekranu); stari "supplements" je bio tih i brise se.
+    const val CHANNEL = "supplements_alert"
+    private const val OLD_CHANNEL = "supplements"
     private const val PREFS = "supp_reminders"
     private const val ACTION_FIRE = "com.vukos.trening.SUPP_FIRE"
     private const val ACTION_TAKEN = "com.vukos.trening.SUPP_TAKEN"
@@ -97,9 +100,30 @@ object SupplementReminders {
     private fun schedule(context: Context, r: SuppReminder) {
         val am = context.getSystemService(AlarmManager::class.java)
         val at = nextTrigger(r, LocalDateTime.now()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        // Prozor od 5 min: ne trazi dozvolu za tacne alarme, a stize skoro na vreme.
-        am.setWindow(AlarmManager.RTC_WAKEUP, at, 5 * 60_000L, firePending(context, r.id))
+        val pi = firePending(context, r.id)
+        // Tacan alarm koji radi i kad je telefon u mirovanju (Doze). Obican "setWindow" je Android
+        // odlagao satima dok je ekran ugasen, pa notifikacija nije stizala.
+        if (exactAllowed(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
     }
+
+    fun exactAllowed(context: Context): Boolean =
+        Build.VERSION.SDK_INT < 31 || context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+
+    /** Notifikacije su dozvoljene i kanal za suplemente nije iskljucen. */
+    fun notificationsAllowed(context: Context): Boolean {
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return false
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return false
+        val ch = context.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL)
+        return ch == null || ch.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    /** Da li Android stedi bateriju na ovoj aplikaciji (moze da kasni ili ugusi podsetnike). */
+    fun batteryRestricted(context: Context): Boolean =
+        !context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
 
     private fun cancel(context: Context, id: String) {
         context.getSystemService(AlarmManager::class.java).cancel(firePending(context, id))
@@ -112,16 +136,16 @@ object SupplementReminders {
     )
 
     fun createChannel(context: Context) {
-        val ch = NotificationChannel(CHANNEL, tr("Suplementi", "Supplements"), NotificationManager.IMPORTANCE_DEFAULT)
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
+        val nm = context.getSystemService(NotificationManager::class.java)
+        nm.deleteNotificationChannel(OLD_CHANNEL)
+        nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Suplementi", "Supplements"), NotificationManager.IMPORTANCE_HIGH))
     }
 
     private fun notifId(id: String) = 1000 + (id.hashCode() and 0xFFFF)
 
-    fun notify(context: Context, r: SuppReminder) {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
+    /** Prikazuje notifikaciju; vraca false ako Android ne dozvoljava notifikacije. */
+    fun notify(context: Context, r: SuppReminder): Boolean {
+        if (!notificationsAllowed(context)) return false
         val open = PendingIntent.getActivity(
             context, 3, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -137,9 +161,12 @@ object SupplementReminders {
             .setContentText(if (r.dose.isBlank()) tr("Dodirni „Uzeo sam“ da se upiše u Dnevnik.", "Tap “Taken” to log it in your Journal.") else tr("Doza: ${r.dose}", "Dose: ${r.dose}"))
             .setContentIntent(open)
             .addAction(0, tr("Uzeo sam ✓", "Taken ✓"), taken)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(notifId(r.id), n)
+        return true
     }
 
     /** Da li je suplement vec unet danas. */
