@@ -145,8 +145,8 @@ fun ActiveWorkoutScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = {
-                Column {
-                    Text(workout?.name ?: "Trening", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.padding(end = 12.dp)) {
+                    Text(workout?.name ?: "Trening", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Početak ${start?.let { "%02d:%02d".format(it.hour, it.minute) } ?: ""}",
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -154,7 +154,10 @@ fun ActiveWorkoutScreen(
                 }
             },
             actions = {
-                Button(onClick = { dialog = "finish" }, modifier = Modifier.padding(end = 4.dp), shape = androidx.compose.foundation.shape.CircleShape) {
+                Button(
+                    onClick = { dialog = "finish" }, modifier = Modifier.padding(end = 2.dp).height(40.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape, contentPadding = PaddingValues(horizontal = 18.dp),
+                ) {
                     Text("Završi", style = MaterialTheme.typography.labelLarge)
                 }
                 Box {
@@ -299,7 +302,7 @@ private fun NoteDialog(exercise: Exercise, onDismiss: () -> Unit, onSave: (Strin
     var text by remember { mutableStateOf(exercise.notes) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Beleška: ${exercise.name}") },
+        title = { Text("Beleška: ${exercise.name}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
         text = {
             androidx.compose.material3.OutlinedTextField(
                 text, { text = it.take(300) }, placeholder = { Text("npr. sedište na 4, uži hvat") },

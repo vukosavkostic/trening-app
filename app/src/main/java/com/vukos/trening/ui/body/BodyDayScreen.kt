@@ -69,7 +69,7 @@ fun BodyDayScreen(day: LocalDate, onBack: () -> Unit, onEdit: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleLarge) },
+            title = { Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
             actions = {
                 if (entry != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Obriši merenje") }

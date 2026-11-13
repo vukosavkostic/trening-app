@@ -80,7 +80,7 @@ fun ExerciseDetailScreen(id: String, onBack: () -> Unit, onOpenWorkout: (String)
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(ex?.name ?: "", maxLines = 1) },
+            title = { Text(ex?.name ?: "", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
             actions = {
                 if (ex?.isCustom == true) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Obriši") }

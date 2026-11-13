@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,7 +48,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onHelp: () -> Unit = {}) {
     val settings = TreningApp.instance.settings
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -67,7 +68,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Notion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Notion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                androidx.compose.material3.TextButton(onClick = onHelp) {
+                    Icon(Icons.AutoMirrored.Filled.HelpOutline, null, Modifier.padding(end = 6.dp)); Text("Uputstvo")
+                }
+            }
             if (configured) {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
@@ -218,9 +224,9 @@ private fun GoalsSection() {
     var weekly by remember { mutableStateOf(settings.weeklyGoal.toString()) }
     Text("Ciljevi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        GoalField("kcal / dan", kcal, Modifier.weight(1f)) { kcal = it; settings.kcalGoal = it.toIntOrNull() ?: 0 }
+        GoalField("kcal", kcal, Modifier.weight(1f)) { kcal = it; settings.kcalGoal = it.toIntOrNull() ?: 0 }
         GoalField("protein g", prot, Modifier.weight(1f)) { prot = it; settings.proteinGoal = it.toIntOrNull() ?: 0 }
-        GoalField("treninga / ned.", weekly, Modifier.weight(1f)) { weekly = it; it.toIntOrNull()?.takeIf { n -> n in 1..14 }?.let { n -> settings.weeklyGoal = n } }
+        GoalField("tren./ned.", weekly, Modifier.weight(1f)) { weekly = it; it.toIntOrNull()?.takeIf { n -> n in 1..14 }?.let { n -> settings.weeklyGoal = n } }
     }
 }
 

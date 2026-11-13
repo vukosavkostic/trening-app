@@ -95,7 +95,7 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         StatTile(stats.change30.signed(), "30 dana", Modifier.weight(1f))
                         StatTile(stats.totalChange.signed(), "ukupno", Modifier.weight(1f))
-                        StatTile("${stats.count}", if (stats.photoDays > 0) "merenja · ${stats.photoDays} sa sl." else "merenja", Modifier.weight(1f))
+                        StatTile("${stats.count}", if (stats.photoDays > 0) "merenja, ${stats.photoDays} sa slikama" else "merenja", Modifier.weight(1f))
                     }
                 }
                 if (stats.count >= 2) item { WeightChart(entries, Modifier.fillMaxWidth(), onClick = onOpenChart) }

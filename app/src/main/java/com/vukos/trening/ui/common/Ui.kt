@@ -66,7 +66,7 @@ fun AppCard(
 @Composable
 fun TabTopBar(title: String, actions: @Composable RowScope.() -> Unit = {}) {
     TopAppBar(
-        title = { Text(title, style = MaterialTheme.typography.headlineMedium) },
+        title = { Text(title, style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
     )
@@ -96,9 +96,11 @@ fun StatTile(value: String, label: String, modifier: Modifier = Modifier, valueC
         modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(horizontal = 14.dp, vertical = 14.dp)
     ) {
-        Text(value, style = MaterialTheme.typography.titleLarge, color = valueColor, maxLines = 1)
+        Text(value, style = MaterialTheme.typography.titleLarge, color = valueColor, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Spacer(Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 

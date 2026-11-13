@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.NotificationAdd
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -55,7 +57,7 @@ val SupplementPurple = Color(0xFFB18CFF)
 /** Kartica suplemenata za izabrani dan: cipovi (klik = izmena), + dodaj, kopiraj juce. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, onAdd: () -> Unit, onEdit: (FoodEntry) -> Unit, onCopy: () -> Unit) {
+fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, onAdd: () -> Unit, onEdit: (FoodEntry) -> Unit, onCopy: () -> Unit, onReminders: () -> Unit) {
     AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconBadge(Icons.Filled.Medication, SupplementPurple, 40.dp)
@@ -67,6 +69,14 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, onAdd: () -> Unit,
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onReminders),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(if (reminders > 0) Icons.Filled.NotificationsActive else Icons.Filled.NotificationAdd, "Podsetnici",
+                    tint = if (reminders > 0) SupplementPurple else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(8.dp))
             Box(
                 Modifier.size(40.dp).clip(CircleShape).background(SupplementPurple).clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center,
@@ -119,49 +129,7 @@ fun SupplementDialog(
         text = {
             val p = picked
             if (p == null) {
-                val results = remember(query, history) { Supplements.search(query, history) }
-                Column {
-                    OutlinedTextField(
-                        query, { query = it }, singleLine = true, placeholder = { Text("Traži: kreatin, omega, protein…") },
-                        leadingIcon = { Icon(Icons.Filled.Search, null) }, shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.size(8.dp))
-                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                        if (query.isNotBlank() && results.none { it.name.equals(query.trim(), ignoreCase = true) }) item {
-                            Row(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                                    .clickable { pick(SupplementDef(query.trim().replaceFirstChar { it.uppercase() }, "", "")) }
-                                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(10.dp))
-                                Text("Dodaj novi: „${query.trim()}“", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)
-                            }
-                        }
-                        itemsIndexed(results, key = { _, it -> "${it.category}-${it.name}" }) { i, d ->
-                            Column {
-                                if (query.isBlank() && (i == 0 || results[i - 1].category != d.category)) {
-                                    Text(d.category.uppercase(), style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp, start = 8.dp))
-                                }
-                                Row(
-                                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { pick(d) }
-                                        .padding(vertical = 10.dp, horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    if (d.category == "Skoro korišćeno") {
-                                        Icon(Icons.Filled.History, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Spacer(Modifier.width(8.dp))
-                                    }
-                                    Text(d.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                                    Text(d.dose, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-                }
+                SupplementPicker(query, { query = it }, history, ::pick)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (initial == null) TextButton(onClick = { picked = null }) { Text("← Izaberi drugi") }
@@ -190,4 +158,52 @@ fun SupplementDialog(
             }
         },
     )
+}
+
+/** Pretraga suplemenata: skoro korisceni, spisak po grupama i "Dodaj novi". */
+@Composable
+fun SupplementPicker(query: String, onQuery: (String) -> Unit, history: List<FoodEntry>, onPick: (SupplementDef) -> Unit) {
+    val results = remember(query, history) { Supplements.search(query, history) }
+    Column {
+        OutlinedTextField(
+            query, onQuery, singleLine = true, placeholder = { Text("Traži: kreatin, omega, protein…") },
+            leadingIcon = { Icon(Icons.Filled.Search, null) }, shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.size(8.dp))
+        LazyColumn(Modifier.heightIn(max = 360.dp)) {
+            if (query.isNotBlank() && results.none { it.name.equals(query.trim(), ignoreCase = true) }) item {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .clickable { onPick(SupplementDef(query.trim().replaceFirstChar { it.uppercase() }, "", "")) }
+                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Dodaj novi: „${query.trim()}“", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)
+                }
+            }
+            itemsIndexed(results, key = { _, it -> "${it.category}-${it.name}" }) { i, d ->
+                Column {
+                    if (query.isBlank() && (i == 0 || results[i - 1].category != d.category)) {
+                        Text(d.category.uppercase(), style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 10.dp, start = 8.dp))
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onPick(d) }
+                            .padding(vertical = 10.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (d.category == "Skoro korišćeno") {
+                            Icon(Icons.Filled.History, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(d.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                        Text(d.dose, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
 }

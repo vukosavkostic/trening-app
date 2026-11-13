@@ -147,6 +147,15 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onOpenWorkout = { nav.navigate("workout_detail/$it") },
                     onOpenBodyDay = { nav.navigate("body_day/${it.toEpochDay()}") },
                     onOpenStats = { nav.navigate("stats") },
+                    onOpenSuppReminders = { nav.navigate("supp_reminders") },
+                )
+            }
+            composable("supp_reminders") { com.vukos.trening.ui.journal.SupplementRemindersScreen(onBack = { nav.popBackStack() }) }
+            composable("notion_help") {
+                com.vukos.trening.ui.help.NotionHelpScreen(
+                    onClose = { nav.popBackStack() },
+                    onOpenSettings = { nav.navigate("settings") },
+                    onOpenNotionPlans = { nav.navigate("notion_routines") },
                 )
             }
             composable("workout/{id}") { e ->
@@ -187,12 +196,13 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
             }
             composable("notion_routines") {
                 NotionRoutinesScreen(
+                    onHelp = { nav.navigate("notion_help") },
                     onBack = { nav.popBackStack() },
                     onSettings = { nav.navigate("settings") },
                     onOpenRoutine = { nav.navigate("routine/$it") },
                 )
             }
-            composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }) }
+            composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }, onHelp = { nav.navigate("notion_help") }) }
             composable(Tab.BODY.route) {
                 BodyScreen(
                     onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },

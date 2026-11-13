@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -54,7 +55,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotionRoutinesScreen(onBack: () -> Unit, onSettings: () -> Unit, onOpenRoutine: (String) -> Unit) {
+fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () -> Unit, onOpenRoutine: (String) -> Unit) {
     val app = TreningApp.instance
     val scope = rememberCoroutineScope()
     val local by remember { app.db.routines().observeAll() }.collectAsStateWithLifecycle(emptyList())
@@ -77,15 +78,29 @@ fun NotionRoutinesScreen(onBack: () -> Unit, onSettings: () -> Unit, onOpenRouti
         TopAppBar(
             title = { Text("Notion treninzi") },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
-            actions = { IconButton(onClick = { reload++ }) { Icon(Icons.Filled.Refresh, "Osveži") } },
+            actions = {
+                IconButton(onClick = onHelp) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "Uputstvo") }
+                IconButton(onClick = { reload++ }) { Icon(Icons.Filled.Refresh, "Osveži") }
+            },
         )
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when {
-                error == "notoken" -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Notion nije povezan.", fontWeight = FontWeight.SemiBold)
-                    Text("Unesi Notion token u podešavanjima.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = onSettings) { Text("Podešavanja") }
+                error == "notoken" -> Column(Modifier.padding(16.dp)) {
+                    com.vukos.trening.ui.common.EmptyState(
+                        Icons.AutoMirrored.Filled.HelpOutline, "Notion nije povezan",
+                        "Uz Notion imaš rezervnu kopiju u oblaku, pregled na računaru, a AI može da ti napravi plan treninga koji ovde uvučeš jednim klikom.",
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            com.vukos.trening.ui.common.PrimaryPill("Uputstvo korak po korak", onHelp, Modifier.fillMaxWidth())
+                            com.vukos.trening.ui.common.OutlinePill("Već imam token", onSettings, Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+                error?.contains("Trening") == true || error?.contains("401") == true -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Ne mogu da učitam planove iz Notiona.", fontWeight = FontWeight.SemiBold)
+                    Text(error!!, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = onHelp) { Text("Pogledaj uputstvo") }
                 }
                 error != null -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Ne mogu da učitam planove iz Notiona.", fontWeight = FontWeight.SemiBold)

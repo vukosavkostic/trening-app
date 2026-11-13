@@ -89,7 +89,7 @@ private val WeightBlue = Color(0xFF5B9CFF)
 
 /** Dnevnik: kalendar, mesec u brojkama i sve za izabrani dan (treninzi, kilaza, ishrana). */
 @Composable
-fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) -> Unit, onOpenStats: () -> Unit) {
+fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) -> Unit, onOpenStats: () -> Unit, onOpenSuppReminders: () -> Unit) {
     val db = TreningApp.instance.db
     val scope = rememberCoroutineScope()
     val workouts by remember { db.workouts().observeFinished() }.collectAsStateWithLifecycle(emptyList())
@@ -118,6 +118,8 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
     val supps = food.filter { it.meal == Supplements.MEAL }
     var suppEditing by remember { mutableStateOf<FoodEntry?>(null) }
     var suppAdding by remember { mutableStateOf(false) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val reminderCount = remember { com.vukos.trening.reminders.SupplementReminders.load(ctx).count { it.enabled } }
 
     // Trening = pun krug; obrok ili kilaza = tackica.
     val markers = remember(workouts, foodDays, body) {
@@ -180,7 +182,8 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
             item {
                 SupplementsCard(
                     supps, copyCount = if (supps.isEmpty()) prevDay.count { it.meal == Supplements.MEAL } else 0,
-                    onAdd = { suppAdding = true }, onEdit = { suppEditing = it },
+                    reminders = reminderCount,
+                    onAdd = { suppAdding = true }, onEdit = { suppEditing = it }, onReminders = onOpenSuppReminders,
                     onCopy = { scope.launch { FoodQuick.copyDay(selectedDay - 1, selectedDay, supplements = true) } },
                 )
             }

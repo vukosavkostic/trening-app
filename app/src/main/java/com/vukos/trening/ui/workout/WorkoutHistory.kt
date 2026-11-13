@@ -143,7 +143,7 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onOpenExercise: (
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(w?.name ?: "") },
+            title = { Text(w?.name ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Nazad") } },
             actions = { IconButton(onClick = { confirm = true }) { Icon(Icons.Filled.Delete, "Obriši") } },
         )

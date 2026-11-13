@@ -31,6 +31,8 @@ class TreningApp : Application() {
         }
         Reminders.createChannel(this)
         Reminders.schedule(this)
+        com.vukos.trening.reminders.SupplementReminders.createChannel(this)
+        com.vukos.trening.reminders.SupplementReminders.scheduleAll(this)
         // Zaostali privremeni fajlovi kamere (npr. ako je merenje otkazano) se brisu.
         File(cacheDir, "capture").listFiles()?.forEach { it.delete() }
     }
