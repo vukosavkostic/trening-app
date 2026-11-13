@@ -1,6 +1,17 @@
 package com.vukos.trening.ui.stats
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.input.pointer.pointerInput
+import com.vukos.trening.ui.body.srLong
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -158,36 +169,65 @@ fun StatsScreen(onBack: () -> Unit) {
                 }
             }
             item {
-                if (period == Period.YEAR) {
-                    val data = TrainingStats.monthlyCounts(dates, from.year)
-                    ActivityChart(
-                        title = tr("Treninzi u ${from.year}.", "Workouts in ${from.year}"),
-                        subtitle = tr("Broj treninga po mesecima", "Workouts per month"),
-                        values = data.map { it.second },
-                        labels = data.map { MONTH_SHORT[it.first.monthValue - 1] },
-                        highlight = if (from.year == today.year) today.monthValue - 1 else -1,
-                        goal = null,
-                        unit = tr("mesečno", "per month"),
-                    )
-                } else {
-                    val data = TrainingStats.weeklyCounts(dates, today, 12)
-                    // Oznaka meseca samo na prvoj nedelji u mesecu; tekuca nedelja = "ova".
-                    val labels = data.mapIndexed { i, (start, _) ->
-                        when {
-                            i == data.lastIndex -> tr("ova", "now")
-                            i == 0 || start.monthValue != data[i - 1].first.monthValue -> MONTH_SHORT[start.monthValue - 1]
-                            else -> ""
-                        }
+                val fmt1 = { v: Double -> String.format(java.util.Locale.US, "%.1f", v).let { if (com.vukos.trening.i18n.Lang.en) it else it.replace('.', ',') } }
+                when (period) {
+                    Period.WEEK -> {
+                        // Izabrana nedelja, dan po dan.
+                        val days = (0..6).map { from.plusDays(it.toLong()) }
+                        val values = days.map { d -> dates.count { it == d } }
+                        val total = values.sum()
+                        ActivityChart(
+                            title = tr("Treninzi po danima", "Workouts by day"),
+                            values = values,
+                            labels = WEEKDAY_SHORT,
+                            captions = days.map { it.srLong() },
+                            highlight = days.indexOf(today),
+                            goal = null,
+                            stats = listOf(
+                                "$total" to tr("treninga", "workouts"),
+                                "${values.count { it > 0 }}" to tr("dana sa treningom", "active days"),
+                                "$total/$goal" to tr("nedeljni cilj", "weekly goal"),
+                            ),
+                        )
                     }
-                    ActivityChart(
-                        title = tr("Aktivnost", "Activity"),
-                        subtitle = tr("Broj treninga po nedelji · poslednjih 12 nedelja", "Workouts per week · last 12 weeks"),
-                        values = data.map { it.second },
-                        labels = labels,
-                        highlight = data.lastIndex,
-                        goal = goal,
-                        unit = tr("nedeljno", "per week"),
-                    )
+                    Period.MONTH -> {
+                        // Nedelje (pon-ned) koje padaju u izabrani mesec; broji se cela nedelja.
+                        val weeks = generateSequence(TrainingStats.weekStart(from)) { it.plusWeeks(1) }.takeWhile { !it.isAfter(to) }.toList()
+                        val values = weeks.map { w -> dates.count { !it.isBefore(w) && !it.isAfter(w.plusDays(6)) } }
+                        val cur = weeks.indexOf(TrainingStats.weekStart(today))
+                        val closed = weeks.indices.filter { weeks[it].plusDays(6).isBefore(today) }.map { values[it] }
+                        ActivityChart(
+                            title = tr("Treninzi po nedeljama", "Workouts by week"),
+                            values = values,
+                            labels = weeks.map { "${it.dayOfMonth}–${it.plusDays(6).dayOfMonth}" },
+                            captions = weeks.map { tr("Nedelja ", "Week of ") + "${it.srDate()} – ${it.plusDays(6).srDate()}" },
+                            highlight = cur,
+                            goal = goal,
+                            stats = listOf(
+                                fmt1(if (closed.isEmpty()) 0.0 else closed.average()) to tr("prosek nedeljno", "weekly average"),
+                                "${values.maxOrNull() ?: 0}" to tr("najviše", "best week"),
+                                "${closed.count { it >= goal }}/${closed.size}" to tr("nedelja sa ciljem", "weeks on goal"),
+                            ),
+                        )
+                    }
+                    Period.YEAR -> {
+                        val data = TrainingStats.monthlyCounts(dates, from.year)
+                        val values = data.map { it.second }
+                        val closed = data.filter { it.first.atEndOfMonth().isBefore(today) }.map { it.second }
+                        ActivityChart(
+                            title = tr("Treninzi po mesecima", "Workouts by month"),
+                            values = values,
+                            labels = data.map { MONTH_SHORT[it.first.monthValue - 1] },
+                            captions = data.map { "${MONTHS[it.first.monthValue - 1]} ${it.first.year}" },
+                            highlight = if (from.year == today.year) today.monthValue - 1 else -1,
+                            goal = null,
+                            stats = listOf(
+                                "${values.sum()}" to tr("ukupno", "total"),
+                                fmt1(if (closed.isEmpty()) 0.0 else closed.average()) to tr("prosek mesečno", "monthly average"),
+                                "${values.maxOrNull() ?: 0}" to tr("najviše", "best month"),
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -241,40 +281,40 @@ private fun RoundBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc
     ) { Icon(icon, desc, Modifier.size(18.dp)) }
 }
 
+private val WEEKDAY_SHORT: List<String> get() = if (com.vukos.trening.i18n.Lang.en)
+    listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+else listOf("pon", "uto", "sre", "čet", "pet", "sub", "ned")
+
 private val MONTH_SHORT: List<String> get() = if (com.vukos.trening.i18n.Lang.en)
     listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 else listOf("jan", "feb", "mar", "apr", "maj", "jun", "jul", "avg", "sep", "okt", "nov", "dec")
 
+/** "1 trening" / "3 treninga" (ili engleski). */
+private fun workoutsText(n: Int) = if (n == 1) tr("1 trening", "1 workout") else tr("$n treninga", "$n workouts")
+
 /**
- * Grafikon aktivnosti: naslov i objasnjenje, tri brojke (prosek, najbolje, cilj ispunjen),
- * stubici sa vrednoscu iznad, isprekidana linija cilja sa natpisom i oznake meseci na x osi.
+ * Grafikon aktivnosti po uzoru na Apple Health / Hevy:
+ *  - tri brojke iznad, pa "oblacic" sa vrednoscu izabranog stubica (dodir ili prevlacenje bira stubic)
+ *  - tanke horizontalne linije mreze sa brojevima desno, isprekidana linija cilja
+ *  - nula = nema stubica (bez sivih "pilula"), oznake na x osi se nikad ne seku - preskacu se ako nema mesta
  */
 @Composable
 private fun ActivityChart(
-    title: String, subtitle: String, values: List<Int>, labels: List<String>,
-    highlight: Int, goal: Int?, unit: String,
+    title: String, values: List<Int>, labels: List<String>, captions: List<String>,
+    highlight: Int, goal: Int?, stats: List<Pair<String, String>>,
 ) {
     val accent = MaterialTheme.colorScheme.primary
-    val muted = MaterialTheme.colorScheme.surfaceContainerHighest
     val onVar = MaterialTheme.colorScheme.onSurfaceVariant
+    val grid = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     val total = values.sum()
-    // Prosek bez tekuceg (nezavrsenog) perioda, ako ga ima.
-    val closed = if (highlight in values.indices) values.filterIndexed { i, _ -> i != highlight } else values
-    val avg = if (closed.isEmpty()) 0.0 else closed.sum().toDouble() / closed.size
     val best = values.maxOrNull() ?: 0
-    val met = if (goal != null) closed.count { it >= goal } else 0
-    val top = maxOf(best, goal ?: 0, 1)
+    var selected by remember(values, labels) { mutableIntStateOf(if (highlight in values.indices) highlight else values.indexOfLast { it > 0 }) }
 
     AppCard {
         Text(title, style = MaterialTheme.typography.titleLarge)
-        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onVar)
         Spacer(Modifier.height(16.dp))
-        Row {
-            MiniStat(String.format(java.util.Locale.US, "%.1f", avg).let { if (com.vukos.trening.i18n.Lang.en) it else it.replace('.', ',') }, tr("prosek $unit", "average $unit"), Modifier.weight(1f))
-            MiniStat("$best", tr("najviše", "best"), Modifier.weight(1f))
-            if (goal != null) MiniStat("$met/${closed.size}", tr("nedelja sa ciljem", "weeks on goal"), Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(18.dp))
+        Row { stats.forEach { (v, l) -> MiniStat(v, l, Modifier.weight(1f)) } }
+        Spacer(Modifier.height(20.dp))
         if (total == 0) {
             Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center) {
@@ -283,62 +323,107 @@ private fun ActivityChart(
             }
             return@AppCard
         }
-        val chartH = 150.dp
-        Box(Modifier.fillMaxWidth().height(chartH)) {
-            // Isprekidana linija cilja + natpis
-            if (goal != null && goal > 0) {
-                val lineColor = Color.White.copy(alpha = 0.5f)
-                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                    val usable = size.height - 18.dp.toPx()
-                    val y = size.height - usable * goal / top
-                    drawLine(lineColor, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(size.width, y),
-                        strokeWidth = 1.5.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
-                }
-            }
-            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
-                values.forEachIndexed { i, v ->
-                    val hit = goal != null && v >= goal
-                    Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(if (v > 0) "$v" else "", style = MaterialTheme.typography.labelSmall,
-                            color = if (i == highlight) accent else onVar)
-                        Spacer(Modifier.height(2.dp))
-                        val frac = v.toFloat() / top
-                        Box(
-                            Modifier.fillMaxWidth().fillMaxHeight(if (v == 0) 0.04f else (frac * 0.88f).coerceAtLeast(0.06f))
-                                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 3.dp, bottomEnd = 3.dp))
-                                .background(
-                                    when {
-                                        v == 0 -> muted
-                                        i == highlight -> accent
-                                        hit || goal == null -> accent.copy(alpha = 0.75f)
-                                        else -> accent.copy(alpha = 0.35f)
-                                    }
-                                )
-                        )
-                    }
-                }
-            }
+
+        // Oblacic: vrednost izabranog stubica
+        val sel = selected.takeIf { it in values.indices }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(horizontal = 14.dp, vertical = 10.dp)) {
+            if (sel != null) {
+                Text(workoutsText(values[sel]), style = MaterialTheme.typography.titleMedium)
+                Text(captions[sel], style = MaterialTheme.typography.bodySmall, color = onVar)
+            } else Text(tr("Dodirni stubić za detalje", "Tap a bar for details"), style = MaterialTheme.typography.bodySmall, color = onVar)
         }
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            labels.forEachIndexed { i, l ->
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    Text(l, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false,
-                        color = if (i == highlight) accent else onVar)
+        Spacer(Modifier.height(14.dp))
+
+        val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+        val axisStyle = MaterialTheme.typography.labelSmall.copy(color = onVar)
+        val selStyle = MaterialTheme.typography.labelSmall.copy(color = accent, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        // Lepa skala: gornja granica i korak (1, 2 ili 5...).
+        val rawTop = maxOf(best, goal ?: 0, 1)
+        val step = when { rawTop <= 4 -> 1; rawTop <= 10 -> 2; rawTop <= 25 -> 5; else -> 10 }
+        val top = ((rawTop + step - 1) / step) * step
+        val n = values.size
+
+        androidx.compose.foundation.Canvas(
+            Modifier.fillMaxWidth().height(190.dp)
+                .pointerInput(n) {
+                    detectTapGestures { o -> selected = barAt(o.x, size.width.toFloat(), 28.dp.toPx(), n) }
                 }
+                .pointerInput(n) {
+                    detectHorizontalDragGestures { ch, _ -> selected = barAt(ch.position.x, size.width.toFloat(), 28.dp.toPx(), n) }
+                }
+        ) {
+            val axisW = 28.dp.toPx()            // mesto za brojeve desno
+            val labelH = 22.dp.toPx()           // mesto za oznake ispod
+            val plotW = size.width - axisW
+            val plotH = size.height - labelH
+            val slot = plotW / n
+            val barW = (slot * 0.62f).coerceAtMost(28.dp.toPx())
+            fun y(v: Float) = plotH * (1f - v / top)
+
+            // Mreza + brojevi desno
+            var g = 0
+            while (g <= top) {
+                val yy = y(g.toFloat())
+                drawLine(grid, Offset(0f, yy), Offset(plotW, yy), strokeWidth = 1.dp.toPx())
+                val t = measurer.measure("$g", axisStyle)
+                drawText(t, topLeft = Offset(plotW + 8.dp.toPx(), (yy - t.size.height / 2f).coerceIn(0f, plotH - t.size.height)))
+                g += step
+            }
+            // Isprekidana linija cilja
+            if (goal != null && goal > 0) {
+                val yy = y(goal.toFloat())
+                drawLine(accent.copy(alpha = 0.8f), Offset(0f, yy), Offset(plotW, yy), strokeWidth = 1.5.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 5.dp.toPx())))
+            }
+            // Stubici
+            values.forEachIndexed { i, v ->
+                if (v <= 0) return@forEachIndexed
+                val cx = slot * i + slot / 2
+                val h = plotH - y(v.toFloat())
+                val color = when {
+                    i == sel -> accent
+                    goal != null && v >= goal -> accent.copy(alpha = 0.7f)
+                    else -> accent.copy(alpha = 0.45f)
+                }
+                val r = minOf(barW / 2, 6.dp.toPx())
+                drawPath(Path().apply {
+                    addRoundRect(RoundRect(Rect(cx - barW / 2, plotH - h, cx + barW / 2, plotH),
+                        topLeft = CornerRadius(r), topRight = CornerRadius(r)))
+                }, color)
+            }
+            // Oznake ispod: samo kada ima mesta (izabrani i tekuci uvek), bez preklapanja
+            val measured = labels.map { measurer.measure(it, axisStyle) }
+            val gap = 6.dp.toPx()
+            val drawn = mutableListOf<ClosedFloatingPointRange<Float>>()
+            val order = (listOfNotNull(sel, highlight.takeIf { it in labels.indices }) + labels.indices).distinct()
+            order.forEach { i ->
+                if (labels[i].isEmpty()) return@forEach
+                val w = measured[i].size.width.toFloat()
+                val left = (slot * i + slot / 2 - w / 2).coerceIn(0f, plotW - w)
+                val range = (left - gap)..(left + w + gap)
+                if (drawn.any { it.start < range.endInclusive && range.start < it.endInclusive }) return@forEach
+                drawn += range
+                val t = if (i == sel) measurer.measure(labels[i], selStyle) else measured[i]
+                drawText(t, topLeft = Offset(left, plotH + 6.dp.toPx()))
             }
         }
         if (goal != null) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(18.dp).height(2.dp).background(Color.White.copy(alpha = 0.5f)))
-                Text(tr("  cilj: $goal treninga nedeljno", "  goal: $goal workouts per week"), style = MaterialTheme.typography.labelMedium, color = onVar)
-                Spacer(Modifier.width(14.dp))
-                Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(accent))
-                Text(tr("  ova nedelja", "  this week"), style = MaterialTheme.typography.labelMedium, color = onVar)
+                androidx.compose.foundation.Canvas(Modifier.width(18.dp).height(2.dp)) {
+                    drawLine(accent, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), strokeWidth = size.height,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 3.dp.toPx())))
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(tr("Cilj: ${workoutsText(goal)} nedeljno", "Goal: ${workoutsText(goal)} per week"), style = MaterialTheme.typography.labelMedium, color = onVar)
             }
         }
     }
 }
+
+private fun barAt(x: Float, width: Float, axisW: Float, n: Int): Int =
+    ((x / ((width - axisW) / n)).toInt()).coerceIn(0, n - 1)
 
 @Composable
 private fun MiniStat(value: String, label: String, modifier: Modifier) {
