@@ -308,7 +308,7 @@ private fun ActivityChart(
 ) {
     val accent = MaterialTheme.colorScheme.primary
     val onVar = MaterialTheme.colorScheme.onSurfaceVariant
-    val grid = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
     val total = values.sum()
     val best = values.maxOrNull() ?: 0
     var selected by remember(values, labels) { mutableIntStateOf(if (highlight in values.indices) highlight else values.indexOfLast { it > 0 }) }
@@ -366,11 +366,15 @@ private fun ActivityChart(
             val plotW = size.width
             val plotH = size.height - labelH
             val slot = plotW / n
-            val barW = (slot * 0.56f).coerceAtMost(26.dp.toPx())
+            // Tanki stubici u obliku pilule (Fitpass stil).
+            val barW = (slot * 0.4f).coerceIn(4.dp.toPx(), 12.dp.toPx())
             fun y(v: Float) = plotH - (plotH - headroom) * v / top
 
-            // Osnovna linija
+            // Osnovna linija i tackasta linija na najvisem stubicu
             drawLine(grid, Offset(0f, plotH), Offset(plotW, plotH), strokeWidth = 1.dp.toPx())
+            if (best > 0) drawLine(grid, Offset(0f, y(best.toFloat())), Offset(plotW, y(best.toFloat())), strokeWidth = 1.dp.toPx(),
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx())))
             // Isprekidana linija cilja
             if (goal != null && goal > 0) {
                 val yy = y(goal.toFloat())
@@ -384,13 +388,12 @@ private fun ActivityChart(
                 val h = plotH - y(v.toFloat())
                 val color = when {
                     i == sel -> accent
-                    goal != null && v >= goal -> accent.copy(alpha = 0.7f)
-                    else -> accent.copy(alpha = 0.45f)
+                    goal != null && v >= goal -> accent.copy(alpha = 0.6f)
+                    else -> accent.copy(alpha = 0.35f)
                 }
-                val r = minOf(barW / 2, 6.dp.toPx())
+                val r = barW / 2
                 drawPath(Path().apply {
-                    addRoundRect(RoundRect(Rect(cx - barW / 2, plotH - h, cx + barW / 2, plotH),
-                        topLeft = CornerRadius(r), topRight = CornerRadius(r)))
+                    addRoundRect(RoundRect(Rect(cx - barW / 2, plotH - h, cx + barW / 2, plotH - 2.dp.toPx()), CornerRadius(r)))
                 }, color)
                 val t = measurer.measure("$v", if (i == sel) selStyle else axisStyle)
                 drawText(t, topLeft = Offset(cx - t.size.width / 2f, plotH - h - t.size.height - 3.dp.toPx()))

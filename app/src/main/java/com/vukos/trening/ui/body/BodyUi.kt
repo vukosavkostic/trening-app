@@ -129,66 +129,51 @@ fun CheckInBanner(due: CheckInSchedule.Due?, topInset: Boolean = true, onClick: 
     }
 }
 
-/** Jednostavan linijski grafikon kilaze (najstarije levo). */
+/** Kartica kilaze po uzoru na Fitpass: ikona i naslov, pocetna i trenutna kilaza, promena, pa grafikon. */
 @Composable
 fun WeightChart(
     entries: List<BodyEntry>,
     modifier: Modifier = Modifier,
-    chartHeight: androidx.compose.ui.unit.Dp = 140.dp,
+    chartHeight: androidx.compose.ui.unit.Dp = 150.dp,
     onClick: (() -> Unit)? = null,
 ) {
     val pts = entries.filter { it.weightKg != null }.sortedBy { it.epochDay }
     if (pts.size < 2) return
-    val min = pts.minOf { it.weightKg!! }
-    val max = pts.maxOf { it.weightKg!! }
-    val span = (max - min).coerceAtLeast(1.0)
-    val line = MaterialTheme.colorScheme.primary
-    val grid = MaterialTheme.colorScheme.outlineVariant
+    val first = pts.first(); val last = pts.last()
+    val diff = last.weightKg!! - first.weightKg!!
+    val onVar = MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier.clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.MonitorWeight, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
             Text(tr("Kilaža", "Weight"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            val diff = pts.last().weightKg!! - pts.first().weightKg!!
-            Text(
-                (if (diff >= 0) "+" else "−") + kotlin.math.abs(diff).kg() + tr(" od ${LocalDate.ofEpochDay(pts.first().epochDay).srShort()}", " since ${LocalDate.ofEpochDay(pts.first().epochDay).srShort()}"),
-                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-            )
-            if (onClick != null) Icon(Icons.Filled.ChevronRight, tr("Otvori grafikon", "Open chart"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (onClick != null) Icon(Icons.Filled.ChevronRight, tr("Otvori grafikon", "Open chart"), tint = onVar)
         }
         Spacer(Modifier.height(12.dp))
-        Row {
-            Column(Modifier.height(chartHeight).width(52.dp)) {
-                Text(max.kg(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.weight(1f))
-                Text(min.kg(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) {
+                Text(first.weightKg!!.kg(), style = MaterialTheme.typography.headlineSmall)
+                Text(LocalDate.ofEpochDay(first.epochDay).srShort(), style = MaterialTheme.typography.labelMedium, color = onVar)
             }
-            Canvas(Modifier.weight(1f).height(chartHeight)) {
-                val n = pts.size
-                fun p(i: Int): Offset {
-                    val x = if (n == 1) size.width / 2 else size.width * i / (n - 1)
-                    val y = size.height * (1 - ((pts[i].weightKg!! - min) / span)).toFloat()
-                    return Offset(x, y.coerceIn(4f, size.height - 4f))
-                }
-                drawLine(grid, Offset(0f, 0f), Offset(size.width, 0f))
-                drawLine(grid, Offset(0f, size.height), Offset(size.width, size.height))
-                val path = Path().apply { moveTo(p(0).x, p(0).y); for (i in 1 until n) lineTo(p(i).x, p(i).y) }
-                val area = Path().apply { addPath(path); lineTo(p(n - 1).x, size.height); lineTo(p(0).x, size.height); close() }
-                drawPath(area, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(line.copy(alpha = 0.28f), Color.Transparent)))
-                drawPath(path, line, style = Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                    join = androidx.compose.ui.graphics.StrokeJoin.Round))
-                if (n <= 30) for (i in 0 until n) drawCircle(line, 3.5.dp.toPx(), p(i))
-                drawCircle(Color.White, 5.dp.toPx(), p(n - 1)); drawCircle(line, 3.5.dp.toPx(), p(n - 1))
+            Column(Modifier.weight(1f)) {
+                Text(last.weightKg!!.kg(), style = MaterialTheme.typography.headlineSmall)
+                Text(tr("sada", "now"), style = MaterialTheme.typography.labelMedium, color = onVar)
             }
+            Text(
+                (if (diff >= 0) "+" else "−") + kotlin.math.abs(diff).kg(),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
         }
-        Row(Modifier.padding(start = 52.dp)) {
-            Text(LocalDate.ofEpochDay(pts.first().epochDay).srShort(), style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-            Text(LocalDate.ofEpochDay(pts.last().epochDay).srShort(), style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Spacer(Modifier.height(16.dp))
+        com.vukos.trening.ui.common.LineChart(
+            pts.map { LocalDate.ofEpochDay(it.epochDay) to it.weightKg!! }, { it.kg() }, height = chartHeight + 60.dp, interactive = onClick == null,
+        )
     }
 }
 

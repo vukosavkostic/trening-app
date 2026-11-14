@@ -95,7 +95,7 @@ fun ActiveWorkoutBanner(workout: Workout?, sets: List<WorkoutSet>, onClick: () -
 fun WorkoutCard(w: Workout, sets: List<WorkoutSet>, exerciseNames: Map<String, String>, onClick: () -> Unit) {
     AppCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Filled.FitnessCenter)
+            IconBadge(Icons.Filled.FitnessCenter, size = com.vukos.trening.ui.common.RowIconSize)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(w.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

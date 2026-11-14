@@ -18,12 +18,9 @@ import com.vukos.trening.data.Supplements
 import com.vukos.trening.ui.common.OutlinePill
 import com.vukos.trening.ui.theme.Success
 import java.time.LocalDate
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -161,49 +158,36 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
         }
     }
 
-    if (showHelp) ModalBottomSheet(onDismissRequest = { showHelp = false }, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, bottom = 32.dp)) {
-            Text(tr("Kako rade podsetnici", "How reminders work"), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(12.dp))
-            listOf(
-                tr("Svaki dan u zadato vreme stiže notifikacija.", "You get a notification every day at the set time."),
-                tr("Dugme „Uzeo sam“ u notifikaciji odmah upisuje suplement u Dnevnik.", "The “Taken” button in the notification logs the supplement in your Journal."),
-                tr("Ako si suplement taj dan već uneo, podsetnik se preskače.", "If you already logged the supplement that day, the reminder is skipped."),
-                tr("Prekidač privremeno isključuje podsetnik. Dodirni podsetnik da promeniš vreme ili da ga obrišeš.", "The switch pauses a reminder. Tap a reminder to change the time or delete it."),
-            ).forEach { line ->
-                Row(Modifier.padding(vertical = 5.dp)) {
-                    Text("•", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(18.dp))
-                    Text(line, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(tr("Provera telefona", "Phone check"), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(2.dp))
-            if (!problems) Text(tr("Sve je podešeno. Podsetnici stižu na vreme.", "All set. Reminders arrive on time."),
-                style = MaterialTheme.typography.bodyMedium, color = Success, modifier = Modifier.padding(top = 6.dp))
-            else {
-                Text(tr("Telefon trenutno blokira ili odlaže notifikacije ove aplikacije.", "Your phone is currently blocking or delaying this app's notifications."),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (!notifOk) FixRow(tr("Notifikacije su isključene", "Notifications are off"), tr("Uključi", "Turn on")) { fixNotifications() }
-                if (!exactOk && Build.VERSION.SDK_INT >= 31) FixRow(tr("Tačni alarmi nisu dozvoljeni", "Exact alarms not allowed"), tr("Dozvoli", "Allow")) {
-                    ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
-                }
-                if (batteryRestricted) FixRow(tr("Štednja baterije može da ih odloži", "Battery saver can delay them"), tr("Isključi", "Turn off")) {
-                    runCatching {
-                        ctx.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName)))
-                    }.onFailure { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            OutlinePill(tr("Pošalji probnu notifikaciju", "Send a test notification"), {
-                val r = list.firstOrNull() ?: SuppReminder(id = "test", name = tr("Probni podsetnik", "Test reminder"), hour = 0, minute = 0)
-                if (!SupplementReminders.notify(ctx, r)) fixNotifications()
-            }, Modifier.fillMaxWidth(), Icons.Filled.NotificationsActive)
-            Spacer(Modifier.height(8.dp))
-            Text(tr("Ako notifikacija ne stigne na vreme (česta pojava na Xiaomi i Huawei telefonima), u podešavanjima telefona uključi „Autostart“ za Trening.",
-                    "If a notification arrives late (common on Xiaomi and Huawei phones), enable “Autostart” for Trening in the phone settings."),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (showHelp) com.vukos.trening.ui.common.InfoSheet(
+        title = tr("Kako rade podsetnici?", "How do reminders work?"),
+        paragraphs = listOf(
+            tr("Svaki dan u **zadato vreme** stiže notifikacija.", "You get a notification **every day at the set time**."),
+            tr("Dugme **„Uzeo sam“** u notifikaciji odmah upisuje suplement u Dnevnik. Ako si ga taj dan već uneo, podsetnik se preskače.",
+                "The **“Taken”** button in the notification logs the supplement in your Journal. If you already logged it that day, the reminder is skipped."),
+            tr("Prekidač privremeno isključuje podsetnik. Dodirni podsetnik da promeniš vreme ili da ga obrišeš.",
+                "The switch pauses a reminder. Tap a reminder to change the time or delete it."),
+            if (!problems) tr("Telefon je podešen. **Podsetnici stižu na vreme.**", "Your phone is set up. **Reminders arrive on time.**")
+            else tr("Telefon trenutno **blokira ili odlaže** notifikacije ove aplikacije.", "Your phone is currently **blocking or delaying** this app's notifications."),
+        ),
+        onDismiss = { showHelp = false },
+    ) {
+        if (!notifOk) FixRow(tr("Notifikacije su isključene", "Notifications are off"), tr("Uključi", "Turn on")) { fixNotifications() }
+        if (!exactOk && Build.VERSION.SDK_INT >= 31) FixRow(tr("Tačni alarmi nisu dozvoljeni", "Exact alarms not allowed"), tr("Dozvoli", "Allow")) {
+            ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
         }
+        if (batteryRestricted) FixRow(tr("Štednja baterije može da ih odloži", "Battery saver can delay them"), tr("Isključi", "Turn off")) {
+            runCatching {
+                ctx.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName)))
+            }.onFailure { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+        }
+        Spacer(Modifier.height(16.dp))
+        com.vukos.trening.ui.common.InfoParagraph(tr("Ako notifikacija kasni (često na Xiaomi i Huawei telefonima), u podešavanjima telefona uključi **„Autostart“** za Trening.",
+            "If a notification arrives late (common on Xiaomi and Huawei phones), enable **“Autostart”** for Trening in the phone settings."))
+        Spacer(Modifier.height(24.dp))
+        OutlinePill(tr("Pošalji probnu notifikaciju", "Send a test notification"), {
+            val r = list.firstOrNull() ?: SuppReminder(id = "test", name = tr("Probni podsetnik", "Test reminder"), hour = 0, minute = 0)
+            if (!SupplementReminders.notify(ctx, r)) fixNotifications()
+        }, Modifier.fillMaxWidth(), Icons.Filled.NotificationsActive)
     }
 
     if (adding || editing != null) ReminderDialog(
@@ -262,7 +246,7 @@ private fun ReminderDialog(initial: SuppReminder?, onDismiss: () -> Unit, onSave
 @Composable
 private fun FixRow(text: String, action: String, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         TextButton(onClick = onClick) { Text(action, color = MaterialTheme.colorScheme.primary) }
     }
 }

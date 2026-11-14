@@ -82,6 +82,18 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier, trailing: @Composa
     }
 }
 
+/** Velicina ikona i okruglih dugmadi u redovima kartica (Dnevnik, istorija). */
+val RowIconSize = 34.dp
+
+/** Okruglo dugme sa ikonom (+, podsetnik) iste velicine kao ikona reda. */
+@Composable
+fun CircleAction(icon: ImageVector, desc: String, bg: Color, tint: Color, onClick: () -> Unit) {
+    Box(
+        Modifier.size(RowIconSize).clip(CircleShape).background(bg).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, desc, tint = tint, modifier = Modifier.size(18.dp)) }
+}
+
 /** Ikona u obojenom krugu (kao na modernim karticama). */
 @Composable
 fun IconBadge(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary, size: Dp = 44.dp) {

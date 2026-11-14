@@ -239,7 +239,7 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
 private fun InfoRow(icon: ImageVector, tint: Color, label: String, value: String, onClick: (() -> Unit)?) {
     AppCard(onClick = onClick, padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(icon, tint, 40.dp)
+            IconBadge(icon, tint, com.vukos.trening.ui.common.RowIconSize)
             Spacer(Modifier.width(14.dp))
             Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Text(value, style = MaterialTheme.typography.titleMedium,
@@ -259,7 +259,7 @@ private fun FoodCard(
     val prot = totals.mapNotNull { it.proteinG }.sum()
     AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Filled.Restaurant, FoodGreen, 40.dp)
+            IconBadge(Icons.Filled.Restaurant, FoodGreen, com.vukos.trening.ui.common.RowIconSize)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(tr("Ishrana", "Food"), style = MaterialTheme.typography.titleMedium)
@@ -268,10 +268,7 @@ private fun FoodCard(
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary).clickable(onClick = onAdd),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Add, tr("Dodaj obrok", "Add meal"), tint = Color.White) }
+            com.vukos.trening.ui.common.CircleAction(Icons.Filled.Add, tr("Dodaj obrok", "Add meal"), MaterialTheme.colorScheme.primary, Color.White, onAdd)
         }
         Spacer(Modifier.height(14.dp))
         if (kcalGoal > 0 || proteinGoal > 0) {

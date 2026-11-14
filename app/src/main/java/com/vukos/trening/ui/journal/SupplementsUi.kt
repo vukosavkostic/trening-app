@@ -62,7 +62,7 @@ val SupplementPurple = Color(0xFFB18CFF)
 fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, onAdd: () -> Unit, onEdit: (FoodEntry) -> Unit, onCopy: () -> Unit, onReminders: () -> Unit) {
     AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Filled.Medication, SupplementPurple, 40.dp)
+            IconBadge(Icons.Filled.Medication, SupplementPurple, com.vukos.trening.ui.common.RowIconSize)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(tr("Suplementi", "Supplements"), style = MaterialTheme.typography.titleMedium)
@@ -71,18 +71,13 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onReminders),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(if (reminders > 0) Icons.Filled.NotificationsActive else Icons.Filled.NotificationAdd, tr("Podsetnici", "Reminders"),
-                    tint = if (reminders > 0) SupplementPurple else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-            }
+            com.vukos.trening.ui.common.CircleAction(
+                if (reminders > 0) Icons.Filled.NotificationsActive else Icons.Filled.NotificationAdd, tr("Podsetnici", "Reminders"),
+                MaterialTheme.colorScheme.surfaceContainerHigh,
+                if (reminders > 0) SupplementPurple else MaterialTheme.colorScheme.onSurfaceVariant, onReminders,
+            )
             Spacer(Modifier.width(8.dp))
-            Box(
-                Modifier.size(40.dp).clip(CircleShape).background(SupplementPurple).clickable(onClick = onAdd),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Add, tr("Dodaj suplement", "Add supplement"), tint = Color.Black) }
+            com.vukos.trening.ui.common.CircleAction(Icons.Filled.Add, tr("Dodaj suplement", "Add supplement"), SupplementPurple, Color.Black, onAdd)
         }
         if (entries.isNotEmpty()) {
             Spacer(Modifier.size(12.dp))
