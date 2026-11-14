@@ -155,10 +155,14 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
             ) {
                 com.vukos.trening.ui.common.IconBadge(Icons.Filled.CalendarMonth, size = 40.dp)
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium)
+                    Row(Modifier.fillMaxWidth()) {
+                        Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f).alignByBaseline())
+                        Text(tr("Promeni", "Change"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.alignByBaseline())
+                    }
                     Text(day.srRelative(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(tr("Promeni", "Change"), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
             }
 
             OutlinedTextField(
