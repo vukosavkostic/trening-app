@@ -36,6 +36,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -110,12 +113,29 @@ fun StatTile(value: String, label: String, modifier: Modifier = Modifier, valueC
         modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(horizontal = 14.dp, vertical = 14.dp)
     ) {
-        Text(value, style = MaterialTheme.typography.titleLarge, color = valueColor, maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        FitText(value, MaterialTheme.typography.titleLarge, valueColor)
         Spacer(Modifier.height(2.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
+}
+
+/**
+ * Jedan red teksta koji se smanjuje dok ne stane (npr. "4860 kg", "5h 14min" u uskoj plocici)
+ * umesto da se odsece sa "...". Dok se meri, ne crta se (bez treptanja).
+ */
+@Composable
+fun FitText(text: String, style: androidx.compose.ui.text.TextStyle, color: Color, minScale: Float = 0.6f) {
+    var scale by androidx.compose.runtime.remember(text) { androidx.compose.runtime.mutableFloatStateOf(1f) }
+    var ready by androidx.compose.runtime.remember(text) { androidx.compose.runtime.mutableStateOf(false) }
+    Text(
+        text, color = color, maxLines = 1, softWrap = false,
+        style = style.copy(fontSize = style.fontSize * scale),
+        modifier = Modifier.drawWithContent { if (ready) drawContent() },
+        onTextLayout = { r ->
+            if (r.hasVisualOverflow && scale > minScale) scale = (scale - 0.08f).coerceAtLeast(minScale) else ready = true
+        },
+    )
 }
 
 /** Glavno dugme (pun narandzasti pill). */

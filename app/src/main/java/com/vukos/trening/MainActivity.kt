@@ -118,8 +118,9 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
     }
 
     Scaffold(topBar = {
-        // Crvena / narandzasta traka za merenje, na svim glavnim tabovima.
-        if (showBar) CheckInBanner(due) { openCheckIn() }
+        // Crvena / narandzasta traka za merenje, na glavnim tabovima osim Profila
+        // (Profil vec ima veliku karticu "Danas je merenje" sa istim dugmetom).
+        if (showBar && route != Tab.BODY.route) CheckInBanner(due) { openCheckIn() }
     }, bottomBar = {
         if (showBar) NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 0.dp) {
             Tab.entries.forEach { tab ->

@@ -34,6 +34,16 @@ class WorkoutMathTest {
         assertEquals(null to null, WorkoutMath.hint(1, emptyList(), null))
     }
 
+    @Test fun hintCarriesEarlierSetOfThisWorkout() {
+        val t = RoutineExercise(routineId = "r", exerciseId = "e", position = 0, targetSets = 3, repsMin = 8, repsMax = 12)
+        val now = listOf(s(1, 60.0, 12), s(2, null, null, done = false))
+        assertEquals(60.0 to 12, WorkoutMath.hint(2, emptyList(), t, current = now))   // kg iz seta 1, ponavljanja iz plana
+        assertEquals(60.0 to 12, WorkoutMath.hint(2, emptyList(), null, current = now))
+        assertEquals(null to null, WorkoutMath.hint(1, emptyList(), null, current = now)) // set 1 nema prethodni
+        // prosli trening ima prednost
+        assertEquals(50.0 to 10, WorkoutMath.hint(2, listOf(s(2, 50.0, 10)), null, current = now))
+    }
+
     @Test fun formatting() {
         assertEquals("62.5", WorkoutMath.fmtKg(62.5))
         assertEquals("60", WorkoutMath.fmtKg(60.0))

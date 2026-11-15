@@ -406,7 +406,7 @@ private fun ExerciseBlock(
             Header("✓", Modifier.width(44.dp))
         }
         sets.forEach { s ->
-            androidx.compose.runtime.key(s.id) { SetRow(s, labels[s.id] ?: "${s.setIndex}", previous, target, onUpdate, onDelete) }
+            androidx.compose.runtime.key(s.id) { SetRow(s, labels[s.id] ?: "${s.setIndex}", previous, target, sets, onUpdate, onDelete) }
         }
         TextButton(onClick = onAddSet, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
             Icon(Icons.Filled.Add, null); Text(tr("  Dodaj set", "  Add set"))
@@ -426,15 +426,17 @@ private fun SetRow(
     label: String,
     previous: List<WorkoutSet>,
     target: RoutineExercise?,
+    siblings: List<WorkoutSet>,
     onUpdate: (WorkoutSet) -> Unit,
     onDelete: (WorkoutSet) -> Unit,
 ) {
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     // Tekst polja zivi lokalno (bez skakanja kursora); baza se azurira na svaku promenu.
     var kg by remember(set.id) { mutableStateOf(WorkoutMath.fmtKg(set.weightKg)) }
     var reps by remember(set.id) { mutableStateOf(set.reps?.toString() ?: "") }
     var typeMenu by remember { mutableStateOf(false) }
     val prev = previous.firstOrNull { it.setIndex == set.setIndex }
-    val (hintKg, hintReps) = WorkoutMath.hint(set.setIndex, previous, target, set.setType)
+    val (hintKg, hintReps) = WorkoutMath.hint(set.setIndex, previous, target, set.setType, siblings)
     val bg = if (set.done) DoneGreen.copy(alpha = 0.22f) else Color.Transparent
 
     Row(
@@ -476,7 +478,7 @@ private fun SetRow(
             Modifier.weight(1.3f), textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
         )
-        NumField(kg, WorkoutMath.fmtKg(hintKg), true, Modifier.weight(1f)) {
+        NumField(kg, WorkoutMath.fmtKg(hintKg), true, Modifier.weight(1f), next = true) {
             kg = it; onUpdate(set.copy(weightKg = WorkoutMath.parseKg(it), reps = WorkoutMath.parseReps(reps)))
         }
         NumField(reps, hintReps?.toString() ?: "", false, Modifier.weight(1f)) {
@@ -487,6 +489,7 @@ private fun SetRow(
                 Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
                     .background(if (set.done) DoneGreen else MaterialTheme.colorScheme.surfaceContainerHighest)
                     .clickable {
+                        focus.clearFocus()   // tastatura se sklanja kad se set stiklira
                         if (set.done) onUpdate(set.copy(weightKg = WorkoutMath.parseKg(kg), reps = WorkoutMath.parseReps(reps), done = false))
                         else {
                             // Prazno polje = prihvata se predlog (prethodno / cilj).
@@ -507,7 +510,7 @@ private fun SetRow(
 
 
 @Composable
-private fun NumField(value: String, hint: String, decimal: Boolean, modifier: Modifier, onChange: (String) -> Unit) {
+private fun NumField(value: String, hint: String, decimal: Boolean, modifier: Modifier, next: Boolean = false, onChange: (String) -> Unit) {
     val style = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
         textAlign = TextAlign.Center)
     Box(
@@ -517,11 +520,18 @@ private fun NumField(value: String, hint: String, decimal: Boolean, modifier: Mo
     ) {
         BasicTextField(
             value = value,
-            onValueChange = { v -> onChange(v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(6)) },
+            onValueChange = { v ->
+                val clean = v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(6)
+                // kg do 999.x, ponavljanja do 999 (inace bi se set sacuvao bez vrednosti)
+                val n = clean.replace(',', '.').toDoubleOrNull()
+                if (n == null || n < 1000) onChange(clean)
+            },
             singleLine = true,
             textStyle = style,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
+            // kg -> "Dalje" prelazi na ponavljanja, ponavljanja -> "Gotovo" sklanja tastaturu
+            keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number,
+                imeAction = if (next) androidx.compose.ui.text.input.ImeAction.Next else androidx.compose.ui.text.input.ImeAction.Done),
             modifier = Modifier.fillMaxWidth(),
             decorationBox = { inner ->
                 Box(contentAlignment = Alignment.Center) {

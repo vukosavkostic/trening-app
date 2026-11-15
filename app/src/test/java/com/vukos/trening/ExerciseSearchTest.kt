@@ -23,9 +23,31 @@ class ExerciseSearchTest {
         assertTrue(r.toString(), "Dumbbell Bench Press" in r)
     }
 
-    @Test fun prefixMatchesComeFirst() {
-        val r = ExerciseSearch.filter(all, "squat")
-        assertTrue(r.first().name.lowercase().startsWith("squat"))
+    @Test fun popularStaplesComeFirst() {
+        fun top(q: String) = ExerciseSearch.filter(all, q).first().name
+        assertEquals("Barbell Squat", top("squat"))
+        assertEquals("Barbell Bench Press - Medium Grip", top("bench press"))
+        assertEquals("Barbell Deadlift", top("deadlift"))
+        assertEquals("Side Lateral Raise", top("lateral raise"))
+        assertEquals("Barbell Curl", top("curl"))
+        assertEquals("Wide-Grip Lat Pulldown", top("lat"))
+    }
+
+    @Test fun prefixBeatsContainsAmongOthers() {
+        val r = ExerciseSearch.filter(all, "squat jerk").map { it.name }
+        assertEquals("Squat Jerk", r.first())
+        // nepopularne: naziv koji pocinje upitom ide pre onog koji ga samo sadrzi
+        val s = ExerciseSearch.filter(all, "jump squat").map { it.name }
+        assertTrue(s.toString(), s.indexOf("Freehand Jump Squat") < s.indexOf("Kneeling Jump Squat") || s.first().lowercase().startsWith("jump squat"))
+    }
+
+    @Test fun exactPhraseBeforeScatteredWords() {
+        val r = ExerciseSearch.filter(all, "shoulder press").map { it.name }
+        assertEquals("Dumbbell Shoulder Press", r.first())
+    }
+
+    @Test fun noQueryShowsPopularFirst() {
+        assertEquals("Barbell Bench Press - Medium Grip", ExerciseSearch.filter(all, "").first().name)
     }
 
     @Test fun aliasAndCaseInsensitive() {

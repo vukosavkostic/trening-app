@@ -34,13 +34,28 @@ object WorkoutMath {
 
     /**
      * Predlog za set: kod progresije nova tezina i donja granica ponavljanja; inace isti set iz proslog
-     * treninga, pa poslednji prosli set, pa cilj iz plana.
+     * treninga, pa poslednji prosli set, pa cilj iz plana. Sta i dalje fali (prvi put radis vezbu)
+     * uzima se iz prethodnog seta iste vrste u ovom treningu (`current`), kao u Strong/Hevy.
      */
     fun hint(
         setIndex: Int,
         previous: List<WorkoutSet>,
         target: RoutineExercise?,
         setType: String = SetType.NORMAL,
+        current: List<WorkoutSet> = emptyList(),
+    ): Pair<Double?, Int?> {
+        val (k, r) = baseHint(setIndex, previous, target, setType)
+        if (k != null && r != null) return k to r
+        val before = current.filter { it.setIndex < setIndex && (it.setType == SetType.WARMUP) == (setType == SetType.WARMUP) }
+            .sortedBy { it.setIndex }
+        return (k ?: before.lastOrNull { it.weightKg != null }?.weightKg) to (r ?: before.lastOrNull { it.reps != null }?.reps)
+    }
+
+    private fun baseHint(
+        setIndex: Int,
+        previous: List<WorkoutSet>,
+        target: RoutineExercise?,
+        setType: String,
     ): Pair<Double?, Int?> {
         val prev = previous.firstOrNull { it.setIndex == setIndex }
             ?: previous.lastOrNull { (it.setType == SetType.WARMUP) == (setType == SetType.WARMUP) }

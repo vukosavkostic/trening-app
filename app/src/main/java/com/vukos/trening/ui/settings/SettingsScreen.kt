@@ -218,10 +218,11 @@ fun BackupScreen(onBack: () -> Unit) = SubScreen(tr("Rezervna kopija", "Backup")
 @Composable
 fun SubScreen(title: String, onBack: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     Scaffold(topBar = {
-        androidx.compose.material3.CenterAlignedTopAppBar(
+        // Naslov levo, kao na ostalim ekranima (Statistika, Grafikon kilaže...)
+        androidx.compose.material3.TopAppBar(
             title = { Text(title, style = MaterialTheme.typography.titleLarge) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
-            colors = androidx.compose.material3.TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+            colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
         )
     }) { pad ->
         Column(
@@ -374,7 +375,7 @@ fun SettingsScreen(
         com.vukos.trening.ui.common.SettingsGroup {
             com.vukos.trening.ui.common.SettingsRow(tr("Jezik", "Language"), com.vukos.trening.i18n.Lang.label, onClick = { langSheet = true })
             com.vukos.trening.ui.common.SettingsRow(tr("Ciljevi", "Goals"), goals, onClick = onGoals)
-            com.vukos.trening.ui.common.SettingsRow(tr("Podsetnici za suplemente", "Supplement reminders"), if (reminders == 0) tr("Isključeno", "Off") else tr("$reminders aktivno", "$reminders active"),
+            com.vukos.trening.ui.common.SettingsRow(tr("Podsetnici", "Reminders"), if (reminders == 0) tr("Isključeno", "Off") else tr("$reminders aktivno", "$reminders active"),
                 onClick = onReminders, divider = false)
         }
         com.vukos.trening.ui.common.GroupHeader(tr("Podaci", "Data"))

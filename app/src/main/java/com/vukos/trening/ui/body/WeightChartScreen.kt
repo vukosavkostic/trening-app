@@ -5,13 +5,14 @@ import com.vukos.trening.i18n.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -57,7 +58,7 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
         LazyColumn(
             Modifier.padding(pad).fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -74,15 +75,30 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
                     modifier = Modifier.padding(vertical = 24.dp),
                 )
             }
-            items(shown.sortedByDescending { it.epochDay }, key = { it.id }) { e ->
+            // Isti izgled kao "Istorija merenja" na Profilu: pun datum, "pre X dana", kilaza i promena.
+            val list = shown.sortedByDescending { it.epochDay }
+            itemsIndexed(list, key = { _, e -> e.id }) { i, e ->
+                val day = LocalDate.ofEpochDay(e.epochDay)
+                val r = { top: Boolean -> if (top) 24.dp else 6.dp }
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(r(i == 0), r(i == 0), r(i == list.lastIndex), r(i == list.lastIndex)))
                         .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .clickable { onOpenDay(LocalDate.ofEpochDay(e.epochDay)) }
-                        .padding(14.dp)
+                        .clickable { onOpenDay(day) }
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 ) {
-                    Text(LocalDate.ofEpochDay(e.epochDay).sr(), Modifier.weight(1f))
-                    Text(e.weightKg!!.kg(), fontWeight = FontWeight.Bold)
+                    Column(Modifier.weight(1f)) {
+                        Text(day.srLong().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall)
+                        Text(day.srRelative(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                        Text(e.weightKg!!.kg(), style = MaterialTheme.typography.titleMedium)
+                        list.getOrNull(i + 1)?.weightKg?.let { prev ->
+                            Text((e.weightKg - prev).signed(), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
         }

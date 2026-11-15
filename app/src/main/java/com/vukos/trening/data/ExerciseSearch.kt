@@ -54,7 +54,9 @@ object ExerciseSearch {
     /**
      * Svaka rec iz upita mora da se nadje u nazivu, misicima ili opremi (redosled nebitan),
      * tako da "row db" nalazi "Dumbbell Row"... a "bench dumbbell" nalazi "Dumbbell Bench Press".
-     * Rezultati: prvo oni ciji naziv pocinje upitom, pa ostali po abecedi.
+     * Rezultati po relevantnosti (kao Hevy/Strong): prvo osnovne, najcesce vezbe (POPULAR),
+     * pa naziv koji pocinje upitom, pa naziv koji sadrzi ceo upit kao frazu, pa kraci nazivi.
+     * Bez upita: popularne prvo, ostale po abecedi.
      */
     fun filter(
         all: List<Exercise>,
@@ -77,9 +79,49 @@ object ExerciseSearch {
                 )
                 tokens.all { it in hay }
             }
-            .sortedWith(compareBy({ !normalize(it.name).startsWith(q) }, { it.name.lowercase() }))
+            .sortedWith(compareBy<Exercise>(
+                { if (q.isEmpty()) 0 else group(rank(normalize(it.name), q, tokens)) },
+                { POPULAR_RANK[it.name] ?: Int.MAX_VALUE },
+                { if (q.isEmpty()) 0 else rank(normalize(it.name), q, tokens) },
+                { if (q.isEmpty()) 0 else it.name.length },
+                { it.name.lowercase() },
+            ))
             .toList()
     }
+
+    /**
+     * 0 = pocinje upitom kao celim recima, 1 = sadrzi upit kao cele reci,
+     * 2 = fraza na pocetku reci ("lat" u "lateral"), 3 = sve reci postoje kao pocetak reci, 4 = ostalo.
+     */
+    private fun rank(name: String, q: String, tokens: List<String>): Int {
+        val n = " $name "
+        val words = name.split(' ')
+        return when {
+            n.startsWith(" $q ") -> 0
+            n.contains(" $q ") -> 1
+            n.contains(" $q") -> 2
+            tokens.all { t -> words.any { it.startsWith(t) } } -> 3
+            else -> 4
+        }
+    }
+
+    /** Grupa: cele reci (0) pa pocetak reci (1) pa ostalo (2); unutar grupe popularne vezbe prve. */
+    private fun group(r: Int) = when { r <= 1 -> 0; r <= 3 -> 1; else -> 2 }
+
+    /** Osnovne vezbe koje se najcesce rade u teretani (redosled = prioritet medju njima). */
+    val POPULAR = listOf(
+        "Barbell Bench Press - Medium Grip", "Barbell Squat", "Barbell Deadlift", "Dumbbell Bench Press",
+        "Incline Dumbbell Press", "Barbell Incline Bench Press - Medium Grip", "Standing Military Press",
+        "Dumbbell Shoulder Press", "Side Lateral Raise", "Wide-Grip Lat Pulldown", "Pullups", "Chin-Up",
+        "Bent Over Barbell Row", "One-Arm Dumbbell Row", "Seated Cable Rows", "Romanian Deadlift",
+        "Leg Press", "Leg Extensions", "Barbell Hip Thrust",
+        "Barbell Lunge", "Dumbbell Lunges", "Goblet Squat", "Front Barbell Squat", "Hack Squat",
+        "Standing Calf Raises", "Seated Calf Raise", "Barbell Curl", "Dumbbell Bicep Curl", "Hammer Curls",
+        "Preacher Curl", "Lying Leg Curls", "Seated Leg Curl", "Triceps Pushdown", "Dips - Triceps Version", "Dips - Chest Version",
+        "Lying Dumbbell Tricep Extension", "Dumbbell Flyes", "Face Pull", "Barbell Shrug", "Dumbbell Shrug",
+        "Plank", "Crunches", "Hanging Leg Raise", "Cable Crunch", "Pushups",
+    )
+    private val POPULAR_RANK = POPULAR.withIndex().associate { it.value to it.index }
 
     private val ALIASES = mapOf("db" to "dumbbell", "bb" to "barbell", "kb" to "kettlebell")
 

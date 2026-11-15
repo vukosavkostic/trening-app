@@ -171,8 +171,11 @@ fun WeightChart(
             }
             Canvas(Modifier.weight(1f).height(chartHeight)) {
                 val n = pts.size
+                // x po datumu (ne po rednom broju): razmak izmedju merenja odgovara proteklim danima
+                val d0 = pts.first().epochDay
+                val dSpan = (pts.last().epochDay - d0).coerceAtLeast(1)
                 fun p(i: Int): Offset {
-                    val x = if (n == 1) size.width / 2 else size.width * i / (n - 1)
+                    val x = if (n == 1) size.width / 2 else size.width * (pts[i].epochDay - d0) / dSpan
                     val y = size.height * (1 - ((pts[i].weightKg!! - min) / span)).toFloat()
                     return Offset(x, y.coerceIn(4f, size.height - 4f))
                 }
