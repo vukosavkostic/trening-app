@@ -23,7 +23,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
@@ -32,8 +31,10 @@ import java.time.ZoneId
  * Podsetnici za merenje:
  *  - nedelja 08:00 i 20:00, ako merenje (kilaza / slike) nije uneto
  *  - ako je nedelja propustena: svako jutro u 08:00 dok se ne unese
- * Alarm je "neprecizan" (moze kasniti par minuta), pa ne trazi posebnu dozvolu za tacne alarme.
- * Prijemnik pri svakom okidanju proverava bazu i zakazuje sledece okidanje.
+ * Alarm je tacan (kao kod suplemenata). Neprecizan alarm je Android u mirovanju odlagao satima,
+ * pa notifikacija nije stizala. Prijemnik pri svakom okidanju proverava bazu i zakazuje sledece.
+ * Svaki termin ("slot") se javlja najvise jednom. Ako alarm zakasni (telefon ugasen, Doze),
+ * notifikacija se ipak posalje cim se alarm okine.
  */
 object Reminders {
     const val CHANNEL = "checkin"
@@ -53,17 +54,44 @@ object Reminders {
         return candidates.first { it.isAfter(now) }
     }
 
-    /** Da li u ovom trenutku treba poslati notifikaciju. */
-    fun shouldNotify(due: CheckInSchedule.Due?, now: LocalDateTime): Boolean {
-        if (due == null || !due.anythingMissing) return false
-        val isCheckInSunday = now.toLocalDate() == due.checkInDay
-        return isCheckInSunday || (due.overdue && now.toLocalTime() < LocalTime.NOON)
+    /**
+     * Termin za koji je do sada trebalo poslati notifikaciju (npr. "2026-11-15-E"), ili null.
+     *  - dan merenja: jutro od 08:00, vece od 20:00
+     *  - propusteno merenje: jedno jutro dnevno, od 08:00 (i kasnije, ako alarm zakasni)
+     */
+    fun slotFor(due: CheckInSchedule.Due?, now: LocalDateTime): String? {
+        if (due == null || !due.anythingMissing) return null
+        val today = now.toLocalDate()
+        val t = now.toLocalTime()
+        if (t < MORNING) return null
+        return if (today == due.checkInDay && t >= EVENING) "$today-E" else "$today-M"
+    }
+
+    /** Da li u ovom trenutku treba poslati notifikaciju (slot jos nije javljen). */
+    fun shouldNotify(due: CheckInSchedule.Due?, now: LocalDateTime, lastSlot: String? = null): Boolean {
+        val slot = slotFor(due, now) ?: return false
+        return slot != lastSlot
+    }
+
+    private const val PREFS = "checkin_reminders"
+    private const val KEY_LAST = "last_slot"
+
+    /** Proverava bazu i salje notifikaciju ako je termin dosao, a jos nije javljen. */
+    suspend fun checkAndNotify(context: Context) {
+        val app = context.applicationContext as TreningApp
+        val now = LocalDateTime.now()
+        val due = CheckInSchedule.dueFromDb(app.db.body(), now.toLocalDate())
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val slot = slotFor(due, now) ?: return
+        if (slot == prefs.getString(KEY_LAST, null)) return
+        if (notify(context, due!!)) prefs.edit().putString(KEY_LAST, slot).apply()
     }
 
     fun schedule(context: Context) {
         val am = context.getSystemService(AlarmManager::class.java)
         val at = nextTrigger(LocalDateTime.now()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(context))
+        if (SupplementReminders.exactAllowed(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(context))
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(context))
     }
 
     private fun pending(context: Context): PendingIntent = PendingIntent.getBroadcast(
@@ -76,11 +104,12 @@ object Reminders {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
     }
 
-    fun notify(context: Context, due: CheckInSchedule.Due) {
+    /** Vraca false ako notifikacije nisu dozvoljene (termin se onda ne obelezava kao javljen). */
+    fun notify(context: Context, due: CheckInSchedule.Due): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
-        ) return
+        ) return false
         val what = when {
             due.weightMissing && due.photosMissing -> tr("kilaža + 3 slike", "weight + 3 photos")
             due.photosMissing -> tr("3 slike (spreda, bok, leđa)", "3 photos (front, side, back)")
@@ -102,6 +131,7 @@ object Reminders {
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(1, n)
+        return true
     }
 
     fun cancelNotification(context: Context) = NotificationManagerCompat.from(context).cancel(1)
@@ -112,9 +142,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val app = context.applicationContext as TreningApp
-                val due = CheckInSchedule.dueFromDb(app.db.body(), LocalDate.now())
-                if (Reminders.shouldNotify(due, LocalDateTime.now())) Reminders.notify(context, due!!)
+                Reminders.checkAndNotify(context)
                 Reminders.schedule(context)
             } finally {
                 pending.finish()
@@ -128,5 +156,10 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         Reminders.schedule(context)
         SupplementReminders.scheduleAll(context)
+        // Ako je jutarnji termin prosao dok je telefon bio ugasen, javi odmah.
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try { Reminders.checkAndNotify(context) } finally { pending.finish() }
+        }
     }
 }

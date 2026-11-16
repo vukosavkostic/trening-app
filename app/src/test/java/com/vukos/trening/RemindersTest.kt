@@ -42,4 +42,25 @@ class RemindersTest {
         assertFalse(Reminders.shouldNotify(due(at(11, 22, 8), true, 0), at(11, 22, 8)))
         assertEquals(LocalDate.of(2026, 11, 22), due(at(11, 24, 8), false, 0)!!.checkInDay)
     }
+
+    @Test fun lateAlarmStillNotifiesOnOverdueDay() {
+        // alarm odlozen (Doze) do 15:30 u ponedeljak, merenje i dalje fali
+        assertTrue(Reminders.shouldNotify(due(at(11, 16, 15, 30), false, 0), at(11, 16, 15, 30)))
+        assertFalse(Reminders.shouldNotify(due(at(11, 16, 7), false, 0), at(11, 16, 7)))   // pre 08:00
+    }
+
+    @Test fun eachSlotOnlyOnce() {
+        val now = at(11, 16, 8)
+        val slot = Reminders.slotFor(due(now, false, 0), now)
+        assertEquals("2026-11-16-M", slot)
+        assertFalse(Reminders.shouldNotify(due(now, false, 0), at(11, 16, 14), slot))       // isti dan, vec javljeno
+        assertTrue(Reminders.shouldNotify(due(at(11, 17, 8), false, 0), at(11, 17, 8), slot)) // sledece jutro opet
+    }
+
+    @Test fun sundayEveningIsSeparateSlot() {
+        val morning = Reminders.slotFor(due(at(11, 15, 8), false, 0), at(11, 15, 8))
+        assertEquals("2026-11-15-M", morning)
+        assertTrue(Reminders.shouldNotify(due(at(11, 15, 20), false, 0), at(11, 15, 20), morning))
+        assertEquals("2026-11-15-E", Reminders.slotFor(due(at(11, 15, 21), false, 0), at(11, 15, 21)))
+    }
 }
