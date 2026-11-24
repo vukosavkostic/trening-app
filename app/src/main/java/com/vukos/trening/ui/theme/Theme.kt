@@ -21,27 +21,48 @@ val Accent = Color(0xFFFF5A1F)
 val Danger = Color(0xFFE5484D)
 val Success = Color(0xFF3DD68C)
 
+/**
+ * Boje dizajna v2 (Claude Design, "Trening Prototype v2"): tamna tema.
+ * bg = pozadina, s1 = kartica, s2 = prazan dan / polje, s3 = traka / sekundarno dugme.
+ */
+object Ds {
+    val bg = Color(0xFF0B0B0C)
+    val s1 = Color(0xFF161618)
+    val s2 = Color(0xFF1C1C1E)
+    val s3 = Color(0xFF2A2A2D)
+    val ink = Color(0xFFF5F5F7)
+    val sub = Color(0xFF8E8E93)
+    val faint = Color(0xFF5A5A5F)
+    val line = Color(0x0FFFFFFF)
+    /** Narandzasti tekst na tamnoj podlozi (malo svetliji od [Accent]). */
+    val aText = Color(0xFFFF6A33)
+    val aSoft = Accent.copy(alpha = 0.16f)
+    val aOn = Color(0xFFFFB693)
+    val green = Color(0xFF30D158)
+    val danger = Color(0xFFFF453A)
+}
+
 private val Colors = darkColorScheme(
     primary = Accent,
     onPrimary = Color.White,
     primaryContainer = Color(0xFF3A1D10),
-    onPrimaryContainer = Color(0xFFFFB693),
+    onPrimaryContainer = Ds.aOn,
     secondary = Color(0xFFB0B0B0),
     // Izabrani cipovi / segmenti: neutralno (bez podrazumevane ljubicaste).
     secondaryContainer = Color(0xFF34343A),
-    onSecondaryContainer = Color(0xFFF4F4F5),
+    onSecondaryContainer = Ds.ink,
     tertiary = Accent,
-    background = Color(0xFF0E0E10),
-    onBackground = Color(0xFFF4F4F5),
-    surface = Color(0xFF0E0E10),
-    onSurface = Color(0xFFF4F4F5),
+    background = Ds.bg,
+    onBackground = Ds.ink,
+    surface = Ds.bg,
+    onSurface = Ds.ink,
     surfaceVariant = Color(0xFF232327),
-    onSurfaceVariant = Color(0xFF9A9AA3),
-    surfaceContainerLowest = Color(0xFF0B0B0D),
-    surfaceContainerLow = Color(0xFF141417),
-    surfaceContainer = Color(0xFF19191C),
-    surfaceContainerHigh = Color(0xFF222226),
-    surfaceContainerHighest = Color(0xFF2B2B30),
+    onSurfaceVariant = Ds.sub,
+    surfaceContainerLowest = Color(0xFF080809),
+    surfaceContainerLow = Color(0xFF141416),
+    surfaceContainer = Ds.s1,
+    surfaceContainerHigh = Ds.s2,
+    surfaceContainerHighest = Ds.s3,
     outline = Color(0xFF4A4A52),
     outlineVariant = Color(0xFF2A2A2F),
     error = Danger,

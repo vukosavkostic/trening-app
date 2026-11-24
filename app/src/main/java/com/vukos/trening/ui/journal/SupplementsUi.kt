@@ -1,6 +1,9 @@
 package com.vukos.trening.ui.journal
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.ChevronRight
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,42 +63,36 @@ val SupplementPurple = Color(0xFFB18CFF)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, onAdd: () -> Unit, onEdit: (FoodEntry) -> Unit, onCopy: () -> Unit, onReminders: () -> Unit) {
-    AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Filled.Medication, SupplementPurple, com.vukos.trening.ui.common.RowIconSize)
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(tr("Suplementi", "Supplements"), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (entries.isEmpty()) tr("Ništa nije uneto", "Nothing logged") else tr("${entries.size} uneto", "${entries.size} logged"),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(com.vukos.trening.ui.theme.Ds.s1)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+    ) {
+        CardHeader(
+            tr("Suplementi", "Supplements"),
+            if (entries.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else tr("${entries.size} uneto", "${entries.size} taken"),
+        ) {
+            RoundButton(Icons.Filled.Add, tr("Dodaj suplement", "Add supplement"), com.vukos.trening.ui.theme.Ds.s3, com.vukos.trening.ui.theme.Ds.ink, 36.dp, onAdd)
+        }
+        if (entries.isNotEmpty()) Column(Modifier.padding(top = 6.dp)) {
+            entries.forEach { e ->
+                val meta = listOfNotNull(
+                    Supplements.doseOf(e.text).takeIf { it.isNotBlank() },
+                    e.kcal?.let { "$it kcal" }, e.proteinG?.let { "$it g" },
+                ).joinToString(" · ")
+                EntryRow(Supplements.nameOf(e.text), meta) { onEdit(e) }
             }
-            com.vukos.trening.ui.common.CircleAction(
-                if (reminders > 0) Icons.Filled.NotificationsActive else Icons.Filled.NotificationAdd, tr("Podsetnici", "Reminders"),
-                MaterialTheme.colorScheme.surfaceContainerHigh,
-                if (reminders > 0) SupplementPurple else MaterialTheme.colorScheme.onSurfaceVariant, onReminders,
+        }
+        if (copyCount > 0) OutlinePill(tr("Isto kao juče ($copyCount)", "Same as yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 12.dp), Icons.Filled.ContentCopy)
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onReminders).padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (reminders > 0) tr("Podsetnici · aktivno: $reminders", "Reminders · $reminders active") else tr("Podsetnici", "Reminders"),
+                Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText,
             )
-            Spacer(Modifier.width(8.dp))
-            com.vukos.trening.ui.common.CircleAction(Icons.Filled.Add, tr("Dodaj suplement", "Add supplement"), SupplementPurple, Color.Black, onAdd)
+            Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = com.vukos.trening.ui.theme.Ds.aText)
         }
-        if (entries.isNotEmpty()) {
-            Spacer(Modifier.size(12.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                entries.forEach { e ->
-                    Column(
-                        Modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .clickable { onEdit(e) }.padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(Supplements.nameOf(e.text), style = MaterialTheme.typography.titleSmall)
-                        Supplements.doseOf(e.text).takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-        }
-        if (copyCount > 0) OutlinePill(tr("Isto kao juče ($copyCount)", "Same as yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 10.dp), Icons.Filled.ContentCopy)
     }
 }
 

@@ -80,14 +80,21 @@ import com.vukos.trening.data.WorkoutMath
 import com.vukos.trening.ui.body.kg
 import com.vukos.trening.ui.body.sr
 import com.vukos.trening.ui.common.DayMarker
-import com.vukos.trening.ui.common.MonthCalendar
-import com.vukos.trening.ui.workout.WorkoutCard
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
+import com.vukos.trening.data.Workout
+import com.vukos.trening.data.WorkoutSet
+import com.vukos.trening.ui.common.FitText
+import com.vukos.trening.ui.common.MONTHS
+import com.vukos.trening.ui.theme.Accent
+import com.vukos.trening.ui.theme.Ds
+import com.vukos.trening.ui.theme.Manrope
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
-
-private val FoodGreen = Color(0xFF3DD68C)
-private val WeightBlue = Color(0xFF5B9CFF)
 
 /** Dnevnik: kalendar, mesec u brojkama i sve za izabrani dan (treninzi, kilaza, ishrana). */
 @Composable
@@ -134,43 +141,53 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
     val dayWorkouts = workouts.filter { JournalStats.dateOf(it) == selected }
     val dayWeight = body.firstOrNull { it.epochDay == selectedDay && it.weightKg != null }
 
-    Scaffold(topBar = {
-        TabTopBar(tr("Dnevnik", "Journal")) {
-            androidx.compose.material3.IconButton(onClick = onOpenStats) { Icon(Icons.Filled.BarChart, tr("Statistika", "Statistics")) }
-        }
-    }) { pad ->
+    Scaffold(containerColor = Ds.bg) { pad ->
         LazyColumn(
             Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                MonthCalendar(
-                    markers = markers, onDayClick = { selectedDay = it.toEpochDay() },
-                    selected = selected, allClickable = true,
-                    month = ym, onMonthChange = { month = it.toString() },
-                    modifier = Modifier.fillMaxWidth(),
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Column(Modifier.weight(1f)) {
+                        Text(LocalDate.now().srLong().replaceFirstChar { it.uppercase() }, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
+                        Text(tr("Dnevnik", "Journal"), Modifier.padding(top = 2.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.68).sp, color = Ds.ink)
+                    }
+                    RoundButton(Icons.Filled.BarChart, tr("Statistika", "Statistics"), Ds.s1, Ds.ink, 40.dp, onOpenStats)
+                }
+            }
+            item {
+                JournalCalendar(
+                    markers = markers, selected = selected, month = ym,
+                    onMonthChange = { month = it.toString() },
+                    onDayClick = { selectedDay = it.toEpochDay() },
                 )
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("${insights.workouts}", tr("treninga", "workouts"), Modifier.weight(1f))
-                    StatTile(JournalStats.fmtMinutes(insights.minutes), tr("u teretani", "in the gym"), Modifier.weight(1f))
-                    StatTile("${WorkoutMath.fmtKg(insights.volumeKg / 1000)} t", tr("podignuto", "lifted"), Modifier.weight(1f))
+                    MonthTile("${insights.workouts}", tr("treninga", "workouts"), Modifier.weight(1f))
+                    MonthTile(JournalStats.fmtMinutes(insights.minutes), tr("u teretani", "in the gym"), Modifier.weight(1f))
+                    MonthTile("${WorkoutMath.fmtKg(insights.volumeKg / 1000)} t", tr("podignuto", "lifted"), Modifier.weight(1f))
                 }
             }
             item {
-                SectionTitle(if (selected == LocalDate.now()) tr("Danas", "Today") else selected.srLong().replaceFirstChar { it.uppercase() })
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        if (selected == LocalDate.now()) tr("Danas", "Today") else selected.srLong().replaceFirstChar { it.uppercase() },
+                        Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.44).sp, color = Ds.ink,
+                    )
+                    Text(MONTHS[ym.monthValue - 1], fontSize = 13.sp, color = Ds.sub)
+                }
             }
             if (dayWorkouts.isEmpty()) item {
-                InfoRow(Icons.Filled.FitnessCenter, MaterialTheme.colorScheme.onSurfaceVariant, tr("Trening", "Workout"),
-                    if (selected.isAfter(LocalDate.now())) "—" else tr("Bez treninga", "No workout"), null)
+                InfoRow(tr("Trening", "Workout"), if (selected.isAfter(LocalDate.now())) "—" else tr("Bez treninga", "No workout"), null)
             }
             items(dayWorkouts, key = { it.id }) { w ->
-                WorkoutCard(w, setsByWorkout[w.id].orEmpty(), names) { onOpenWorkout(w.id) }
+                JournalWorkoutCard(w, setsByWorkout[w.id].orEmpty(), names) { onOpenWorkout(w.id) }
             }
             dayWeight?.let { e ->
-                item { InfoRow(Icons.Filled.MonitorWeight, WeightBlue, tr("Kilaža", "Weight"), e.weightKg!!.kg()) { onOpenBodyDay(selected) } }
+                item { InfoRow(tr("Kilaža", "Weight"), e.weightKg!!.kg()) { onOpenBodyDay(selected) } }
             }
             item {
                 FoodCard(
@@ -235,17 +252,101 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
     )
 }
 
+/** Okruglo dugme sa ikonom (statistika, +). */
 @Composable
-private fun InfoRow(icon: ImageVector, tint: Color, label: String, value: String, onClick: (() -> Unit)?) {
-    AppCard(onClick = onClick, padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(icon, tint, com.vukos.trening.ui.common.RowIconSize)
-            Spacer(Modifier.width(14.dp))
-            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.titleMedium,
-                color = if (onClick != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
-            if (onClick != null) Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+internal fun RoundButton(icon: ImageVector, desc: String, bg: Color, tint: Color, size: Dp, onClick: () -> Unit) {
+    Box(
+        Modifier.size(size).clip(CircleShape).background(bg).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, desc, tint = tint, modifier = Modifier.size(18.dp)) }
+}
+
+/** Plocica sa brojem za mesec (treninzi, vreme, podignuto). */
+@Composable
+private fun MonthTile(value: String, label: String, modifier: Modifier) {
+    Column(modifier.clip(RoundedCornerShape(20.dp)).background(Ds.s1).padding(horizontal = 16.dp, vertical = 14.dp)) {
+        FitText(value, TextStyle(fontFamily = Manrope, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.44).sp), Ds.ink)
+        Text(label, Modifier.padding(top = 2.dp), fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String, onClick: (() -> Unit)?) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Ds.s1)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(label, Modifier.weight(1f), fontSize = 16.sp, color = Ds.ink)
+        Text(value, fontSize = 16.sp, fontWeight = if (onClick != null) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (onClick != null) Ds.ink else Ds.sub)
+        if (onClick != null) Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = Ds.faint)
+    }
+}
+
+/** Trening izabranog dana: vreme, naziv, trajanje / setovi / tone i najbolji set po vezbi. */
+@Composable
+private fun JournalWorkoutCard(w: Workout, sets: List<WorkoutSet>, names: Map<String, String>, onClick: () -> Unit) {
+    val time = java.time.Instant.ofEpochMilli(w.startedAt).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    val meta = listOf(
+        WorkoutMath.duration(w.startedAt, w.finishedAt),
+        tr("${sets.size} setova", "${sets.size} sets"),
+        "${WorkoutMath.fmtKg(Math.round(WorkoutMath.volume(sets) / 100.0) / 10.0)} t",
+    ).joinToString(" · ")
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1).clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 18.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Trening", "Workout") + " · " + "%02d:%02d".format(time.hour, time.minute), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
+                Text(w.name, Modifier.padding(top = 4.dp), fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.52).sp,
+                    color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(meta, Modifier.padding(top = 2.dp), fontSize = 14.sp, color = Ds.sub)
+            }
+            Icon(Icons.Filled.ChevronRight, null, Modifier.padding(top = 4.dp).size(18.dp), tint = Ds.faint)
         }
+        val groups = sets.groupBy { it.exercisePosition }.toSortedMap().values
+        if (groups.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            HorizontalDivider(thickness = 1.dp, color = Ds.line)
+        }
+        groups.forEach { g ->
+            val best = g.maxWithOrNull(compareBy<WorkoutSet>({ it.weightKg ?: 0.0 }, { it.reps ?: 0 }))
+            Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(names[g.first().exerciseId] ?: "?", Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                best?.let {
+                    Text(
+                        (WorkoutMath.fmtKg(it.weightKg).takeIf { k -> k.isNotEmpty() }?.let { k -> "$k kg × " } ?: "") + "${it.reps ?: 0}",
+                        Modifier.padding(start = 12.dp), fontSize = 15.sp, color = Ds.sub,
+                    )
+                }
+            }
+            HorizontalDivider(thickness = 1.dp, color = Ds.line)
+        }
+    }
+}
+
+/** Naslov kartice (Ishrana, Suplementi) sa brojem unosa i okruglim dugmetom. */
+@Composable
+internal fun CardHeader(title: String, sub: String, trailing: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+            Text(sub, Modifier.padding(top = 1.dp), fontSize = 13.sp, color = Ds.sub)
+        }
+        trailing()
+    }
+}
+
+/** Red unosa (obrok, suplement): tekst levo, vrednosti desno, tanka linija ispod. */
+@Composable
+internal fun EntryRow(text: String, meta: String, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text, Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink)
+            if (meta.isNotEmpty()) Text(meta, Modifier.padding(start = 12.dp), fontSize = 13.sp, color = Ds.sub)
+        }
+        HorizontalDivider(thickness = 1.dp, color = Ds.line)
     }
 }
 
@@ -257,82 +358,57 @@ private fun FoodCard(
     // Zbir ukljucuje i suplemente (npr. protein u prahu).
     val kcal = totals.mapNotNull { it.kcal }.sum()
     val prot = totals.mapNotNull { it.proteinG }.sum()
-    AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Filled.Restaurant, FoodGreen, com.vukos.trening.ui.common.RowIconSize)
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(tr("Ishrana", "Food"), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (food.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else tr("${food.size} ${if (food.size == 1) "unos" else "unosa"}", "${food.size} ${if (food.size == 1) "entry" else "entries"}"),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            com.vukos.trening.ui.common.CircleAction(Icons.Filled.Add, tr("Dodaj obrok", "Add meal"), MaterialTheme.colorScheme.primary, Color.White, onAdd)
-        }
-        Spacer(Modifier.height(14.dp))
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1).padding(horizontal = 20.dp, vertical = 18.dp)) {
+        CardHeader(
+            tr("Ishrana", "Food"),
+            if (food.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else tr("${food.size} ${if (food.size == 1) "unos" else "unosa"}", "${food.size} ${if (food.size == 1) "entry" else "entries"}"),
+        ) { RoundButton(Icons.Filled.Add, tr("Dodaj obrok", "Add meal"), Accent, Color.White, 36.dp, onAdd) }
         if (kcalGoal > 0 || proteinGoal > 0) {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClick = onGoals).padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly) {
-                if (kcalGoal > 0) GoalRing(kcal, kcalGoal, "kcal", MaterialTheme.colorScheme.primary)
-                if (proteinGoal > 0) GoalRing(prot, proteinGoal, tr("g proteina", "g protein"), FoodGreen)
+            Row(
+                Modifier.fillMaxWidth().padding(top = 16.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onGoals),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (kcalGoal > 0) GoalBar(kcal, kcalGoal, "kcal", Accent, Modifier.weight(1f))
+                if (proteinGoal > 0) GoalBar(prot, proteinGoal, tr("g proteina", "g protein"), Ds.green, Modifier.weight(1f))
             }
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (kcal > 0 || prot > 0) Text(
-                    listOfNotNull(kcal.takeIf { it > 0 }?.let { "$it kcal" }, prot.takeIf { it > 0 }?.let { tr("$it g proteina", "$it g protein") }).joinToString(", "),
-                    style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
+                    listOfNotNull(kcal.takeIf { it > 0 }?.let { "$it kcal" }, prot.takeIf { it > 0 }?.let { tr("$it g proteina", "$it g protein") }).joinToString(" · "),
+                    Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
                 ) else Spacer(Modifier.weight(1f))
-                TextButton(onClick = onGoals) { Text(tr("Postavi dnevni cilj", "Set a daily goal")) }
+                Text(tr("Postavi dnevni cilj", "Set a daily goal"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onGoals).padding(vertical = 6.dp, horizontal = 4.dp),
+                    fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
             }
         }
-        if (copyCount > 0) OutlinePill(tr("Kopiraj juče ($copyCount)", "Copy yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 8.dp), Icons.Filled.ContentCopy)
+        if (copyCount > 0) OutlinePill(tr("Kopiraj juče ($copyCount)", "Copy yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 12.dp), Icons.Filled.ContentCopy)
         MEALS.forEach { meal ->
             val entries = food.filter { it.meal == meal }
             if (entries.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
-                Text(com.vukos.trening.data.mealLabel(meal).uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(com.vukos.trening.data.mealLabel(meal), Modifier.padding(top = 14.dp, bottom = 2.dp), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
                 entries.forEach { f ->
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onEdit(f) }.padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(f.text, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            listOfNotNull(f.kcal?.let { "$it kcal" }, f.proteinG?.let { "${it}g P" }).joinToString(", "),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+                    EntryRow(f.text, listOfNotNull(f.kcal?.let { "$it kcal" }, f.proteinG?.let { "$it g" }).joinToString(" · ")) { onEdit(f) }
                 }
             }
         }
     }
 }
 
-/** Prsten napretka ka dnevnom cilju. */
+/** Napredak ka dnevnom cilju: broj / cilj, tanka traka i koliko je ostalo. */
 @Composable
-private fun GoalRing(value: Int, goal: Int, unit: String, color: Color) {
-    val track = MaterialTheme.colorScheme.surfaceContainerHighest
+private fun GoalBar(value: Int, goal: Int, unit: String, color: Color, modifier: Modifier) {
     val frac = (value.toFloat() / goal).coerceIn(0f, 1f)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                val stroke = androidx.compose.ui.graphics.drawscope.Stroke(10.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                val inset = 5.dp.toPx()
-                val sz = androidx.compose.ui.geometry.Size(size.width - inset * 2, size.height - inset * 2)
-                val tl = androidx.compose.ui.geometry.Offset(inset, inset)
-                drawArc(track, 0f, 360f, false, tl, sz, style = stroke)
-                if (frac > 0f) drawArc(color, -90f, 360f * frac, false, tl, sz, style = stroke)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$value", style = MaterialTheme.typography.titleLarge)
-                Text("/ $goal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("$value", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink)
+            Text("/ $goal $unit", Modifier.padding(bottom = 4.dp), fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.height(4.dp))
+        Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Ds.s3)) {
+            if (frac > 0f) Box(Modifier.fillMaxWidth(frac).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(color))
+        }
         Text(
             if (value >= goal) tr("Cilj ispunjen", "Goal reached") else tr("još ${goal - value} $unit", "${goal - value} $unit to go"),
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp, color = Ds.sub,
         )
     }
 }
