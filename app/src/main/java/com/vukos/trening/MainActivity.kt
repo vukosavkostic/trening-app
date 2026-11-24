@@ -174,7 +174,11 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 com.vukos.trening.ui.help.NotionHelpScreen(
                     onClose = { nav.popBackStack() },
                     onOpenSettings = { nav.navigate("settings_notion") },
-                    onOpenNotionPlans = { nav.navigate("notion_routines") },
+                    // Vodic se zatvara; ako je otvoren sa Notion treninga, samo se vraca tamo.
+                    onOpenNotionPlans = {
+                        nav.popBackStack()
+                        if (nav.currentDestination?.route != "notion_routines") nav.navigate("notion_routines")
+                    },
                 )
             }
             composable("workout/{id}") { e ->

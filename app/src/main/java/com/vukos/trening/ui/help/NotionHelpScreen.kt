@@ -242,24 +242,29 @@ fun NotionHelpScreen(onClose: () -> Unit, onOpenSettings: () -> Unit, onOpenNoti
     val planImported = routines.any { it.notionPageId != null }
     val autoDone = mapOf(3 to connected, 4 to connected, 5 to connected, 6 to planImported, 2 to connected, 1 to connected)
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().background(com.vukos.trening.ui.theme.Ds.bg).statusBarsPadding().navigationBarsPadding()) {
         // Zaglavlje: zatvori, naslov, korak N od M, segmentirani napredak (dodir = skok na korak).
-        Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, tr("Zatvori", "Close")) }
-            Text(tr("Povezivanje sa Notionom", "Connect to Notion"), style = HelpBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 17.sp), modifier = Modifier.weight(1f))
-            Text("${pager.currentPage + 1}/${STEPS.size}", style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(com.vukos.trening.ui.theme.Ds.s1).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Close, tr("Zatvori", "Close"), Modifier.size(18.dp), tint = com.vukos.trening.ui.theme.Ds.ink)
+            }
+            Text(tr("Povezivanje sa Notionom", "Connect to Notion"), Modifier.weight(1f), fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                color = com.vukos.trening.ui.theme.Ds.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("${pager.currentPage + 1}/${STEPS.size}", Modifier.width(40.dp), fontSize = 15.sp, color = com.vukos.trening.ui.theme.Ds.sub,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             STEPS.indices.forEach { i ->
                 val c by animateColorAsState(
                     when {
                         i == pager.currentPage -> MaterialTheme.colorScheme.primary
                         autoDone[i] == true || i < pager.currentPage -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
-                        else -> MaterialTheme.colorScheme.surfaceContainerHighest
+                        else -> com.vukos.trening.ui.theme.Ds.s3
                     }, label = "seg",
                 )
-                Box(Modifier.weight(1f).height(5.dp).clip(CircleShape).background(c).clickable { scope.launch { pager.animateScrollToPage(i) } })
+                Box(Modifier.weight(1f).height(14.dp).clickable { scope.launch { pager.animateScrollToPage(i) } }, contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(c))
+                }
             }
         }
 
@@ -284,17 +289,26 @@ fun NotionHelpScreen(onClose: () -> Unit, onOpenSettings: () -> Unit, onOpenNoti
         }
 
         // Navigacija: Nazad / Dalje (na kraju: Gotovo).
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (pager.currentPage > 0) TextButton(onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } }) {
-                Text(tr("Nazad", "Back"), style = MaterialTheme.typography.labelLarge)
-            } else TextButton(onClick = onClose) { Text(tr("Preskoči", "Skip"), style = MaterialTheme.typography.labelLarge) }
-            Spacer(Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val first = pager.currentPage == 0
+            Box(
+                Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(28.dp)).clickable {
+                    if (first) onClose() else scope.launch { pager.animateScrollToPage(pager.currentPage - 1) }
+                },
+                contentAlignment = Alignment.Center,
+            ) { Text(if (first) tr("Preskoči", "Skip") else tr("Nazad", "Back"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.ink) }
             val last = pager.currentPage == STEPS.lastIndex
-            PrimaryPill(
-                if (last) tr("Gotovo", "Done") else if (pager.currentPage == 0) tr("Počni", "Start") else tr("Dalje", "Next"),
-                { if (last) onClose() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
-                Modifier.width(150.dp),
-            )
+            Box(
+                Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(28.dp)).background(com.vukos.trening.ui.theme.Accent).clickable {
+                    // "Gotovo" vodi na Notion treninge kad je Notion povezan.
+                    if (last) { if (connected) onOpenNotionPlans() else onClose() } else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
+                },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(if (last) tr("Gotovo", "Done") else if (first) tr("Počni", "Start") else tr("Dalje", "Next"),
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+            }
         }
     }
 }
@@ -306,7 +320,7 @@ private fun StepHeader(page: Int, done: Boolean) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (page == 0) tr("Vodič", "Guide") else tr("Korak $page od ${STEPS.size - 2}", "Step $page of ${STEPS.size - 2}") + if (s.minutes.isNotEmpty()) " (${s.minutes})" else "",
-                style = HelpSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f),
+                fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText, modifier = Modifier.weight(1f),
             )
             if (done) {
                 Icon(Icons.Filled.CheckCircle, null, Modifier.size(16.dp), tint = Success)
@@ -449,7 +463,7 @@ private fun TipsPage() {
 /* ------------------------------- Gradivni elementi ------------------------------- */
 
 /* Tipografija vodica: regular font, veci prored, svetao tekst - mirno i citljivo. */
-private val HelpTitle = androidx.compose.ui.text.TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, lineHeight = 32.sp)
+private val HelpTitle = androidx.compose.ui.text.TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 35.sp, letterSpacing = (-0.96).sp)
 private val HelpH2 = androidx.compose.ui.text.TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp)
 private val HelpBody = androidx.compose.ui.text.TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 25.sp)
 private val HelpSmall = androidx.compose.ui.text.TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 21.sp)
