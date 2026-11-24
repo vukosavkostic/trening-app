@@ -64,7 +64,7 @@ import com.vukos.trening.ui.theme.TreningTheme
 
 private enum class Tab(val route: String, private val sr: String, private val en: String, val icon: ImageVector) {
     JOURNAL("journal", "Dnevnik", "Journal", Icons.Filled.MenuBook),
-    ROUTINES("routines", "Trening", "Workout", Icons.Filled.FitnessCenter),
+    ROUTINES("routines", "Trening", "Train", Icons.Filled.FitnessCenter),
     BODY("body", "Profil", "Profile", Icons.Filled.Person);
 
     val label: String get() = tr(sr, en)
@@ -169,7 +169,14 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     savedState = e.savedStateHandle,
                     onPickExercises = { nav.navigate("picker") },
                     onOpenExercise = { nav.navigate("exercise/$it") },
-                    onFinished = { id -> nav.popBackStack(); nav.navigate("workout_detail/$id") },
+                    // "Sačuvaj u dnevnik": Dnevnik sa danasnjim danom (novi trening je na vrhu).
+                    onFinished = {
+                        nav.popBackStack()
+                        nav.navigate(Tab.JOURNAL.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                        }
+                    },
                     onClose = { nav.popBackStack() },
                 )
             }

@@ -2,55 +2,85 @@ package com.vukos.trening.ui.routines
 
 import com.vukos.trening.i18n.tr
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vukos.trening.TreningApp
+import com.vukos.trening.data.JournalStats
+import com.vukos.trening.data.Rotation
 import com.vukos.trening.data.Routine
+import com.vukos.trening.data.RoutineExercise
+import com.vukos.trening.data.TrainingStats
 import com.vukos.trening.ui.body.srRelative
-import com.vukos.trening.ui.common.AppCard
-import com.vukos.trening.ui.common.Chip
 import com.vukos.trening.ui.common.EmptyState
-import com.vukos.trening.ui.common.IconBadge
 import com.vukos.trening.ui.common.OutlinePill
 import com.vukos.trening.ui.common.PrimaryPill
-import com.vukos.trening.ui.common.SectionTitle
-import com.vukos.trening.ui.common.TabTopBar
+import com.vukos.trening.ui.journal.RoundButton
+import com.vukos.trening.ui.theme.Accent
+import com.vukos.trening.ui.theme.Ds
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.temporal.IsoFields
 
-/** Tab Trening: brzi start, pa lista planova (nisu vezani za dan - bilo koji se radi bilo kad). */
+private val PlanRowH = 76.dp
+
+/**
+ * Tab Trening (dizajn v2): "Sledeći" po rotaciji, ova nedelja / niz, slobodan trening,
+ * pa "Moji planovi" - drzi i prevuci da promenis redosled (redosled je rotacija).
+ */
 @Composable
 fun RoutinesScreen(
     onOpen: (String) -> Unit,
@@ -61,6 +91,7 @@ fun RoutinesScreen(
     onOpenStats: () -> Unit,
 ) {
     val db = TreningApp.instance.db
+    val scope = rememberCoroutineScope()
     val routines by remember { db.routines().observeAll() }.collectAsStateWithLifecycle(emptyList())
     val links by remember { db.routines().observeAllExercises() }.collectAsStateWithLifecycle(emptyList())
     val exercises by remember { db.exercises().observeAll() }.collectAsStateWithLifecycle(emptyList())
@@ -72,58 +103,110 @@ fun RoutinesScreen(
         workouts.filter { it.routineId != null }.groupBy { it.routineId!! }
             .mapValues { (_, ws) -> ws.maxOf { it.startedAt } }
     }
+    val rotation = remember(routines, workouts) { Rotation.next(routines, workouts) }
 
-    Scaffold(
-        topBar = {
-            TabTopBar(tr("Trening", "Workout")) {
-                IconButton(onClick = onNotion) { Icon(Icons.Filled.CloudDownload, tr("Planovi iz Notiona", "Plans from Notion")) }
-                IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, tr("Podešavanja", "Settings")) }
-            }
-        },
-    ) { pad ->
+    val goal = remember { TreningApp.instance.settings.weeklyGoal }
+    val today = LocalDate.now()
+    val week = today.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+    val dates = remember(workouts) { workouts.map { JournalStats.dateOf(it) } }
+    val thisWeek = dates.count { TrainingStats.weekStart(it) == TrainingStats.weekStart(today) }
+    val streak = remember(dates, goal) { TrainingStats.streak(dates, goal, today) }
+
+    fun saveOrder(ordered: List<Routine>) {
+        val now = System.currentTimeMillis()
+        scope.launch {
+            ordered.forEachIndexed { i, r -> if (r.sortOrder != i) db.routines().upsert(r.copy(sortOrder = i, updatedAt = now, dirty = true)) }
+        }
+    }
+
+    Scaffold(containerColor = Ds.bg) { pad ->
         LazyColumn(
             Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                // Nedeljni cilj i niz nedelja.
-                val goal = remember { TreningApp.instance.settings.weeklyGoal }
-                val dates = workouts.map { com.vukos.trening.data.JournalStats.dateOf(it) }
-                val today = java.time.LocalDate.now()
-                val thisWeek = dates.count { com.vukos.trening.data.TrainingStats.weekStart(it) == com.vukos.trening.data.TrainingStats.weekStart(today) }
-                val streak = com.vukos.trening.data.TrainingStats.streak(dates, goal, today)
-                AppCard(onClick = onOpenStats, padding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(tr("Ova nedelja", "This week"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(tr("$thisWeek / $goal treninga", "$thisWeek / $goal workouts"), style = MaterialTheme.typography.titleLarge)
-                        }
-                        if (streak > 0) Chip(tr("$streak ${if (streak == 1) "nedelja" else "nedelja"} zaredom", "$streak ${if (streak == 1) "week" else "weeks"} in a row"),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer, bg = MaterialTheme.colorScheme.primaryContainer)
-                        Icon(Icons.Filled.ChevronRight, tr("Statistika", "Statistics"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            tr("Nedelja $week · urađeno $thisWeek od $goal", "Week $week · $thisWeek of $goal done"),
+                            fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub,
+                        )
+                        Text(tr("Trening", "Train"), Modifier.padding(top = 2.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.68).sp, color = Ds.ink)
                     }
-                    Spacer(Modifier.height(12.dp))
-                    com.vukos.trening.ui.stats.WeekProgress(thisWeek, goal)
-                }
-            }
-            item {
-                AppCard(onClick = { onStart(null) }, padding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconBadge(Icons.Filled.Bolt)
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(tr("Slobodan trening", "Free workout"), style = MaterialTheme.typography.titleMedium)
-                            Text(tr("Bez plana, vežbe dodaješ usput", "No plan, add exercises as you go"), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        RoundButton(Icons.Filled.CloudDownload, tr("Planovi iz Notiona", "Plans from Notion"), Ds.s1, Ds.ink, 40.dp, onNotion)
+                        RoundButton(Icons.Filled.Settings, tr("Podešavanja", "Settings"), Ds.s1, Ds.ink, 40.dp, onSettings)
                     }
                 }
             }
+            rotation.next?.let { next ->
+                item {
+                    val ex = byRoutine[next.id].orEmpty()
+                    val past = workouts.filter { it.routineId == next.id && it.finishedAt != null }
+                    val avgMin = past.takeIf { it.isNotEmpty() }?.map { (it.finishedAt!! - it.startedAt) / 60_000 }?.average()?.toInt()
+                    UpNextCard(next, rotation.last, ex, names, avgMin, onStart = { if (ex.isEmpty()) onOpen(next.id) else onStart(next.id) })
+                }
+            }
             item {
-                SectionTitle(tr("Moji planovi", "My plans")) {
-                    TextButton(onClick = onNew) { Icon(Icons.Filled.Add, null, Modifier.size(18.dp)); Text(tr(" Novi plan", " New plan")) }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(Ds.s1).clickable(onClick = onOpenStats).padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(tr("Ova nedelja", "This week"), fontSize = 13.sp, color = Ds.sub)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text("$thisWeek", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink)
+                            Text("/$goal", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.faint)
+                        }
+                        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            repeat(goal.coerceAtLeast(1)) { i ->
+                                Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(if (i < thisWeek) Accent else Ds.s3))
+                            }
+                        }
+                    }
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(Ds.s1).padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(tr("Niz", "Streak"), fontSize = 13.sp, color = Ds.sub)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text("$streak", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink)
+                            Text(
+                                tr(" nedelja", " ${if (streak == 1) "week" else "weeks"}"),
+                                Modifier.padding(bottom = 3.dp), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Ds.sub,
+                            )
+                        }
+                        Text(tr("zaredom sa ispunjenim ciljem", "on goal in a row"), fontSize = 13.sp, color = Ds.sub)
+                    }
+                }
+            }
+            item {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Ds.s1).clickable { onStart(null) }
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Slobodan trening", "Free workout"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+                        Text(tr("Bez plana, vežbe dodaješ usput", "No plan, add exercises as you go"), fontSize = 13.sp, color = Ds.sub)
+                    }
+                    Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = Ds.faint)
+                }
+            }
+            item {
+                Column {
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
+                        Text(tr("Moji planovi", "My plans"), Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.44).sp, color = Ds.ink)
+                        Text(tr("Novi plan", "New plan"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onNew).padding(4.dp),
+                            fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
+                    }
+                    if (routines.size > 1) Text(
+                        tr("Drži plan i prevuci da promeniš redosled. Redosled je tvoja rotacija.", "Hold a plan and drag to reorder. The order sets your rotation."),
+                        Modifier.padding(top = 8.dp), fontSize = 13.sp, color = Ds.sub,
+                    )
                 }
             }
             if (routines.isEmpty()) item {
@@ -136,11 +219,11 @@ fun RoutinesScreen(
                         OutlinePill(tr("Uvezi iz Notiona", "Import from Notion"), onNotion, Modifier.fillMaxWidth(), Icons.Filled.CloudDownload)
                     }
                 }
-            }
-            items(routines, key = { it.id }) { r ->
-                RoutineCard(
-                    r, byRoutine[r.id].orEmpty().map { names[it.exerciseId] ?: "?" }, lastDone[r.id],
-                    onStart = { onStart(r.id) }, onEdit = { onOpen(r.id) },
+            } else item {
+                PlanList(
+                    routines, byRoutine, lastDone,
+                    onStart = { r -> if (byRoutine[r.id].isNullOrEmpty()) onOpen(r.id) else onStart(r.id) },
+                    onEdit = { onOpen(it.id) }, onReorder = ::saveOrder,
                 )
             }
         }
@@ -148,31 +231,156 @@ fun RoutinesScreen(
 }
 
 @Composable
-private fun RoutineCard(r: Routine, exerciseNames: List<String>, lastDone: Long?, onStart: () -> Unit, onEdit: () -> Unit) {
-    AppCard(onClick = onEdit) {
-        Row(verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f)) {
-                Text(r.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    listOfNotNull(
-                        tr("${exerciseNames.size} ${if (exerciseNames.size == 1) "vežba" else "vežbi"}", "${exerciseNames.size} ${if (exerciseNames.size == 1) "exercise" else "exercises"}"),
-                        lastDone?.let { tr("poslednji put ", "last done ") + java.time.Instant.ofEpochMilli(it)
-                            .atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative() } ?: tr("još nije rađen", "not done yet"),
-                    ).joinToString(", "),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (r.notionPageId != null) Chip("Notion")
-            Icon(Icons.Filled.Edit, tr("Izmeni plan", "Edit plan"), tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp).size(20.dp))
+private fun UpNextCard(
+    next: Routine, last: Routine?, ex: List<RoutineExercise>, names: Map<String, String>, avgMin: Int?, onStart: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(Ds.s1).padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        Column {
+            Text(
+                last?.let { tr("Sledeći · rotacija posle: ${it.name}", "Up next · rotation after ${it.name}") } ?: tr("Sledeći", "Up next"),
+                fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText,
+            )
+            Text(next.name, Modifier.padding(top = 6.dp), fontSize = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.2).sp,
+                color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOfNotNull(
+                    tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"),
+                    tr("${ex.sumOf { it.targetSets }} setova", "${ex.sumOf { it.targetSets }} sets").takeIf { ex.isNotEmpty() },
+                    avgMin?.let { "~$it min" },
+                ).joinToString(" · "),
+                Modifier.padding(top = 2.dp), fontSize = 15.sp, color = Ds.sub,
+            )
         }
-        if (exerciseNames.isNotEmpty()) Text(
-            exerciseNames.joinToString(", "), maxLines = 2, overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp),
-        )
-        Spacer(Modifier.height(16.dp))
-        if (exerciseNames.isEmpty()) OutlinePill(tr("Dodaj vežbe u plan", "Add exercises to the plan"), onEdit, Modifier.fillMaxWidth(), Icons.Filled.Add)
-        else PrimaryPill(tr("Započni trening", "Start workout"), onStart, Modifier.fillMaxWidth(), Icons.Filled.PlayArrow)
+        if (ex.isNotEmpty()) Column {
+            HorizontalDivider(thickness = 1.dp, color = Ds.line)
+            ex.take(3).forEach { e ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 11.dp)) {
+                    Text(names[e.exerciseId] ?: "?", Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${e.targetSets} × ${repsText(e)}", Modifier.padding(start = 12.dp), fontSize = 15.sp, color = Ds.sub)
+                }
+                HorizontalDivider(thickness = 1.dp, color = Ds.line)
+            }
+            if (ex.size > 3) Text(tr("+ još ${ex.size - 3}", "+ ${ex.size - 3} more"), Modifier.padding(top = 11.dp), fontSize = 15.sp, color = Ds.sub)
+        }
+        Box(
+            Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(Accent).clickable(onClick = onStart),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                if (ex.isEmpty()) tr("Dodaj vežbe u plan", "Add exercises to the plan") else tr("Započni trening", "Start workout"),
+                fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Color.White,
+            )
+        }
+    }
+}
+
+private fun repsText(e: RoutineExercise): String = when {
+    e.repsMin != null && e.repsMax != null && e.repsMin != e.repsMax -> "${e.repsMin}–${e.repsMax}"
+    else -> (e.repsMin ?: e.repsMax)?.toString() ?: "—"
+}
+
+/** Lista planova u jednoj kartici; dugo drzanje podigne plan, prevlacenje menja redosled. */
+@Composable
+private fun PlanList(
+    routines: List<Routine>,
+    byRoutine: Map<String, List<RoutineExercise>>,
+    lastDone: Map<String, Long>,
+    onStart: (Routine) -> Unit,
+    onEdit: (Routine) -> Unit,
+    onReorder: (List<Routine>) -> Unit,
+) {
+    val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+    val rowPx = with(density) { PlanRowH.toPx() }
+    // Novi redosled se prikazuje odmah, dok ga baza ne potvrdi (bez skakanja posle spustanja).
+    var pending by remember { mutableStateOf<List<String>?>(null) }
+    LaunchedEffect(routines) { if (pending == routines.map { it.id }) pending = null }
+    val byId = routines.associateBy { it.id }
+    val order = pending?.takeIf { p -> p.size == routines.size && p.all { it in byId } }?.map { byId.getValue(it) } ?: routines
+    var dragIdx by remember { mutableIntStateOf(-1) }
+    var dragDy by remember { mutableFloatStateOf(0f) }
+    val n = order.size
+    val target = if (dragIdx >= 0) (dragIdx + Math.round(dragDy / rowPx)).coerceIn(0, n - 1) else -1
+
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1)) {
+        order.forEachIndexed { i, r ->
+            val me = i == dragIdx
+            val shift = when {
+                dragIdx < 0 || me -> 0.dp
+                dragIdx < i && i <= target -> -PlanRowH
+                dragIdx > i && i >= target -> PlanRowH
+                else -> 0.dp
+            }
+            val animShift by animateDpAsState(shift, tween(220), label = "shift")
+            val lift by animateFloatAsState(if (me) 1f else 0f, tween(200), label = "lift")
+            val ex = byRoutine[r.id].orEmpty()
+            val meta = listOf(
+                tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"),
+                lastDone[r.id]?.let {
+                    tr("poslednji put ", "last done ") + java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative()
+                } ?: tr("još nije rađen", "not done yet"),
+            ).joinToString(" · ")
+            Box(
+                Modifier.fillMaxWidth().height(PlanRowH).zIndex(if (me) 2f else 1f)
+                    .offset(y = if (me) 0.dp else animShift)
+                    .graphicsLayer {
+                        if (me) translationY = dragDy
+                        val s = 1f + 0.03f * lift
+                        scaleX = s; scaleY = s
+                    }
+                    .then(if (me) Modifier.shadow(18.dp, RoundedCornerShape(20.dp)) else Modifier)
+                    .clip(if (me) RoundedCornerShape(20.dp) else RoundedCornerShape(0.dp))
+                    .background(if (me) Ds.s2 else Ds.s1)
+                    .pointerInput(r.id, order) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                dragIdx = order.indexOfFirst { it.id == r.id }; dragDy = 0f
+                            },
+                            onDrag = { change, amount -> change.consume(); dragDy += amount.y },
+                            onDragEnd = {
+                                val from = dragIdx
+                                val to = (from + Math.round(dragDy / rowPx)).coerceIn(0, n - 1)
+                                if (from >= 0 && to != from) {
+                                    val a = order.toMutableList(); val m = a.removeAt(from); a.add(to, m)
+                                    pending = a.map { it.id }; onReorder(a)
+                                }
+                                dragIdx = -1; dragDy = 0f
+                            },
+                            onDragCancel = { dragIdx = -1; dragDy = 0f },
+                        )
+                    }
+                    .clickable { onEdit(r) },
+            ) {
+                Row(
+                    Modifier.fillMaxSize().padding(start = 12.dp, end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.DragIndicator, null, Modifier.size(16.dp), tint = Ds.faint)
+                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(r.name, Modifier.weight(1f, fill = false), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (r.notionPageId != null) Text(
+                                "Notion", Modifier.padding(start = 8.dp).clip(RoundedCornerShape(6.dp)).background(Ds.s3).padding(horizontal = 7.dp, vertical = 2.dp),
+                                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Ds.sub,
+                            )
+                        }
+                        Text(meta, Modifier.padding(top = 2.dp), fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Row(
+                        Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(Ds.aSoft).clickable { onStart(r) }.padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, null, Modifier.size(14.dp), tint = Ds.aText)
+                        Text(tr("Kreni", "Start"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
+                    }
+                }
+                if (i < n - 1 && !me) HorizontalDivider(Modifier.align(Alignment.BottomCenter), thickness = 1.dp, color = Ds.line)
+            }
+        }
     }
 }
