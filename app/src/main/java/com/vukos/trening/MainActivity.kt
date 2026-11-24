@@ -78,7 +78,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openRequest.value = intent?.getStringExtra(Reminders.EXTRA_OPEN)
-        setContent { TreningTheme { AppRoot(openRequest.value) { openRequest.value = null } } }
+        setContent {
+            TreningTheme {
+                // Ikone statusne trake prate izabranu temu (ne samo sistemsku).
+                val dark = com.vukos.trening.ui.theme.isDarkTheme()
+                androidx.compose.runtime.DisposableEffect(dark) {
+                    val t = android.graphics.Color.TRANSPARENT
+                    enableEdgeToEdge(
+                        statusBarStyle = if (dark) androidx.activity.SystemBarStyle.dark(t) else androidx.activity.SystemBarStyle.light(t, t),
+                        navigationBarStyle = if (dark) androidx.activity.SystemBarStyle.dark(t) else androidx.activity.SystemBarStyle.light(t, t),
+                    )
+                    onDispose {}
+                }
+                AppRoot(openRequest.value) { openRequest.value = null }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

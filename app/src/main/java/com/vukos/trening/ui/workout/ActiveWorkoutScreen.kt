@@ -675,6 +675,7 @@ private fun RestFullScreen(now: Long, title: String, elapsedSec: Long, upNext: P
     val rem = RestTimer.remainingSec(now)
     val total = RestTimer.totalSec.coerceAtLeast(1)
     val frac by animateFloatAsState(rem.toFloat() / total, tween(1000), label = "ring")
+    val track = Ds.s2
     Box(
         Modifier.fillMaxSize().background(Ds.bg).clickable(remember { MutableInteractionSource() }, indication = null) {}
             .statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp),
@@ -692,7 +693,7 @@ private fun RestFullScreen(now: Long, title: String, elapsedSec: Long, upNext: P
                     val inset = w / 2 + 4.dp.toPx()
                     val sz = androidx.compose.ui.geometry.Size(size.width - inset * 2, size.height - inset * 2)
                     val tl = Offset(inset, inset)
-                    drawArc(Ds.s2, 0f, 360f, false, tl, sz, style = Stroke(w))
+                    drawArc(track, 0f, 360f, false, tl, sz, style = Stroke(w))
                     if (frac > 0f) drawArc(Accent, -90f, 360f * frac, false, tl, sz, style = Stroke(w, cap = StrokeCap.Round))
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
