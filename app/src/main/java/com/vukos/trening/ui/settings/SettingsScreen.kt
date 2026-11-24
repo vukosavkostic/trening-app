@@ -359,7 +359,6 @@ private fun PasswordDialog(export: Boolean, onDismiss: () -> Unit, onConfirm: (C
 
 /** Glavna podesavanja: grupe redova kao u modernim aplikacijama; detalji su na podekranima. */
 @OptIn(ExperimentalMaterial3Api::class)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
