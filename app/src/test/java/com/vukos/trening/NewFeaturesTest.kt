@@ -90,7 +90,9 @@ class NewFeaturesTest {
         val sets = listOf(set(1, 40.0, 10, SetType.WARMUP), set(2, 80.0, 8), set(3, 80.0, 8), set(1, 20.0, 10, ex = "x", pos = 1))
         val d = LocalDate.ofInstant(java.time.Instant.EPOCH, zone)
         val r = TrainingStats.muscleSets(listOf(w), sets, mapOf("e" to "chest", "x" to "triceps"), d, d)
-        assertEquals(listOf("chest" to 2, "triceps" to 1), r)
+        assertEquals(listOf("chest" to 2.0, "triceps" to 1.0), r)
+        val r2 = TrainingStats.muscleSets(listOf(w), sets, mapOf("e" to "chest", "x" to "triceps"), d, d, secondaryMuscles = mapOf("e" to listOf("triceps", "shoulders")))
+        assertEquals(listOf("chest" to 2.0, "triceps" to 2.0, "shoulders" to 1.0), r2)
     }
 
     @Test fun backupRoundTripAndWrongPassword() {

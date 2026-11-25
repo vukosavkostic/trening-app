@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Zajednicke komponente modernog izgleda (zaobljene kartice, pill dugmad, ikone u krugu). */
 
@@ -104,6 +105,28 @@ fun IconBadge(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary
         Modifier.size(size).clip(CircleShape).background(tint.copy(alpha = 0.16f)),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, null, tint = tint, modifier = Modifier.size(size * 0.5f)) }
+}
+
+/** Velicina naslova po duzini naziva (dizajn v2.1): do 14 znakova pun, do 20 x0.82, do 28 x0.7, inace x0.62. */
+fun titleSize(name: String, base: Int): androidx.compose.ui.unit.TextUnit {
+    val k = when { name.length <= 14 -> 1f; name.length <= 20 -> 0.82f; name.length <= 28 -> 0.7f; else -> 0.62f }
+    return kotlin.math.round(base * k).sp
+}
+
+/** Ikona + tekst u jednom redu (meta podaci umesto "·"). */
+@Composable
+fun IconText(icon: ImageVector, text: String, color: Color, modifier: Modifier = Modifier, fontSize: androidx.compose.ui.unit.TextUnit = 14.sp, iconSize: Dp = 14.dp) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(icon, null, Modifier.size(iconSize), tint = color)
+        Text(text, fontSize = fontSize, color = color, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }
+}
+
+/** Mali naslov kartice velikim slovima (11 / 600 / +0.1em). */
+@Composable
+fun Kicker(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(text.uppercase(), modifier, fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, letterSpacing = 1.1.sp, color = color, maxLines = 1,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
 }
 
 /** Mala kartica sa brojem i opisom. */

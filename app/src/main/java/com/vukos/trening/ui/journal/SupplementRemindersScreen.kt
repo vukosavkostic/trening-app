@@ -1,6 +1,31 @@
 package com.vukos.trening.ui.journal
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 
 import android.Manifest
 import android.content.Intent
@@ -111,142 +136,284 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
     var showHelp by remember { mutableStateOf(false) }
     val problems = !notifOk || !exactOk || batteryRestricted
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(tr("Podsetnici za suplemente", "Supplement reminders"), style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
-            actions = {
-                IconButton(onClick = { showHelp = true }) {
-                    BadgedBox(badge = { if (problems) Badge(containerColor = MaterialTheme.colorScheme.primary) }) {
-                        Icon(Icons.AutoMirrored.Filled.HelpOutline, tr("Uputstvo", "Help"))
-                    }
-                }
+    val D = com.vukos.trening.ui.theme.Ds
+    val p = adding || editing != null
+    if (p) {
+        ReminderEditScreen(
+            initial = editing,
+            onCancel = { adding = false; editing = null },
+            onSave = { r ->
+                save(list.filter { it.id != r.id } + r); adding = false; editing = null
+                if (!notifOk) fixNotifications()
             },
+            onDelete = editing?.let { e -> { save(list.filter { it.id != e.id }); editing = null } },
         )
-    }) { pad ->
-        LazyColumn(
-            Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (list.isEmpty()) item {
-                EmptyState(Icons.Filled.NotificationsActive, tr("Bez podsetnika", "No reminders"),
-                    tr("Dodaj podsetnik i svaki dan u zadato vreme stiže notifikacija.", "Add a reminder and you get a notification every day at that time."))
-            }
-            items(list, key = { it.id }) { r ->
-                AppCard(onClick = { editing = r }, padding = PaddingValues(horizontal = 18.dp, vertical = 14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("%02d:%02d".format(r.hour, r.minute), style = MaterialTheme.typography.headlineMedium,
-                            color = if (r.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(16.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(r.name, style = MaterialTheme.typography.titleMedium)
-                            if (r.dose.isNotBlank()) Text(r.dose, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            val taken = ExerciseSearch.normalize(r.name) in takenNames
-                            Text(
-                                if (taken) tr("Danas uneto. Sledeći put sutra.", "Logged today. Next reminder tomorrow.") else tr("svaki dan", "every day"),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (taken) Success else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(checked = r.enabled, onCheckedChange = { on -> save(list.map { if (it.id == r.id) it.copy(enabled = on) else it }) })
-                    }
+        androidx.activity.compose.BackHandler { adding = false; editing = null }
+    } else LazyColumn(
+        Modifier.fillMaxSize().background(D.bg).statusBarsPadding(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth()) {
+                CircleBtn(Icons.Filled.ChevronLeft, tr("Nazad", "Back"), onBack)
+                Spacer(Modifier.weight(1f))
+                Box {
+                    CircleBtn(Icons.AutoMirrored.Filled.HelpOutline, tr("Kako rade podsetnici", "How reminders work")) { showHelp = true }
+                    if (problems) Box(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp).size(8.dp).clip(CircleShape)
+                        .background(com.vukos.trening.ui.theme.Accent))
                 }
             }
-            item { PrimaryPill(tr("Dodaj podsetnik", "Add reminder"), { adding = true }, Modifier.fillMaxWidth().padding(top = 8.dp), Icons.Filled.Add) }
+        }
+        item { Text(tr("Podsetnici", "Reminders"), fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.68).sp, color = D.ink) }
+        if (list.isEmpty()) item {
+            EmptyState(Icons.Filled.NotificationsActive, tr("Bez podsetnika", "No reminders"),
+                tr("Dodaj podsetnik i svaki dan u zadato vreme stiže notifikacija.", "Add a reminder and you get a notification every day at that time."))
+        } else item {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(D.s1)) {
+                list.forEachIndexed { i, r ->
+                    val taken = r.enabled && ExerciseSearch.normalize(r.name) in takenNames
+                    Row(
+                        Modifier.fillMaxWidth().alpha(if (r.enabled) 1f else 0.45f).padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f).clickable { editing = r }) {
+                            Text("%02d:%02d".format(r.hour, r.minute), fontSize = 34.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.68).sp,
+                                lineHeight = 38.sp, color = D.ink)
+                            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Text(r.name, Modifier.weight(1f, fill = false), fontSize = 14.sp, color = D.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                if (r.dose.isNotBlank()) Text(r.dose, fontSize = 14.sp, color = D.sub, maxLines = 1)
+                            }
+                            if (taken) Text(tr("Danas uneto. Sledeći put sutra.", "Logged today. Next reminder tomorrow."),
+                                Modifier.padding(top = 2.dp), fontSize = 12.sp, color = D.green)
+                        }
+                        Box(Modifier.clip(RoundedCornerShape(16.dp)).clickable {
+                            save(list.map { if (it.id == r.id) it.copy(enabled = !r.enabled) else it })
+                        }) { com.vukos.trening.ui.workout.IosSwitch(r.enabled) }
+                    }
+                    if (i < list.size - 1) androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = D.line)
+                }
+            }
+        }
+        item {
+            Box(
+                Modifier.padding(top = 4.dp).fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(com.vukos.trening.ui.theme.Accent)
+                    .clickable { adding = true },
+                contentAlignment = Alignment.Center,
+            ) { Text(tr("Dodaj podsetnik", "Add reminder"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = androidx.compose.ui.graphics.Color.White) }
         }
     }
 
-    if (showHelp) com.vukos.trening.ui.common.InfoSheet(
-        title = tr("Kako rade podsetnici?", "How do reminders work?"),
-        paragraphs = listOf(
-            tr("Svaki dan u **zadato vreme** stiže notifikacija.", "You get a notification **every day at the set time**."),
-            tr("Dugme **„Uzeo sam“** u notifikaciji odmah upisuje suplement u Dnevnik. Ako si ga taj dan već uneo, podsetnik se preskače.",
-                "The **“Taken”** button in the notification logs the supplement in your Journal. If you already logged it that day, the reminder is skipped."),
-            tr("Prekidač privremeno isključuje podsetnik. Dodirni podsetnik da promeniš vreme ili da ga obrišeš.",
-                "The switch pauses a reminder. Tap a reminder to change the time or delete it."),
-            if (!problems) tr("Telefon je podešen. **Podsetnici stižu na vreme.**", "Your phone is set up. **Reminders arrive on time.**")
-            else tr("Telefon trenutno **blokira ili odlaže** notifikacije ove aplikacije.", "Your phone is currently **blocking or delaying** this app's notifications."),
-        ),
-        onDismiss = { showHelp = false },
+    if (showHelp) androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { showHelp = false },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = D.sheet,
     ) {
-        if (!notifOk) FixRow(tr("Notifikacije su isključene", "Notifications are off"), tr("Uključi", "Turn on")) { fixNotifications() }
-        if (!exactOk && Build.VERSION.SDK_INT >= 31) FixRow(tr("Tačni alarmi nisu dozvoljeni", "Exact alarms not allowed"), tr("Dozvoli", "Allow")) {
-            ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 34.dp)) {
+            Text(tr("Kako rade podsetnici", "How reminders work"), fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.48).sp, color = D.ink)
+            Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                listOf(
+                    tr("Svaki dan **u zadato vreme** stiže notifikacija.", "You get a notification **every day at the set time**."),
+                    tr("Dugme **Uzeo sam** u notifikaciji odmah upisuje suplement u Dnevnik. Ako si ga taj dan već uneo, **podsetnik se preskače**.",
+                        "The **Taken** button in the notification logs the supplement in your Journal right away. If you already logged it that day, **the reminder is skipped**."),
+                    tr("**Prekidačem** privremeno isključuješ podsetnik. **Dodirni podsetnik** da promeniš vreme ili da ga obrišeš.",
+                        "Use the **switch** to pause a reminder. **Tap a reminder** to change the time or delete it."),
+                ).forEach { Text(boldText(it, D.ink), fontSize = 16.sp, lineHeight = 24.sp, color = D.sub) }
+            }
+            Text(tr("Notifikacije", "Notifications"), Modifier.padding(start = 4.dp, top = 26.dp, bottom = 8.dp), fontSize = 13.sp, color = D.sub)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(D.s1)) {
+                HelpRow(
+                    tr("Provera telefona", "Phone check"),
+                    if (problems) tr("Telefon blokira ili odlaže notifikacije ove aplikacije.", "Your phone is blocking or delaying this app's notifications.")
+                    else tr("Telefon je podešen. Podsetnici stižu na vreme.", "Your phone is set up. Reminders arrive on time."),
+                ) { Box(Modifier.size(8.dp).clip(CircleShape).background(if (problems) com.vukos.trening.ui.theme.Accent else D.green)) }
+                if (!notifOk) HelpRow(tr("Notifikacije su isključene", "Notifications are off"), tr("Bez njih podsetnici ne stižu", "Reminders cannot arrive without them")) {
+                    ActionText(tr("Uključi", "Turn on")) { fixNotifications() }
+                }
+                if (!exactOk && Build.VERSION.SDK_INT >= 31) HelpRow(tr("Tačni alarmi nisu dozvoljeni", "Exact alarms not allowed"), tr("Podsetnik može da kasni nekoliko minuta", "A reminder can be a few minutes late")) {
+                    ActionText(tr("Dozvoli", "Allow")) { ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))) }
+                }
+                if (batteryRestricted) HelpRow(tr("Podsetnici mogu da kasne", "Reminders may arrive late"), tr("Štednja baterije može da ih odloži", "Battery saver can delay them")) {
+                    ActionText(tr("Isključi", "Turn off")) {
+                        runCatching {
+                            ctx.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName)))
+                        }.onFailure { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+                    }
+                }
+                Row(
+                    Modifier.fillMaxWidth().clickable {
+                        val r = list.firstOrNull() ?: SuppReminder(id = "test", name = tr("Probni podsetnik", "Test reminder"), hour = 0, minute = 0)
+                        if (!SupplementReminders.notify(ctx, r)) fixNotifications()
+                    }.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(tr("Pošalji probnu notifikaciju", "Send a test notification"), Modifier.weight(1f), fontSize = 16.sp, color = D.ink)
+                    Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = D.faint)
+                }
+            }
         }
-        if (batteryRestricted) FixRow(tr("Štednja baterije može da ih odloži", "Battery saver can delay them"), tr("Isključi", "Turn off")) {
-            runCatching {
-                ctx.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName)))
-            }.onFailure { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
-        }
-        Spacer(Modifier.height(16.dp))
-        com.vukos.trening.ui.common.InfoParagraph(tr("Ako notifikacija kasni (često na Xiaomi i Huawei telefonima), u podešavanjima telefona uključi **„Autostart“** za Trening.",
-            "If a notification arrives late (common on Xiaomi and Huawei phones), enable **“Autostart”** for Trening in the phone settings."))
-        Spacer(Modifier.height(24.dp))
-        OutlinePill(tr("Pošalji probnu notifikaciju", "Send a test notification"), {
-            val r = list.firstOrNull() ?: SuppReminder(id = "test", name = tr("Probni podsetnik", "Test reminder"), hour = 0, minute = 0)
-            if (!SupplementReminders.notify(ctx, r)) fixNotifications()
-        }, Modifier.fillMaxWidth(), Icons.Filled.NotificationsActive)
     }
-
-    if (adding || editing != null) ReminderDialog(
-        initial = editing,
-        onDismiss = { adding = false; editing = null },
-        onSave = { r ->
-            save(list.filter { it.id != r.id } + r); adding = false; editing = null
-            if (!notifOk) fixNotifications()
-        },
-        onDelete = editing?.let { e -> { save(list.filter { it.id != e.id }); editing = null } },
-    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** "**reč**" -> podebljano, u boji [ink]. */
+private fun boldText(s: String, ink: androidx.compose.ui.graphics.Color) = buildAnnotatedString {
+    s.split("**").forEachIndexed { i, part ->
+        if (i % 2 == 1) withStyle(SpanStyle(color = ink, fontWeight = FontWeight.SemiBold)) { append(part) } else append(part)
+    }
+}
+
 @Composable
-private fun ReminderDialog(initial: SuppReminder?, onDismiss: () -> Unit, onSave: (SuppReminder) -> Unit, onDelete: (() -> Unit)?) {
+private fun CircleBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, onClick: () -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Box(Modifier.size(40.dp).clip(CircleShape).background(D.s1).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(icon, desc, Modifier.size(20.dp), tint = D.ink)
+    }
+}
+
+@Composable
+private fun HelpRow(title: String, sub: String, trailing: @Composable () -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 16.sp, color = D.ink)
+            Text(sub, Modifier.padding(top = 2.dp), fontSize = 13.sp, lineHeight = 18.sp, color = D.sub)
+        }
+        trailing()
+    }
+    androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = D.line)
+}
+
+@Composable
+private fun ActionText(text: String, onClick: () -> Unit) {
+    Text(text, Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(4.dp), fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText)
+}
+
+/** Novi / izmena podsetnika preko celog ekrana: vreme strelicama, pretraga suplementa, doza. */
+@Composable
+private fun ReminderEditScreen(initial: SuppReminder?, onCancel: () -> Unit, onSave: (SuppReminder) -> Unit, onDelete: (() -> Unit)?) {
+    val D = com.vukos.trening.ui.theme.Ds
     val history by remember { TreningApp.instance.db.food().observeRecent() }.collectAsStateWithLifecycle(emptyList())
     var picked by remember { mutableStateOf(initial?.let { SupplementDef(it.name, it.dose, "", it.kcal, it.proteinG) }) }
     var query by remember { mutableStateOf("") }
     var dose by remember { mutableStateOf(initial?.dose ?: "") }
-    val time = rememberTimePickerState(initial?.hour ?: 9, initial?.minute ?: 0, is24Hour = true)
+    var hour by remember { mutableStateOf(initial?.hour ?: 9) }
+    var minute by remember { mutableStateOf(initial?.minute ?: 0) }
+    val results = remember(query, history) { Supplements.search(query, history) }
+    val shown = remember(results, picked, query) {
+        val base = if (query.isBlank()) results.take(5) else results.take(12)
+        val p = picked
+        if (p != null && base.none { ExerciseSearch.normalize(it.name) == ExerciseSearch.normalize(p.name) }) listOf(p) + base else base
+    }
+    val canSave = picked != null
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(picked?.name ?: tr("Koji suplement?", "Which supplement?")) },
-        text = {
-            val p = picked
-            if (p == null) SupplementPicker(query, { query = it }, history) { d -> picked = d; dose = d.dose }
-            else Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                TimePicker(time)
-                OutlinedTextField(dose, { dose = it.take(30) }, label = { Text(tr("Doza", "Dose")) }, singleLine = true,
-                    shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
-                if (initial == null) TextButton(onClick = { picked = null }) { Text(tr("Izaberi drugi suplement", "Choose another supplement")) }
+    LazyColumn(
+        Modifier.fillMaxSize().background(D.bg).statusBarsPadding().imePadding(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Otkaži", "Cancel"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onCancel).padding(4.dp), fontSize = 17.sp, color = D.sub)
+                Text(if (initial == null) tr("Novi podsetnik", "New reminder") else tr("Izmena podsetnika", "Edit reminder"),
+                    Modifier.weight(1f), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = D.ink, textAlign = TextAlign.Center)
+                Text(tr("Sačuvaj", "Save"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = canSave) {
+                    val d = picked!!
+                    onSave((initial ?: SuppReminder(name = d.name, hour = hour, minute = minute)).copy(
+                        name = d.name, dose = dose.trim(), hour = hour, minute = minute, enabled = true, kcal = d.kcal, proteinG = d.proteinG,
+                    ))
+                }.padding(4.dp), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = if (canSave) D.aText else D.faint)
             }
-        },
-        confirmButton = {
-            if (picked != null) TextButton(onClick = {
-                val d = picked!!
-                onSave((initial ?: SuppReminder(name = d.name, hour = 9, minute = 0)).copy(
-                    name = d.name, dose = dose.trim(), hour = time.hour, minute = time.minute, enabled = true,
-                    kcal = d.kcal, proteinG = d.proteinG,
-                ))
-            }) { Text(tr("Sačuvaj", "Save")) }
-        },
-        dismissButton = {
-            Row {
-                if (onDelete != null) TextButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, null); Text(tr(" Obriši", " Delete"), color = MaterialTheme.colorScheme.error)
+        }
+        item {
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TimeColumn("%02d".format(hour), { hour = (hour + 1) % 24 }, { hour = (hour + 23) % 24 })
+                    Text(":", Modifier.padding(bottom = 8.dp), fontSize = 64.sp, fontWeight = FontWeight.Light, color = D.faint)
+                    TimeColumn("%02d".format(minute), { minute = (minute / 5 * 5 + 5) % 60 }, { minute = ((minute + 4) / 5 * 5 + 55) % 60 })
                 }
-                TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) }
+                Text(tr("Svaki dan", "Every day"), Modifier.padding(top = 6.dp), fontSize = 14.sp, color = D.sub)
             }
-        },
-    )
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(tr("Suplement", "Supplement"), Modifier.padding(start = 4.dp, top = 6.dp), fontSize = 13.sp, color = D.sub)
+                DsField(query, { query = it.take(40) }, tr("Pretraži suplemente", "Search supplements"), Icons.Filled.Search)
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(D.s1)) {
+                    shown.forEachIndexed { i, d ->
+                        val sel = picked?.let { ExerciseSearch.normalize(it.name) == ExerciseSearch.normalize(d.name) } == true
+                        OptionRow(d.name,
+                            listOfNotNull(if (d.category == "Skoro korišćeno") tr("Skoro korišćeno", "Recent") else null, d.dose.takeIf { it.isNotBlank() }).joinToString(", "),
+                            sel, divider = i < shown.size - 1 || query.isNotBlank()) { picked = d; dose = d.dose; query = "" }
+                    }
+                    val q = query.trim()
+                    if (q.isNotEmpty() && shown.none { ExerciseSearch.normalize(it.name) == ExerciseSearch.normalize(q) }) {
+                        OptionRow(tr("Dodaj „$q“", "Add “$q”"), tr("Novi suplement", "New supplement"), false, divider = false) {
+                            picked = SupplementDef(q, "", ""); query = ""
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(tr("Doza", "Dose"), Modifier.padding(start = 4.dp, top = 6.dp), fontSize = 13.sp, color = D.sub)
+                DsField(dose, { dose = it.take(30) }, tr("npr. 5 g", "e.g. 5 g"), null)
+            }
+        }
+        if (onDelete != null) item {
+            Text(tr("Obriši podsetnik", "Delete reminder"), Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onDelete).padding(8.dp),
+                fontSize = 15.sp, color = D.danger, textAlign = TextAlign.Center)
+        }
+    }
 }
 
 @Composable
-private fun FixRow(text: String, action: String, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        TextButton(onClick = onClick) { Text(action, color = MaterialTheme.colorScheme.primary) }
+private fun TimeColumn(value: String, onUp: () -> Unit, onDown: () -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(56.dp, 36.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onUp), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.KeyboardArrowUp, tr("Više", "Up"), Modifier.size(24.dp), tint = D.sub)
+        }
+        Text(value, fontSize = 72.sp, fontWeight = FontWeight.Light, letterSpacing = (-2.88).sp, lineHeight = 74.sp, color = D.ink)
+        Box(Modifier.size(56.dp, 36.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onDown), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.KeyboardArrowDown, tr("Manje", "Down"), Modifier.size(24.dp), tint = D.sub)
+        }
+    }
+}
+
+@Composable
+private fun OptionRow(name: String, sub: String, selected: Boolean, divider: Boolean, onClick: () -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(name, fontSize = 16.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, color = D.ink)
+            if (sub.isNotEmpty()) Text(sub, fontSize = 13.sp, color = D.sub)
+        }
+        if (selected) Icon(Icons.Filled.Check, null, Modifier.size(18.dp), tint = com.vukos.trening.ui.theme.Accent)
+    }
+    if (divider) androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = D.line)
+}
+
+/** Polje za unos u stilu dizajna (siva kartica, bez okvira). */
+@Composable
+internal fun DsField(value: String, onChange: (String) -> Unit, placeholder: String, icon: androidx.compose.ui.graphics.vector.ImageVector?, height: androidx.compose.ui.unit.Dp = 48.dp, radius: androidx.compose.ui.unit.Dp = 16.dp) {
+    val D = com.vukos.trening.ui.theme.Ds
+    val style = androidx.compose.ui.text.TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontSize = 16.sp, color = D.ink)
+    Row(
+        Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(radius)).background(D.s1).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        icon?.let { Icon(it, null, Modifier.size(16.dp), tint = D.sub) }
+        androidx.compose.foundation.text.BasicTextField(
+            value, onChange, Modifier.weight(1f), singleLine = true, textStyle = style,
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(com.vukos.trening.ui.theme.Accent),
+            decorationBox = { inner -> Box { if (value.isEmpty()) Text(placeholder, style = style.copy(color = D.faint)); inner() } },
+        )
     }
 }

@@ -64,7 +64,7 @@ import com.vukos.trening.ui.theme.TreningTheme
 
 private enum class Tab(val route: String, private val sr: String, private val en: String, val icon: ImageVector) {
     JOURNAL("journal", "Dnevnik", "Journal", Icons.Filled.MenuBook),
-    ROUTINES("routines", "Trening", "Workout", Icons.Filled.FitnessCenter),
+    ROUTINES("routines", "Trening", "Train", Icons.Filled.FitnessCenter),
     BODY("body", "Profil", "Profile", Icons.Filled.Person);
 
     val label: String get() = tr(sr, en)
@@ -78,7 +78,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openRequest.value = intent?.getStringExtra(Reminders.EXTRA_OPEN)
-        setContent { TreningTheme { AppRoot(openRequest.value) { openRequest.value = null } } }
+        setContent {
+            TreningTheme {
+                // Ikone statusne trake prate izabranu temu (ne samo sistemsku).
+                val dark = com.vukos.trening.ui.theme.isDarkTheme()
+                androidx.compose.runtime.DisposableEffect(dark) {
+                    val t = android.graphics.Color.TRANSPARENT
+                    enableEdgeToEdge(
+                        statusBarStyle = if (dark) androidx.activity.SystemBarStyle.dark(t) else androidx.activity.SystemBarStyle.light(t, t),
+                        navigationBarStyle = if (dark) androidx.activity.SystemBarStyle.dark(t) else androidx.activity.SystemBarStyle.light(t, t),
+                    )
+                    onDispose {}
+                }
+                AppRoot(openRequest.value) { openRequest.value = null }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -160,7 +174,11 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 com.vukos.trening.ui.help.NotionHelpScreen(
                     onClose = { nav.popBackStack() },
                     onOpenSettings = { nav.navigate("settings_notion") },
-                    onOpenNotionPlans = { nav.navigate("notion_routines") },
+                    // Vodic se zatvara; ako je otvoren sa Notion treninga, samo se vraca tamo.
+                    onOpenNotionPlans = {
+                        nav.popBackStack()
+                        if (nav.currentDestination?.route != "notion_routines") nav.navigate("notion_routines")
+                    },
                 )
             }
             composable("workout/{id}") { e ->
@@ -169,7 +187,14 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     savedState = e.savedStateHandle,
                     onPickExercises = { nav.navigate("picker") },
                     onOpenExercise = { nav.navigate("exercise/$it") },
-                    onFinished = { id -> nav.popBackStack(); nav.navigate("workout_detail/$id") },
+                    // "Sačuvaj u dnevnik": Dnevnik sa danasnjim danom (novi trening je na vrhu).
+                    onFinished = {
+                        nav.popBackStack()
+                        nav.navigate(Tab.JOURNAL.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                        }
+                    },
                     onClose = { nav.popBackStack() },
                 )
             }
@@ -188,6 +213,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onSettings = { nav.navigate("settings") },
                     onStart = { startWorkout(it) },
                     onOpenStats = { nav.navigate("stats") },
+                    onNotionGuide = { nav.navigate("notion_help") },
                 )
             }
             composable("routine/{id}") { e ->
@@ -232,7 +258,9 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 )
             }
             composable("stats") { com.vukos.trening.ui.stats.StatsScreen(onBack = { nav.popBackStack() }) }
-            composable("body_compare") { com.vukos.trening.ui.body.BodyCompareScreen(onBack = { nav.popBackStack() }) }
+            composable("body_compare?after={after}", arguments = listOf(androidx.navigation.navArgument("after") { defaultValue = "" })) { e ->
+                com.vukos.trening.ui.body.BodyCompareScreen(onBack = { nav.popBackStack() }, afterId = e.arguments?.getString("after")?.takeIf { it.isNotEmpty() })
+            }
             composable("body_day/{day}") { e ->
                 val day = LocalDate.ofEpochDay(e.arguments!!.getString("day")!!.toLong())
                 BodyDayScreen(day, onBack = { nav.popBackStack() }, onEdit = { openCheckIn(day) })
@@ -241,6 +269,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 WeightChartScreen(
                     onBack = { nav.popBackStack() },
                     onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },
+                    onCompare = { nav.navigate("body_compare?after=$it") },
                 )
             }
             composable("checkin/{day}") { e ->
@@ -256,15 +285,37 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onOpenWorkout = { nav.navigate("workout_detail/$it") },
                 )
             }
-            composable("exercise_new") {
-                NewExerciseScreen(onDone = { nav.popBackStack() })
+            composable(
+                "exercise_new?name={name}&group={group}&num={num}",
+                arguments = listOf(
+                    androidx.navigation.navArgument("name") { defaultValue = "" },
+                    androidx.navigation.navArgument("group") { defaultValue = "" },
+                    androidx.navigation.navArgument("num") { defaultValue = 0; type = androidx.navigation.NavType.IntType },
+                ),
+            ) { e ->
+                val args = e.arguments!!
+                // Iz izbora vezbi: nova (ili postojeca "Izaberi") vezba se vraca izboru i odmah je izabrana.
+                fun back(id: String?) {
+                    if (id != null) nav.previousBackStackEntry?.savedStateHandle?.set("created", id)
+                    nav.popBackStack()
+                }
+                NewExerciseScreen(
+                    initialName = args.getString("name").orEmpty(),
+                    muscleHint = args.getString("group")?.takeIf { it.isNotEmpty() }?.let { com.vukos.trening.data.MuscleGroup.valueOf(it) },
+                    selectionNumber = args.getInt("num").takeIf { it > 0 },
+                    onUse = { back(it) },
+                    onDone = { back(it) },
+                )
             }
             // Picker: vraca izabrane ID-jeve prethodnom ekranu preko savedStateHandle["picked"].
-            composable("picker") {
-                ExerciseListScreen(
-                    selectionMode = true,
-                    onOpen = {},
-                    onNew = { nav.navigate("exercise_new") },
+            composable("picker") { e ->
+                val created by e.savedStateHandle.getStateFlow<String?>("created", null).collectAsStateWithLifecycle()
+                com.vukos.trening.ui.exercises.ChooseExercisesScreen(
+                    created = created,
+                    onCreatedHandled = { e.savedStateHandle["created"] = null },
+                    onNew = { name, group, num ->
+                        nav.navigate("exercise_new?name=${android.net.Uri.encode(name)}&group=${group?.name ?: ""}&num=$num")
+                    },
                     onConfirm = { ids ->
                         nav.previousBackStackEntry?.savedStateHandle?.set("picked", ArrayList(ids))
                         nav.popBackStack()

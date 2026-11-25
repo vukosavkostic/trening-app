@@ -47,6 +47,11 @@ class Settings(context: Context) {
     var proteinGoal: Int
         get() = prefs.getInt("protein_goal", 0)
         set(v) { prefs.edit().putInt("protein_goal", v).apply() }
+    /** Podrazumevani odmor izmedju setova (sekunde); pokrece se kad se set stiklira. */
+    var restDefaultSec: Int
+        get() = prefs.getInt("rest_default_sec", 90)
+        set(v) { prefs.edit().putInt("rest_default_sec", v).apply() }
+
     var weeklyGoal: Int
         get() = prefs.getInt("weekly_goal", 3)
         set(v) { prefs.edit().putInt("weekly_goal", v).apply() }

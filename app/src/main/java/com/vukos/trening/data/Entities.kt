@@ -36,6 +36,8 @@ data class Exercise(
     val customImage: String? = null,
     /** Licna beleska uz vezbu (npr. "sediste na 4"), prikazuje se na svakom treningu. */
     @ColumnInfo(defaultValue = "") val notes: String = "",
+    /** Kako se loguju setovi: kg × ponavljanja / samo ponavljanja / vreme (sekunde u polju reps). */
+    @ColumnInfo(defaultValue = "weight") val trackType: String = TrackType.WEIGHT,
     val notionPageId: String? = null,
     val updatedAt: Long = System.currentTimeMillis(),
     val dirty: Boolean = false,
@@ -172,6 +174,12 @@ data class FoodEntry(
 )
 
 /** Tipovi setova. Zagrevanje se ne racuna u volumen, rekorde ni progresiju. */
+object TrackType {
+    const val WEIGHT = "weight"
+    const val REPS = "reps"
+    const val TIME = "time"
+}
+
 object SetType {
     const val NORMAL = "normal"
     const val WARMUP = "warmup"

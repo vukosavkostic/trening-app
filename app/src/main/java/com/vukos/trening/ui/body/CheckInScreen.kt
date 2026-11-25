@@ -214,7 +214,7 @@ fun CheckInScreen(initialDay: LocalDate, onDone: () -> Unit) {
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(4.dp))
-                com.vukos.trening.ui.common.LockNote(tr("Šifrovano, samo u aplikaciji. Ne ide u galeriju ni u Notion.", "Encrypted, only inside the app. Never goes to the gallery or Notion."))
+                com.vukos.trening.ui.common.LockNote(tr("Slike ostaju šifrovane na ovom telefonu", "Photos stay encrypted on this phone"))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Pose.entries.forEach { pose ->

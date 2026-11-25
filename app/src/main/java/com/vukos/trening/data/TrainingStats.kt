@@ -34,11 +34,17 @@ object TrainingStats {
     fun muscleSets(
         workouts: List<Workout>, sets: List<WorkoutSet>, primaryMuscle: Map<String, String>,
         from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault(),
-    ): List<Pair<String, Int>> {
+        secondaryMuscles: Map<String, List<String>> = emptyMap(),
+    ): List<Pair<String, Double>> {
         val ids = workouts.filter { it.finishedAt != null && !it.deleted && inRange(it, from, to, zone) }.map { it.id }.toSet()
-        return sets.filter { it.workoutId in ids && WorkoutMath.isWorking(it) }
-            .groupingBy { primaryMuscle[it.exerciseId] ?: "ostalo" }.eachCount()
-            .toList().sortedByDescending { it.second }
+        val out = mutableMapOf<String, Double>()
+        // Glavni misic dobija ceo set, svaki sporedni pola seta.
+        sets.filter { it.workoutId in ids && WorkoutMath.isWorking(it) }.forEach { s ->
+            val main = primaryMuscle[s.exerciseId] ?: "ostalo"
+            out[main] = (out[main] ?: 0.0) + 1.0
+            secondaryMuscles[s.exerciseId].orEmpty().filter { it != main }.forEach { m -> out[m] = (out[m] ?: 0.0) + 0.5 }
+        }
+        return out.toList().sortedByDescending { it.second }
     }
 
     /** Broj treninga po nedeljama (poslednjih [weeks] nedelja, najstarija prva). */

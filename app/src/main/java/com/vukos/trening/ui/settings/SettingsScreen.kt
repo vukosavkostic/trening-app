@@ -5,6 +5,15 @@ import com.vukos.trening.i18n.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import com.vukos.trening.ui.body.srRelative
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -361,7 +370,8 @@ fun SettingsScreen(
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val settings = TreningApp.instance.settings
-    var langSheet by remember { mutableStateOf(false) }
+    var sheet by remember { mutableStateOf<String?>(null) }
+    var restDefault by remember { mutableStateOf(settings.restDefaultSec) }
     val goals = listOfNotNull(
         settings.kcalGoal.takeIf { it > 0 }?.let { "$it kcal" },
         settings.proteinGoal.takeIf { it > 0 }?.let { "$it g" },
@@ -369,54 +379,100 @@ fun SettingsScreen(
     ).joinToString(", ")
     val reminders = remember { com.vukos.trening.reminders.SupplementReminders.load(ctx).count { it.enabled } }
     val backupAt = settings.lastBackupAt
+    val D = com.vukos.trening.ui.theme.Ds
 
-    SubScreen(tr("Podešavanja", "Settings"), onBack) {
-        com.vukos.trening.ui.common.GroupHeader(tr("Opšte", "General"))
-        com.vukos.trening.ui.common.SettingsGroup {
-            com.vukos.trening.ui.common.SettingsRow(tr("Jezik", "Language"), com.vukos.trening.i18n.Lang.label, onClick = { langSheet = true })
-            com.vukos.trening.ui.common.SettingsRow(tr("Ciljevi", "Goals"), goals, onClick = onGoals)
-            com.vukos.trening.ui.common.SettingsRow(tr("Podsetnici", "Reminders"), if (reminders == 0) tr("Isključeno", "Off") else tr("$reminders aktivno", "$reminders active"),
-                onClick = onReminders, divider = false)
+    Column(
+        Modifier.fillMaxSize().background(D.bg).statusBarsPadding().verticalScroll(rememberScrollState())
+            .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(D.s1).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.ChevronLeft, tr("Nazad", "Back"), Modifier.size(20.dp), tint = D.ink)
         }
-        com.vukos.trening.ui.common.GroupHeader(tr("Podaci", "Data"))
-        com.vukos.trening.ui.common.SettingsGroup {
-            com.vukos.trening.ui.common.SettingsRow("Notion", if (settings.notionConfigured) tr("Povezano", "Connected") else tr("Nije povezano", "Not connected"), onClick = onNotion)
-            com.vukos.trening.ui.common.SettingsRow(tr("Rezervna kopija", "Backup"),
-                if (backupAt == 0L) tr("Nikad", "Never") else java.time.Instant.ofEpochMilli(backupAt).atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate().let { it.srRelative() },
-                onClick = onBackup, divider = false)
+        Text(tr("Podešavanja", "Settings"), Modifier.padding(vertical = 8.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.68).sp, color = D.ink)
+        DsGroup(tr("Opšte", "General")) {
+            DsRow(tr("Jezik", "Language"), com.vukos.trening.i18n.Lang.label) { sheet = "lang" }
+            DsRow(tr("Izgled", "Appearance"), com.vukos.trening.ui.theme.Appearance.label()) { sheet = "theme" }
+            DsRow(tr("Ciljevi", "Goals"), goals, onClick = onGoals)
+            DsRow(tr("Podrazumevani odmor", "Default rest"), com.vukos.trening.ui.workout.RestTimer.mmss(restDefault), divider = false) { sheet = "rest" }
         }
-        com.vukos.trening.ui.common.GroupHeader(tr("Pomoć", "Help"))
-        com.vukos.trening.ui.common.SettingsGroup {
-            com.vukos.trening.ui.common.SettingsRow(tr("Uputstvo za Notion", "Notion guide"), onClick = onHelp, divider = false)
+        DsGroup(tr("Podaci", "Data")) {
+            DsRow("Notion", if (settings.notionConfigured) tr("Povezano", "Connected") else tr("Nije povezano", "Not connected"), onClick = onNotion)
+            DsRow(
+                tr("Rezervna kopija", "Backup"),
+                if (backupAt == 0L) tr("Nikad", "Never") else java.time.Instant.ofEpochMilli(backupAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative(),
+                divider = false, onClick = onBackup,
+            )
         }
         // Verzija aplikacije na dnu.
         Text(
             "Trening ${tr("verzija", "version")} ${com.vukos.trening.BuildConfig.VERSION_NAME}",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Modifier.fillMaxWidth().padding(top = 24.dp), fontSize = 13.sp, color = D.faint,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 16.dp),
         )
     }
 
-    if (langSheet) androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = { langSheet = false },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Text(tr("Jezik", "Language"), style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp))
-        listOf("sr" to "Srpski", "en" to "English").forEach { (code, name) ->
-            val sel = com.vukos.trening.i18n.Lang.code == code
-            Row(
-                Modifier.fillMaxWidth().clickable { com.vukos.trening.i18n.Lang.set(ctx, code); langSheet = false }
-                    .padding(horizontal = 24.dp, vertical = 18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
-                    color = if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                androidx.compose.material3.RadioButton(selected = sel, onClick = { com.vukos.trening.i18n.Lang.set(ctx, code); langSheet = false })
+    sheet?.let { which ->
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { sheet = null },
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = D.sheet,
+        ) {
+            when (which) {
+                "rest" -> com.vukos.trening.ui.workout.RestDefaultSheet { com.vukos.trening.ui.workout.RestTimer.setDefault(it); restDefault = it; sheet = null }
+                "lang" -> PickSheet(tr("Jezik", "Language"), listOf("sr" to "Srpski", "en" to "English"), com.vukos.trening.i18n.Lang.code) {
+                    com.vukos.trening.i18n.Lang.set(ctx, it); sheet = null
+                }
+                else -> {
+                    val A = com.vukos.trening.ui.theme.Appearance
+                    PickSheet(tr("Izgled", "Appearance"), listOf(A.SYSTEM, A.DARK, A.LIGHT).map { it to A.label(it) }, A.mode) {
+                        A.set(ctx, it); sheet = null
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Grupa redova sa malim naslovom iznad (dizajn v2). */
+@Composable
+private fun DsGroup(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Text(title, Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp), fontSize = 13.sp, color = D.sub)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(D.s1), content = content)
+}
+
+@Composable
+private fun DsRow(label: String, value: String, divider: Boolean = true, onClick: () -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Row(
+        Modifier.fillMaxWidth().height(52.dp).clickable(onClick = onClick).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(label, Modifier.weight(1f), fontSize = 16.sp, color = D.ink, maxLines = 1)
+        if (value.isNotEmpty()) Text(value, fontSize = 15.sp, color = D.sub, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 200.dp))
+        Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = D.faint)
+    }
+    if (divider) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 16.dp), thickness = 1.dp, color = D.line)
+}
+
+/** List sa izborom jedne vrednosti (jezik, izgled). */
+@Composable
+private fun PickSheet(title: String, options: List<Pair<String, String>>, selected: String, onPick: (String) -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Column(Modifier.padding(bottom = 34.dp)) {
+        Text(title, Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 16.dp), fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold, color = D.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Column(Modifier.padding(horizontal = 16.dp).clip(RoundedCornerShape(20.dp)).background(D.s1)) {
+            options.forEachIndexed { i, (key, name) ->
+                Row(Modifier.fillMaxWidth().height(52.dp).clickable { onPick(key) }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, Modifier.weight(1f), fontSize = 16.sp, color = D.ink)
+                    if (key == selected) Icon(Icons.Filled.Check, null, Modifier.size(18.dp), tint = com.vukos.trening.ui.theme.Accent)
+                }
+                if (i < options.size - 1) androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = D.line)
+            }
+        }
     }
 }

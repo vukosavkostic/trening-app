@@ -1,6 +1,19 @@
 package com.vukos.trening.ui.routines
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.clickable
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -67,81 +80,113 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
     var reload by remember { mutableIntStateOf(0) }
     var importing by remember { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf<Pair<String, ImportResult>?>(null) }
+    var loadedAt by remember { mutableStateOf(0L) }
 
     LaunchedEffect(reload) {
         if (!app.settings.notionConfigured) { error = "notoken"; return@LaunchedEffect }
         error = null; items = null
         runCatching { NotionRoutines.list(app.settings) }
-            .onSuccess { items = it }
+            .onSuccess { items = it; loadedAt = System.currentTimeMillis() }
             .onFailure { error = it.message ?: tr("Greška pri učitavanju.", "Loading failed.") }
     }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(tr("Notion treninzi", "Notion workouts")) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Nazad", "Back")) } },
-            actions = {
-                IconButton(onClick = onHelp) { Icon(Icons.AutoMirrored.Filled.HelpOutline, tr("Uputstvo", "Guide")) }
-                IconButton(onClick = { reload++ }) { Icon(Icons.Filled.Refresh, tr("Osveži", "Refresh")) }
-            },
-        )
-    }) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
-            when {
-                error == "notoken" -> Column(Modifier.padding(16.dp)) {
-                    com.vukos.trening.ui.common.EmptyState(
-                        Icons.AutoMirrored.Filled.HelpOutline, tr("Notion nije povezan", "Notion is not connected"),
-                        tr("Uz Notion imaš rezervnu kopiju u oblaku, pregled na računaru, a AI može da ti napravi plan treninga koji ovde uvučeš jednim klikom.", "With Notion you get a cloud copy, a view on your computer, and AI can build a workout plan you pull in here with one tap."),
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            com.vukos.trening.ui.common.PrimaryPill(tr("Uputstvo korak po korak", "Step-by-step guide"), onHelp, Modifier.fillMaxWidth())
-                            com.vukos.trening.ui.common.OutlinePill(tr("Već imam token", "I already have a token"), onSettings, Modifier.fillMaxWidth())
-                        }
+    val D = com.vukos.trening.ui.theme.Ds
+    val notConnected = error == "notoken"
+    LazyColumn(
+        Modifier.fillMaxSize().background(D.bg).statusBarsPadding(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Circle(Icons.Filled.ChevronLeft, tr("Nazad", "Back"), onBack)
+                Spacer(Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Circle(Icons.AutoMirrored.Filled.HelpOutline, tr("Uputstvo", "Guide"), onHelp)
+                    if (!notConnected) Circle(Icons.Filled.Refresh, tr("Osveži", "Refresh"), enabled = items != null || error != null) { reload++ }
+                }
+            }
+        }
+        item {
+            Column {
+                Text(tr("Notion treninzi", "Notion workouts"), fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.68).sp, color = D.ink)
+                Text(
+                    when {
+                        notConnected -> tr("Planovi koje napišeš u Notionu se pojavljuju ovde", "Plans you write in Notion appear here")
+                        items == null && error == null -> tr("Osvežavam…", "Refreshing…")
+                        else -> tr("Baza Routines, osveženo ", "Routines database, updated ") + updatedText(loadedAt)
+                    },
+                    Modifier.padding(top = 2.dp), fontSize = 15.sp, color = D.sub,
+                )
+            }
+        }
+        when {
+            notConnected -> item {
+                Column(
+                    Modifier.padding(top = 4.dp).fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Column {
+                        Text(tr("Nije povezano", "Not connected"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = D.aText)
+                        Text(tr("Notion nije povezan", "Notion is not connected"), Modifier.padding(top = 6.dp), fontSize = 26.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.52).sp, color = D.ink)
+                        Text(
+                            tr("Uz Notion imaš rezervnu kopiju u oblaku, pregled na računaru, a AI može da ti napravi plan treninga koji ovde uvučeš jednim klikom.", "With Notion you get a cloud copy, a view on your computer, and AI can build a workout plan you pull in here with one tap."),
+                            Modifier.padding(top = 8.dp), fontSize = 15.sp, lineHeight = 22.sp, color = D.sub,
+                        )
+                    }
+                    Wide(tr("Uputstvo korak po korak", "Step-by-step guide"), com.vukos.trening.ui.theme.Accent, Color.White, 56.dp, onHelp)
+                    Wide(tr("Već imam token", "I already have a token"), Color.Transparent, D.ink, 44.dp, onSettings)
+                }
+            }
+            error != null -> item {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(D.s1).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(tr("Ne mogu da učitam planove iz Notiona.", "Could not load plans from Notion."), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = D.ink)
+                    Text(error!!, fontSize = 14.sp, color = D.sub)
+                    val guide = error?.contains("Trening") == true || error?.contains("401") == true
+                    Wide(if (guide) tr("Pogledaj uputstvo", "See the guide") else tr("Pokušaj ponovo", "Try again"), D.s3, D.ink, 48.dp) {
+                        if (guide) onHelp() else reload++
                     }
                 }
-                error?.contains("Trening") == true || error?.contains("401") == true -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(tr("Ne mogu da učitam planove iz Notiona.", "Could not load plans from Notion."), fontWeight = FontWeight.SemiBold)
-                    Text(error!!, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = onHelp) { Text(tr("Pogledaj uputstvo", "See the guide")) }
+            }
+            items == null -> item {
+                Box(Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = com.vukos.trening.ui.theme.Accent)
                 }
-                error != null -> Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(tr("Ne mogu da učitam planove iz Notiona.", "Could not load plans from Notion."), fontWeight = FontWeight.SemiBold)
-                    Text(error!!, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = { reload++ }) { Text(tr("Pokušaj ponovo", "Try again")) }
-                }
-                items == null -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                items!!.isEmpty() -> Text(
-                    tr("U Notion bazi Routines još nema planova.\nDodaj stranicu sa vežbama, jedna po redu, npr.\n\"Dumbbell Bench Press 3x8-12\".", "There are no plans in the Notion Routines database yet.\nAdd a page with exercises, one per line, e.g.\n\"Dumbbell Bench Press 3x8-12\"."),
-                    Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
+            }
+            items!!.isEmpty() -> item {
+                Text(
+                    tr("U Notion bazi Routines još nema planova.", "There are no plans in the Notion Routines database yet."),
+                    Modifier.padding(4.dp), fontSize = 15.sp, color = D.sub,
                 )
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+            }
+            else -> items(items!!, key = { it.pageId }) { nr ->
+                val added = nr.appId != null && nr.appId in localIds
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(D.s1)
+                        .alpha(if (importing != null && importing != nr.pageId) 0.6f else 1f).padding(horizontal = 20.dp, vertical = 18.dp)
                 ) {
-                    items(items!!, key = { it.pageId }) { nr ->
-                        val added = nr.appId != null && nr.appId in localIds
-                        Column(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surfaceContainer).padding(20.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(nr.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                    Text(
-                                        tr("${nr.lines.size} vežbi", "${nr.lines.size} exercises"),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                                when {
-                                    added -> TextButton(onClick = { onOpenRoutine(nr.appId!!) }) {
-                                        Icon(Icons.Filled.CheckCircle, null, tint = com.vukos.trening.ui.theme.Success)
-                                        Text(tr("  Dodato", "  Added"))
-                                    }
-                                    importing == nr.pageId -> CircularProgressIndicator(Modifier.padding(8.dp))
-                                    else -> Button(
-                                        enabled = importing == null && nr.lines.isNotEmpty(),
-                                        onClick = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text(nr.name, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.19).sp, color = D.ink)
+                            Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Text(tr("${nr.lines.size} vežbi", "${nr.lines.size} exercises"), fontSize = 13.sp, color = D.sub, maxLines = 1)
+                                if (added) Text(tr("u Mojim planovima", "in My plans"), fontSize = 13.sp, color = D.sub, maxLines = 1)
+                            }
+                        }
+                        when {
+                            added -> Row(
+                                Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).clickable { onOpenRoutine(nr.appId!!) }.padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Icon(Icons.Filled.CheckCircle, null, Modifier.size(16.dp), tint = D.green)
+                                Text(tr("Dodato", "Added"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = D.green)
+                            }
+                            nr.lines.isNotEmpty() -> {
+                                val busy = importing == nr.pageId
+                                Box(
+                                    Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (busy) D.s3 else D.aSoft)
+                                        .clickable(enabled = importing == null) {
                                             importing = nr.pageId
                                             scope.launch {
                                                 runCatching { NotionRoutines.import(app.settings, nr) }
@@ -152,42 +197,94 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                                                     .onFailure { error = tr("Dodavanje nije uspelo: ${it.message}", "Adding failed: ${it.message}") }
                                                 importing = null
                                             }
-                                        },
-                                    ) { Text(tr("Dodaj", "Add")) }
+                                        }.padding(horizontal = 18.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(if (busy) tr("Dodajem…", "Adding…") else tr("Dodaj", "Add"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                        color = if (busy) D.sub else D.aText)
                                 }
                             }
-                            nr.lines.take(6).forEach { l ->
-                                Text(
-                                    "• ${l.name}  ${l.sets}×${l.repsMin ?: ""}${if (l.repsMax != null && l.repsMax != l.repsMin) "–${l.repsMax}" else ""}" +
-                                        (l.kg?.let { "  $it kg" } ?: ""),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(top = 2.dp),
-                                )
-                            }
-                            if (nr.lines.size > 6) Text(tr("… još ${nr.lines.size - 6}", "… ${nr.lines.size - 6} more"), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (nr.lines.isEmpty()) Text(tr("Nema vežbi (lista na stranici ili polje Plan).", "No exercises (list on the page or the Plan field)."),
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
+                    androidx.compose.material3.HorizontalDivider(Modifier.padding(top = 12.dp), thickness = 1.dp, color = D.line)
+                    nr.lines.take(6).forEach { l ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(l.name, Modifier.weight(1f), fontSize = 14.sp, color = D.ink)
+                            Text(
+                                "${l.sets} × ${l.repsMin ?: ""}${if (l.repsMax != null && l.repsMax != l.repsMin) "–${l.repsMax}" else ""}" + (l.kg?.let { tr(" sa $it kg", " at $it kg") } ?: ""),
+                                fontSize = 14.sp, color = D.sub, maxLines = 1,
+                            )
+                        }
+                        androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = D.line)
+                    }
+                    if (nr.lines.size > 6) Text(tr("… još ${nr.lines.size - 6}", "… ${nr.lines.size - 6} more"), Modifier.padding(top = 9.dp), fontSize = 14.sp, color = D.sub)
+                    if (nr.lines.isEmpty()) Text(tr("Nema vežbi (lista na stranici ili polje Plan).", "No exercises (list on the page or the Plan field)."),
+                        Modifier.padding(top = 10.dp), fontSize = 14.sp, lineHeight = 20.sp, color = D.danger)
                 }
             }
+        }
+        if (!notConnected) item {
+            Text(
+                buildAnnotatedString {
+                    append(tr("Napiši plan u Notion bazi Routines, jedna vežba po redu, na primer ", "Write a plan in the Notion Routines database, one exercise per line, for example "))
+                    withStyle(SpanStyle(color = D.ink, fontFamily = FontFamily.Monospace, fontSize = 12.sp)) { append("Dumbbell Bench Press 3x8-12 [20kg]") }
+                    append(tr(". Dodirni osveži da se pojavi ovde.", ". Tap refresh to see it here."))
+                },
+                Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp), fontSize = 13.sp, lineHeight = 20.sp, color = D.sub,
+            )
         }
     }
 
     result?.let { (name, r) ->
-        AlertDialog(
+        androidx.compose.material3.ModalBottomSheet(
             onDismissRequest = { result = null },
-            title = { Text(tr("Dodato: $name", "Added: $name")) },
-            text = {
-                Text(
-                    tr("Uparenih vežbi: ${r.matched}.", "Matched exercises: ${r.matched}.") +
-                        if (r.created.isEmpty()) "" else
-                            tr("\n\nNisu pronađene u bazi, pa su dodate kao tvoje vežbe:\n", "\n\nNot found in the database, added as your own exercises:\n") + r.created.joinToString("\n") { "• $it" }
-                )
-            },
-            confirmButton = { TextButton(onClick = { result = null; onOpenRoutine(r.routineId) }) { Text(tr("Otvori plan", "Open plan")) } },
-            dismissButton = { TextButton(onClick = { result = null }) { Text("OK") } },
-        )
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = D.sheet,
+        ) {
+            Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 34.dp)) {
+                Text(tr("Dodato u Moje planove", "Added to My plans"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = D.green)
+                Text(name, Modifier.padding(top = 6.dp), fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.52).sp, color = D.ink)
+                Text(tr("Uparenih vežbi: ${r.matched}", "Matched exercises: ${r.matched}"), Modifier.padding(top = 6.dp), fontSize = 15.sp, color = D.sub)
+                if (r.created.isNotEmpty()) Column(
+                    Modifier.padding(top = 18.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(D.s1).padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Text(tr("Nisu pronađene u bazi, pa su dodate kao tvoje vežbe:", "Not found in the database, added as your own exercises:"),
+                        fontSize = 14.sp, lineHeight = 20.sp, color = D.sub)
+                    r.created.forEach { Text(it, Modifier.padding(top = 8.dp), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = D.ink) }
+                }
+                Column(Modifier.padding(top = 22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Wide(tr("Otvori plan", "Open plan"), com.vukos.trening.ui.theme.Accent, Color.White, 56.dp) { result = null; onOpenRoutine(r.routineId) }
+                    Wide("OK", Color.Transparent, D.ink, 44.dp) { result = null }
+                }
+            }
+        }
+    }
+}
+
+/** "sada" / "pre 5 min" / "u 14:05" */
+private fun updatedText(at: Long): String {
+    val min = ((System.currentTimeMillis() - at) / 60_000).toInt()
+    val t = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    return when {
+        min < 1 -> tr("sada", "just now")
+        min < 60 -> tr("pre $min min", "$min min ago")
+        else -> tr("u %02d:%02d".format(t.hour, t.minute), "at %02d:%02d".format(t.hour, t.minute))
+    }
+}
+
+@Composable
+private fun Circle(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, onClick: () -> Unit) = Circle(icon, desc, true, onClick)
+
+@Composable
+private fun Circle(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, enabled: Boolean, onClick: () -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Box(Modifier.size(40.dp).alpha(if (enabled) 1f else 0.5f).clip(CircleShape).background(D.s1).clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center) { Icon(icon, desc, Modifier.size(19.dp), tint = D.ink) }
+}
+
+@Composable
+private fun Wide(text: String, bg: Color, ink: Color, height: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(height / 2)).background(bg).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(text, fontSize = if (height >= 56.dp) 17.sp else 15.sp, fontWeight = FontWeight.SemiBold, color = ink)
     }
 }

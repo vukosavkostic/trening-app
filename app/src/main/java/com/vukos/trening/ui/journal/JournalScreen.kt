@@ -80,16 +80,30 @@ import com.vukos.trening.data.WorkoutMath
 import com.vukos.trening.ui.body.kg
 import com.vukos.trening.ui.body.sr
 import com.vukos.trening.ui.common.DayMarker
-import com.vukos.trening.ui.common.MonthCalendar
-import com.vukos.trening.ui.workout.WorkoutCard
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
+import com.vukos.trening.data.Workout
+import com.vukos.trening.data.WorkoutSet
+import com.vukos.trening.ui.common.FitText
+import com.vukos.trening.ui.common.MONTHS
+import com.vukos.trening.ui.theme.Accent
+import com.vukos.trening.ui.theme.Ds
+import com.vukos.trening.ui.theme.Manrope
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Layers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 
-private val FoodGreen = Color(0xFF3DD68C)
-private val WeightBlue = Color(0xFF5B9CFF)
-
 /** Dnevnik: kalendar, mesec u brojkama i sve za izabrani dan (treninzi, kilaza, ishrana). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) -> Unit, onOpenStats: () -> Unit, onOpenSuppReminders: () -> Unit) {
     val db = TreningApp.instance.db
@@ -134,43 +148,46 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
     val dayWorkouts = workouts.filter { JournalStats.dateOf(it) == selected }
     val dayWeight = body.firstOrNull { it.epochDay == selectedDay && it.weightKg != null }
 
-    Scaffold(topBar = {
-        TabTopBar(tr("Dnevnik", "Journal")) {
-            androidx.compose.material3.IconButton(onClick = onOpenStats) { Icon(Icons.Filled.BarChart, tr("Statistika", "Statistics")) }
-        }
-    }) { pad ->
+    if (!(adding || editing != null)) Scaffold(containerColor = Ds.bg) { pad ->
         LazyColumn(
             Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                MonthCalendar(
-                    markers = markers, onDayClick = { selectedDay = it.toEpochDay() },
-                    selected = selected, allClickable = true,
-                    month = ym, onMonthChange = { month = it.toString() },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("${insights.workouts}", tr("treninga", "workouts"), Modifier.weight(1f))
-                    StatTile(JournalStats.fmtMinutes(insights.minutes), tr("u teretani", "in the gym"), Modifier.weight(1f))
-                    StatTile("${WorkoutMath.fmtKg(insights.volumeKg / 1000)} t", tr("podignuto", "lifted"), Modifier.weight(1f))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Column(Modifier.weight(1f)) {
+                        Text(LocalDate.now().srLong().replaceFirstChar { it.uppercase() } + tr(", nedelja ", ", Week ") + LocalDate.now().get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR),
+                            fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
+                        Text(tr("Dnevnik", "Journal"), Modifier.padding(top = 2.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.68).sp, color = Ds.ink)
+                    }
+                    RoundButton(Icons.Filled.BarChart, tr("Statistika", "Statistics"), Ds.s1, Ds.ink, 40.dp, onOpenStats)
                 }
             }
             item {
-                SectionTitle(if (selected == LocalDate.now()) tr("Danas", "Today") else selected.srLong().replaceFirstChar { it.uppercase() })
+                JournalCalendar(
+                    markers = markers, selected = selected, month = ym,
+                    onMonthChange = { month = it.toString() },
+                    onDayClick = { selectedDay = it.toEpochDay() },
+                )
+            }
+            item {
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        if (selected == LocalDate.now()) tr("Danas", "Today") else selected.srLong().replaceFirstChar { it.uppercase() },
+                        Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.44).sp, color = Ds.ink,
+                    )
+                }
             }
             if (dayWorkouts.isEmpty()) item {
-                InfoRow(Icons.Filled.FitnessCenter, MaterialTheme.colorScheme.onSurfaceVariant, tr("Trening", "Workout"),
-                    if (selected.isAfter(LocalDate.now())) "—" else tr("Bez treninga", "No workout"), null)
+                InfoRow(tr("Trening", "Workout"), if (selected.isAfter(LocalDate.now())) "—" else tr("Bez treninga", "No workout"), null)
             }
             items(dayWorkouts, key = { it.id }) { w ->
-                WorkoutCard(w, setsByWorkout[w.id].orEmpty(), names) { onOpenWorkout(w.id) }
+                JournalWorkoutCard(w, setsByWorkout[w.id].orEmpty(), names) { onOpenWorkout(w.id) }
             }
             dayWeight?.let { e ->
-                item { InfoRow(Icons.Filled.MonitorWeight, WeightBlue, tr("Kilaža", "Weight"), e.weightKg!!.kg()) { onOpenBodyDay(selected) } }
+                item { InfoRow(tr("Kilaža", "Weight"), e.weightKg!!.kg()) { onOpenBodyDay(selected) } }
             }
             item {
                 FoodCard(
@@ -192,7 +209,22 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
         }
     }
 
-    if (suppAdding || suppEditing != null) SupplementDialog(
+    if (suppAdding) androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { suppAdding = false },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Ds.sheet,
+    ) {
+        AddSupplementSheet(selected, food, recentFood, reminderCount, onReminders = { suppAdding = false; onOpenSuppReminders() }) { text, k, p, at ->
+            // Izabrano vreme unosa (podrazumevano sada).
+            val created = at?.let { selected.atTime(it).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() } ?: System.currentTimeMillis()
+            scope.launch {
+                db.food().upsert(FoodEntry(epochDay = selectedDay, meal = Supplements.MEAL, text = text, kcal = k, proteinG = p, createdAt = created,
+                    updatedAt = System.currentTimeMillis(), dirty = true))
+            }
+            suppAdding = false
+        }
+    }
+    if (suppEditing != null) SupplementDialog(
         initial = suppEditing, history = recentFood,
         onDismiss = { suppAdding = false; suppEditing = null },
         onSave = { text, k, p ->
@@ -214,38 +246,112 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
         settings.kcalGoal = k; settings.proteinGoal = p; kcalGoal = k; proteinGoal = p; goalsDialog = false
     }
 
-    if (adding || editing != null) FoodDialog(
-        initial = editing,
-        recent = recentFood,
-        onDismiss = { adding = false; editing = null },
-        onSave = { meal, text, kcal, prot ->
-            scope.launch {
-                val base = editing ?: FoodEntry(epochDay = selectedDay, meal = meal, text = text)
-                db.food().upsert(base.copy(meal = meal, text = text, kcal = kcal, proteinG = prot,
-                    updatedAt = System.currentTimeMillis(), dirty = true))
-            }
-            adding = false; editing = null
-        },
-        onDelete = editing?.let { e ->
-            {
-                scope.launch { db.food().upsert(e.copy(deleted = true, dirty = true, updatedAt = System.currentTimeMillis())) }
-                editing = null
-            }
-        },
-    )
+    if (adding || editing != null) {
+        androidx.activity.compose.BackHandler { adding = false; editing = null }
+        FoodEditScreen(
+            initial = editing,
+            day = selected,
+            recent = recentFood,
+            dayKcal = food.mapNotNull { it.kcal }.sum() - (editing?.kcal ?: 0),
+            dayProt = food.mapNotNull { it.proteinG }.sum() - (editing?.proteinG ?: 0),
+            onDismiss = { adding = false; editing = null },
+            onSave = { meal, text, kcal, prot ->
+                scope.launch {
+                    val base = editing ?: FoodEntry(epochDay = selectedDay, meal = meal, text = text)
+                    db.food().upsert(base.copy(meal = meal, text = text, kcal = kcal, proteinG = prot,
+                        updatedAt = System.currentTimeMillis(), dirty = true))
+                }
+                adding = false; editing = null
+            },
+            onDelete = editing?.let { e ->
+                {
+                    scope.launch { db.food().upsert(e.copy(deleted = true, dirty = true, updatedAt = System.currentTimeMillis())) }
+                    editing = null
+                }
+            },
+        )
+    }
+}
+
+/** Okruglo dugme sa ikonom (statistika, +). */
+@Composable
+internal fun RoundButton(icon: ImageVector, desc: String, bg: Color, tint: Color, size: Dp, onClick: () -> Unit) {
+    Box(
+        Modifier.size(size).clip(CircleShape).background(bg).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, desc, tint = tint, modifier = Modifier.size(18.dp)) }
+}
+
+/** Plocica sa brojem za mesec (treninzi, vreme, podignuto). */
+@Composable
+private fun MonthTile(value: String, label: String, modifier: Modifier) {
+    Column(modifier.clip(RoundedCornerShape(20.dp)).background(Ds.s1).padding(horizontal = 16.dp, vertical = 14.dp)) {
+        FitText(value, TextStyle(fontFamily = Manrope, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.44).sp), Ds.ink)
+        Text(label, Modifier.padding(top = 2.dp), fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, tint: Color, label: String, value: String, onClick: (() -> Unit)?) {
-    AppCard(onClick = onClick, padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(icon, tint, com.vukos.trening.ui.common.RowIconSize)
-            Spacer(Modifier.width(14.dp))
-            Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.titleMedium,
-                color = if (onClick != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
-            if (onClick != null) Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun InfoRow(label: String, value: String, onClick: (() -> Unit)?) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Ds.s1)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(label, Modifier.weight(1f), fontSize = 16.sp, color = Ds.ink)
+        Text(value, fontSize = 16.sp, fontWeight = if (onClick != null) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (onClick != null) Ds.ink else Ds.sub)
+        if (onClick != null) Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = Ds.faint)
+    }
+}
+
+/** Trening izabranog dana: vreme, naziv, trajanje / setovi / tone i najbolji set po vezbi. */
+@Composable
+private fun JournalWorkoutCard(w: Workout, sets: List<WorkoutSet>, names: Map<String, String>, onClick: () -> Unit) {
+    val time = java.time.Instant.ofEpochMilli(w.startedAt).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1).clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 18.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.vukos.trening.ui.common.Kicker(tr("Trening", "Workout"), Ds.aText)
+                    Text("%02d:%02d".format(time.hour, time.minute), fontSize = 13.sp, color = Ds.sub)
+                }
+                Text(w.name, Modifier.padding(top = 4.dp), fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.52).sp,
+                    color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, WorkoutMath.duration(w.startedAt, w.finishedAt), Ds.sub)
+                    com.vukos.trening.ui.common.IconText(Icons.Filled.Layers, tr("${sets.size} setova", "${sets.size} sets"), Ds.sub)
+                    com.vukos.trening.ui.common.IconText(Icons.Filled.FitnessCenter, "${WorkoutMath.fmtKg(Math.round(WorkoutMath.volume(sets) / 100.0) / 10.0)} t", Ds.sub)
+                }
+            }
+            Icon(Icons.Filled.ChevronRight, null, Modifier.padding(top = 4.dp).size(18.dp), tint = Ds.faint)
         }
+    }
+}
+
+/** Naslov kartice (Ishrana, Suplementi) sa brojem unosa i okruglim dugmetom. */
+@Composable
+internal fun CardHeader(title: String, sub: String, trailing: @Composable () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+            if (sub.isNotEmpty()) Text(sub, Modifier.padding(top = 1.dp), fontSize = 13.sp, color = Ds.sub)
+        }
+        trailing()
+    }
+}
+
+/** Red unosa (obrok, suplement): tekst levo, vrednosti desno, tanka linija ispod. */
+@Composable
+internal fun EntryRow(text: String, meta: List<String>, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(text, Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { meta.forEach { Text(it, fontSize = 13.sp, color = Ds.sub, maxLines = 1) } }
+        }
+        HorizontalDivider(thickness = 1.dp, color = Ds.line)
     }
 }
 
@@ -257,83 +363,54 @@ private fun FoodCard(
     // Zbir ukljucuje i suplemente (npr. protein u prahu).
     val kcal = totals.mapNotNull { it.kcal }.sum()
     val prot = totals.mapNotNull { it.proteinG }.sum()
-    AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconBadge(Icons.Filled.Restaurant, FoodGreen, com.vukos.trening.ui.common.RowIconSize)
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(tr("Ishrana", "Food"), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (food.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else tr("${food.size} ${if (food.size == 1) "unos" else "unosa"}", "${food.size} ${if (food.size == 1) "entry" else "entries"}"),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            com.vukos.trening.ui.common.CircleAction(Icons.Filled.Add, tr("Dodaj obrok", "Add meal"), MaterialTheme.colorScheme.primary, Color.White, onAdd)
-        }
-        Spacer(Modifier.height(14.dp))
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1).padding(horizontal = 20.dp, vertical = 18.dp)) {
+        CardHeader(
+            tr("Ishrana", "Food"),
+            if (food.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else "",
+        ) { RoundButton(Icons.Filled.Add, tr("Dodaj obrok", "Add meal"), Accent, Color.White, 36.dp, onAdd) }
         if (kcalGoal > 0 || proteinGoal > 0) {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(onClick = onGoals).padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly) {
-                if (kcalGoal > 0) GoalRing(kcal, kcalGoal, "kcal", MaterialTheme.colorScheme.primary)
-                if (proteinGoal > 0) GoalRing(prot, proteinGoal, tr("g proteina", "g protein"), FoodGreen)
+            Row(
+                Modifier.fillMaxWidth().padding(top = 16.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onGoals),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (kcalGoal > 0) GoalBar(kcal, kcalGoal, "kcal", Accent, Modifier.weight(1f))
+                if (proteinGoal > 0) GoalBar(prot, proteinGoal, tr("g proteina", "g protein"), Ds.green, Modifier.weight(1f))
             }
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (kcal > 0 || prot > 0) Text(
-                    listOfNotNull(kcal.takeIf { it > 0 }?.let { "$it kcal" }, prot.takeIf { it > 0 }?.let { tr("$it g proteina", "$it g protein") }).joinToString(", "),
-                    style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
-                ) else Spacer(Modifier.weight(1f))
-                TextButton(onClick = onGoals) { Text(tr("Postavi dnevni cilj", "Set a daily goal")) }
+            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (kcal > 0) Text("$kcal kcal", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink, maxLines = 1)
+                    if (prot > 0) Text(tr("$prot g proteina", "$prot g protein"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink, maxLines = 1)
+                }
+                Text(tr("Postavi dnevni cilj", "Set a daily goal"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onGoals).padding(vertical = 6.dp, horizontal = 4.dp),
+                    fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
             }
         }
-        if (copyCount > 0) OutlinePill(tr("Kopiraj juče ($copyCount)", "Copy yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 8.dp), Icons.Filled.ContentCopy)
+        if (copyCount > 0) OutlinePill(tr("Kopiraj juče ($copyCount)", "Copy yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 12.dp), Icons.Filled.ContentCopy)
         MEALS.forEach { meal ->
             val entries = food.filter { it.meal == meal }
             if (entries.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
-                Text(com.vukos.trening.data.mealLabel(meal).uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(com.vukos.trening.data.mealLabel(meal), Modifier.padding(top = 14.dp, bottom = 2.dp), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
                 entries.forEach { f ->
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onEdit(f) }.padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(f.text, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            listOfNotNull(f.kcal?.let { "$it kcal" }, f.proteinG?.let { "${it}g P" }).joinToString(", "),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+                    EntryRow(f.text, listOfNotNull(f.kcal?.let { "$it kcal" }, f.proteinG?.let { "$it g" })) { onEdit(f) }
                 }
             }
         }
     }
 }
 
-/** Prsten napretka ka dnevnom cilju. */
+/** Napredak ka dnevnom cilju: broj / cilj, tanka traka i koliko je ostalo. */
 @Composable
-private fun GoalRing(value: Int, goal: Int, unit: String, color: Color) {
-    val track = MaterialTheme.colorScheme.surfaceContainerHighest
+private fun GoalBar(value: Int, goal: Int, unit: String, color: Color, modifier: Modifier) {
     val frac = (value.toFloat() / goal).coerceIn(0f, 1f)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                val stroke = androidx.compose.ui.graphics.drawscope.Stroke(10.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                val inset = 5.dp.toPx()
-                val sz = androidx.compose.ui.geometry.Size(size.width - inset * 2, size.height - inset * 2)
-                val tl = androidx.compose.ui.geometry.Offset(inset, inset)
-                drawArc(track, 0f, 360f, false, tl, sz, style = stroke)
-                if (frac > 0f) drawArc(color, -90f, 360f * frac, false, tl, sz, style = stroke)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$value", style = MaterialTheme.typography.titleLarge)
-                Text("/ $goal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("$value", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink)
+            Text("/ $goal $unit", Modifier.padding(bottom = 4.dp), fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            if (value >= goal) tr("Cilj ispunjen", "Goal reached") else tr("još ${goal - value} $unit", "${goal - value} $unit to go"),
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Ds.s3)) {
+            if (frac > 0f) Box(Modifier.fillMaxWidth(frac).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(color))
+        }
     }
 }
 
@@ -358,11 +435,15 @@ private fun GoalsDialog(kcal: Int, protein: Int, onDismiss: () -> Unit, onSave: 
     )
 }
 
+/** Novi obrok / izmena obroka preko celog ekrana (dizajn v2). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FoodDialog(
+private fun FoodEditScreen(
     initial: FoodEntry?,
+    day: LocalDate,
     recent: List<FoodEntry>,
+    dayKcal: Int,
+    dayProt: Int,
     onDismiss: () -> Unit,
     onSave: (String, String, Int?, Int?) -> Unit,
     onDelete: (() -> Unit)?,
@@ -382,6 +463,7 @@ private fun FoodDialog(
     var product by remember { mutableStateOf<FoodProduct?>(null) }
     var grams by remember { mutableStateOf("100") }
     var scanMsg by remember { mutableStateOf<String?>(null) }
+    var scanning by remember { mutableStateOf(false) }
     fun applyGrams(g: String) {
         grams = g
         val pr = product ?: return
@@ -398,63 +480,152 @@ private fun FoodDialog(
         com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, opts).startScan()
             .addOnSuccessListener { b ->
                 val code = b.rawValue ?: return@addOnSuccessListener
-                scanMsg = tr("Tražim proizvod…", "Looking up product…")
+                scanning = true
                 scope.launch {
                     val pr = runCatching { OpenFoodFacts.lookup(code) }.getOrNull()
+                    scanning = false
                     if (pr == null) scanMsg = tr("Proizvod $code nije pronađen u bazi Open Food Facts. Upiši ručno.", "Product $code was not found in Open Food Facts. Enter it manually.")
                     else { product = pr; text = pr.name; scanMsg = null; applyGrams(grams) }
                 }
             }
             .addOnFailureListener { scanMsg = tr("Skener nije dostupan: ${it.message}", "Scanner unavailable: ${it.message}") }
     }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) tr("Novi obrok", "New meal") else tr("Izmena obroka", "Edit meal")) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MEALS.forEach { m -> FilterChip(selected = meal == m, onClick = { meal = m }, label = { Text(com.vukos.trening.data.mealLabel(m)) }) }
+    val canSave = text.isNotBlank()
+    val fk = kcal.toIntOrNull() ?: 0
+    val fp = prot.toIntOrNull() ?: 0
+    val numStyle = TextStyle(fontFamily = Manrope, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+
+    LazyColumn(
+        Modifier.fillMaxSize().background(Ds.bg).statusBarsPadding().imePadding(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Column {
+                Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Otkaži", "Cancel"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onDismiss).padding(4.dp), fontSize = 17.sp, color = Ds.sub)
+                    Text(if (initial == null) tr("Novi obrok", "New meal") else tr("Izmena obroka", "Edit meal"), Modifier.weight(1f),
+                        fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(tr("Sačuvaj", "Save"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = canSave) {
+                        onSave(meal, text.trim(), kcal.toIntOrNull(), prot.toIntOrNull())
+                    }.padding(4.dp), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = if (canSave) Ds.aText else Ds.faint)
                 }
-                if (suggestions.isNotEmpty()) {
-                    Text(tr("Često", "Frequent"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        suggestions.forEach { sg ->
-                            androidx.compose.material3.SuggestionChip(
-                                onClick = { text = sg.text; kcal = sg.kcal?.toString() ?: ""; prot = sg.proteinG?.toString() ?: ""; product = null },
-                                label = { Text(sg.text, maxLines = 1) },
-                            )
+                Text(
+                    (if (day == LocalDate.now()) tr("Danas, ", "Today, ") + day.srLong() else day.srLong().replaceFirstChar { it.uppercase() }),
+                    Modifier.fillMaxWidth(), fontSize = 14.sp, color = Ds.sub, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Ds.s1).padding(3.dp)) {
+                MEALS.forEach { m ->
+                    val sel = meal == m
+                    Box(
+                        Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(9.dp)).background(if (sel) Ds.s3 else Color.Transparent).clickable { meal = m },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(com.vukos.trening.data.mealLabel(m), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (sel) Ds.ink else Ds.sub, maxLines = 1)
+                    }
+                }
+            }
+        }
+        item {
+            DsField(text, { text = it }, tr("Šta si jeo/la", "What did you eat"), null, height = 56.dp, radius = 18.dp)
+        }
+        if (product == null && suggestions.isNotEmpty()) item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(tr("Često", "Frequent"), Modifier.padding(horizontal = 4.dp), fontSize = 13.sp, color = Ds.sub)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    suggestions.forEach { sg ->
+                        val sel = text == sg.text
+                        Row(
+                            Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (sel) Ds.aSoft else Ds.s1)
+                                .clickable { text = sg.text; kcal = sg.kcal?.toString() ?: ""; prot = sg.proteinG?.toString() ?: ""; product = null }
+                                .padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(sg.text, fontSize = 14.sp, color = if (sel) Ds.aText else Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 220.dp))
+                            sg.kcal?.let { Text("$it kcal", fontSize = 12.sp, color = Ds.sub) }
                         }
                     }
                 }
-                OutlinedTextField(text, { text = it }, label = { Text(tr("Šta si jeo/la", "What did you eat")) }, modifier = Modifier.fillMaxWidth())
-                TextButton(onClick = ::scan) { Icon(Icons.Filled.QrCodeScanner, null); Text(tr("  Skeniraj barkod", "  Scan barcode")) }
-                scanMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                product?.let { pr ->
-                    Text(
-                        tr("Na 100 g: ", "Per 100 g: ") + listOfNotNull(pr.kcal100?.let { "${Math.round(it)} kcal" }, pr.protein100?.let { tr("${WorkoutMath.fmtKg(it)} g proteina", "${WorkoutMath.fmtKg(it)} g protein") })
-                            .joinToString(", ").ifEmpty { tr("nema podataka o vrednostima", "no nutrition data") },
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(grams, { applyGrams(it.filter(Char::isDigit).take(4)) }, label = { Text(tr("Količina (g)", "Amount (g)")) },
-                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            }
+        }
+        val pr = product
+        if (pr == null) item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(Ds.s1).clickable(enabled = !scanning, onClick = ::scan),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.QrCodeScanner, null, Modifier.size(18.dp), tint = Ds.aText)
+                    Text(if (scanning) tr("Tražim proizvod…", "Looking up product…") else tr("Skeniraj barkod", "Scan barcode"),
+                        fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(kcal, { kcal = it.filter(Char::isDigit).take(5) }, label = { Text(tr("kcal (opc.)", "kcal (opt.)")) },
-                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
-                    OutlinedTextField(prot, { prot = it.filter(Char::isDigit).take(4) }, label = { Text("protein g") },
-                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                scanMsg?.let { Text(it, Modifier.padding(horizontal = 4.dp), fontSize = 13.sp, color = Ds.sub) }
+            }
+        } else item {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1).padding(horizontal = 20.dp, vertical = 18.dp)) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Pronađeno u Open Food Facts", "Found in Open Food Facts"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.green)
+                        Text(pr.name, Modifier.padding(top = 4.dp), fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+                        Text(
+                            tr("Na 100 g: ", "Per 100 g: ") + listOfNotNull(pr.kcal100?.let { "${Math.round(it)} kcal" }, pr.protein100?.let { tr("${WorkoutMath.fmtKg(it)} g proteina", "${WorkoutMath.fmtKg(it)} g protein") })
+                                .joinToString(", ").ifEmpty { tr("nema podataka o vrednostima", "no nutrition data") },
+                            Modifier.padding(top = 2.dp), fontSize = 14.sp, color = Ds.sub,
+                        )
+                    }
+                    RoundButton(Icons.Filled.Close, tr("Ukloni proizvod", "Remove product"), Ds.s3, Ds.ink, 32.dp) {
+                        product = null; text = ""; kcal = ""; prot = ""
+                    }
+                }
+                HorizontalDivider(Modifier.padding(top = 16.dp), thickness = 1.dp, color = Ds.line)
+                Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Količina", "Amount"), Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink)
+                    Row(Modifier.height(40.dp).clip(RoundedCornerShape(12.dp)).background(Ds.bg).padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        androidx.compose.foundation.text.BasicTextField(
+                            grams, { applyGrams(it.filter(Char::isDigit).take(4)) }, Modifier.width(48.dp), singleLine = true,
+                            textStyle = TextStyle(fontFamily = Manrope, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.End),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Accent),
+                        )
+                        Text("g", fontSize = 15.sp, color = Ds.sub)
+                    }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(enabled = text.isNotBlank(), onClick = { onSave(meal, text.trim(), kcal.toIntOrNull(), prot.toIntOrNull()) }) { Text(tr("Sačuvaj", "Save")) }
-        },
-        dismissButton = {
-            Row {
-                if (onDelete != null) TextButton(onClick = onDelete) { Text(tr("Obriši", "Delete"), color = MaterialTheme.colorScheme.error) }
-                TextButton(onClick = onDismiss) { Text(tr("Otkaži", "Cancel")) }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(
+                    Triple(tr("kcal (opciono)", "kcal (optional)"), kcal) { v: String -> kcal = v.filter(Char::isDigit).take(5) },
+                    Triple(tr("protein g (opciono)", "protein g (optional)"), prot) { v: String -> prot = v.filter(Char::isDigit).take(4) },
+                ).forEach { (label, value, set) ->
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(Ds.s1).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text(label, fontSize = 12.sp, color = Ds.sub, maxLines = 1)
+                        androidx.compose.foundation.text.BasicTextField(
+                            value, set, Modifier.fillMaxWidth().padding(top = 2.dp), singleLine = true, textStyle = numStyle,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Accent),
+                            decorationBox = { inner -> Box { if (value.isEmpty()) Text("—", style = numStyle.copy(color = Ds.faint)); inner() } },
+                        )
+                    }
+                }
             }
-        },
-    )
+        }
+        item {
+            Text(
+                if (fk > 0 || fp > 0) tr("Dan posle čuvanja: ${dayKcal + fk} kcal, ${dayProt + fp} g proteina", "Day total after saving: ${dayKcal + fk} kcal, ${dayProt + fp} g protein")
+                else tr("Ostavi kcal i protein prazno ako ih ne pratiš.", "Leave kcal and protein empty if you do not track them."),
+                Modifier.padding(horizontal = 4.dp), fontSize = 13.sp, lineHeight = 20.sp, color = Ds.sub,
+            )
+        }
+        if (onDelete != null) item {
+            Text(tr("Obriši obrok", "Delete meal"), Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(onClick = onDelete).padding(8.dp),
+                fontSize = 15.sp, color = Ds.danger, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+    }
 }
-

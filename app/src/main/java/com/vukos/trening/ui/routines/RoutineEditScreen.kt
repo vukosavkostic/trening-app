@@ -1,6 +1,33 @@
 package com.vukos.trening.ui.routines
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.draw.shadow
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -127,6 +154,8 @@ class RoutineEditViewModel(private val routineId: String?) : ViewModel() {
     suspend fun delete() { routineId?.let { db.routines().softDelete(it) } }
 }
 
+private val PlanStride = 86.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutineEditScreen(
@@ -140,69 +169,130 @@ fun RoutineEditScreen(
     val byId = remember(exercises) { exercises.associateBy { it.id } }
     var confirmDelete by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val D = com.vukos.trening.ui.theme.Ds
+    var open by remember { mutableIntStateOf(-1) }
+    var dragIdx by remember { mutableIntStateOf(-1) }
+    var dragDy by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+    val stridePx = with(density) { PlanStride.toPx() }
 
     // Rezultat pickera (lista ID-jeva) stize preko savedStateHandle.
     val picked = savedState?.getStateFlow<ArrayList<String>?>("picked", null)?.collectAsStateWithLifecycle()
     LaunchedEffect(picked?.value) {
         picked?.value?.let { vm.addExercises(it); savedState["picked"] = null }
     }
+    val canSave = vm.loaded && vm.name.isNotBlank()
+    val n = vm.items.size
+    val target = if (dragIdx >= 0) (dragIdx + Math.round(dragDy / stridePx)).coerceIn(0, n - 1) else -1
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(if (routineId == null) tr("Novi plan", "New plan") else tr("Izmena plana", "Edit plan")) },
-            navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.Filled.Close, tr("Zatvori", "Close")) } },
-            actions = {
-                if (routineId != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, tr("Obriši", "Delete")) }
-                TextButton(enabled = vm.loaded && vm.name.isNotBlank(), onClick = {
-                    scope.launch { vm.save(); onDone() }
-                }) { Text(tr("Sačuvaj", "Save")) }
-            },
-        )
-    }) { pad ->
-        LazyColumn(
-            Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                OutlinedTextField(
-                    value = vm.name, onValueChange = { vm.name = it }, label = { Text(tr("Naziv plana", "Plan name")) }, placeholder = { Text(tr("npr. Push, Pull, Noge, Full Body", "e.g. Push, Pull, Legs, Full Body")) },
-                    singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.titleLarge, shape = RoundedCornerShape(16.dp),
+    LazyColumn(
+        Modifier.fillMaxSize().background(D.bg).statusBarsPadding().imePadding(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Otkaži", "Cancel"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onDone).padding(4.dp), fontSize = 17.sp, color = D.sub)
+                Text(if (routineId == null) tr("Novi plan", "New plan") else tr("Izmena plana", "Edit plan"), Modifier.weight(1f),
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = D.ink, textAlign = TextAlign.Center)
+                Text(tr("Sačuvaj", "Save"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = canSave) { scope.launch { vm.save(); onDone() } }.padding(4.dp),
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = if (canSave) D.aText else D.faint)
+            }
+        }
+        item {
+            Column(Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+                val style = TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.68).sp, color = D.ink)
+                BasicTextField(
+                    vm.name, { vm.name = it.take(40) }, Modifier.fillMaxWidth(), singleLine = true, textStyle = style,
+                    cursorBrush = SolidColor(com.vukos.trening.ui.theme.Accent),
+                    decorationBox = { inner -> Box { if (vm.name.isEmpty()) Text(tr("Naziv plana", "Plan name"), style = style.copy(color = D.faint)); inner() } },
+                )
+                Text(
+                    tr("${vm.items.size} vežbi, ${vm.items.sumOf { it.sets }} setova", "${vm.items.size} exercises, ${vm.items.sumOf { it.sets }} sets"),
+                    Modifier.padding(top = 2.dp), fontSize = 15.sp, color = D.sub,
                 )
             }
-            item { Text(tr("Vežbe (${vm.items.size})", "Exercises (${vm.items.size})"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 8.dp)) }
-            itemsIndexed(vm.items, key = { i, d -> "$i-${d.exerciseId}" }) { i, d ->
-                val ex = byId[d.exerciseId]
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ex?.let { ExerciseThumb(it, 44.dp) }
-                        Spacer(Modifier.width(12.dp))
-                        Text(ex?.name ?: "?", style = MaterialTheme.typography.titleMedium, maxLines = 2,
-                            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { vm.move(i, -1) }, enabled = i > 0) { Icon(Icons.Filled.KeyboardArrowUp, tr("Gore", "Up")) }
-                        IconButton(onClick = { vm.move(i, 1) }, enabled = i < vm.items.lastIndex) { Icon(Icons.Filled.KeyboardArrowDown, tr("Dole", "Down")) }
-                        IconButton(onClick = { vm.items.removeAt(i) }) { Icon(Icons.Filled.Close, tr("Ukloni", "Remove")) }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Setovi", "Sets"), Modifier.width(56.dp), style = MaterialTheme.typography.bodySmall)
-                        IconButton(onClick = { if (d.sets > 1) vm.items[i] = d.copy(sets = d.sets - 1) }) { Icon(Icons.Filled.Remove, tr("Manje", "Fewer")) }
-                        Text("${d.sets}", fontWeight = FontWeight.Bold)
-                        IconButton(onClick = { if (d.sets < 20) vm.items[i] = d.copy(sets = d.sets + 1) }) { Icon(Icons.Filled.Add, tr("Više", "More")) }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SmallNum(tr("Ponav. od", "Reps from"), d.repsMin, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMin = it) }
-                        SmallNum(tr("do", "to"), d.repsMax, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMax = it) }
-                        SmallNum(tr("kg (opc.)", "kg (opt.)"), d.kg, Modifier.weight(1f), decimal = true) { vm.items[i] = d.copy(kg = it) }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                vm.items.forEachIndexed { i, d ->
+                    androidx.compose.runtime.key("$i-${d.exerciseId}") {
+                        val me = i == dragIdx
+                        val shift = when {
+                            dragIdx < 0 || me -> 0.dp
+                            dragIdx < i && i <= target -> -PlanStride
+                            dragIdx > i && i >= target -> PlanStride
+                            else -> 0.dp
+                        }
+                        val animShift by animateDpAsState(shift, tween(220), label = "shift")
+                        val ex = byId[d.exerciseId]
+                        val isOpen = open == i && dragIdx < 0
+                        Column(
+                            Modifier.fillMaxWidth().zIndex(if (me) 2f else 1f)
+                                .offset(y = if (me) 0.dp else animShift)
+                                .graphicsLayer { if (me) { translationY = dragDy; scaleX = 1.03f; scaleY = 1.03f } }
+                                .then(if (me) Modifier.shadow(18.dp, RoundedCornerShape(24.dp)) else Modifier)
+                                .clip(RoundedCornerShape(24.dp)).background(if (me) D.s2 else D.s1)
+                                .pointerInput(i, n) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); open = -1; dragIdx = i; dragDy = 0f },
+                                        onDrag = { c, amount -> c.consume(); dragDy += amount.y },
+                                        onDragEnd = {
+                                            val to = (dragIdx + Math.round(dragDy / stridePx)).coerceIn(0, n - 1)
+                                            if (dragIdx >= 0 && to != dragIdx) { val x = vm.items.removeAt(dragIdx); vm.items.add(to, x) }
+                                            dragIdx = -1; dragDy = 0f
+                                        },
+                                        onDragCancel = { dragIdx = -1; dragDy = 0f },
+                                    )
+                                }
+                                .padding(start = 10.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().clickable(remember { MutableInteractionSource() }, indication = null) { open = if (open == i) -1 else i },
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Icon(Icons.Filled.DragIndicator, null, Modifier.size(16.dp), tint = D.faint)
+                                if (ex != null) ExerciseThumb(ex, 48.dp) else Box(Modifier.size(48.dp).clip(RoundedCornerShape(13.dp)).background(D.s2))
+                                Column(Modifier.weight(1f)) {
+                                    Text(ex?.name ?: "?", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = D.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(summary(d), fontSize = 14.sp, color = D.sub, maxLines = 1)
+                                }
+                                Icon(if (isOpen) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, Modifier.size(18.dp), tint = D.faint)
+                            }
+                            if (isOpen) {
+                                Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(D.bg).padding(10.dp)) {
+                                        Text(tr("Setovi", "Sets"), fontSize = 12.sp, color = D.sub)
+                                        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Step("−") { if (d.sets > 1) vm.items[i] = d.copy(sets = d.sets - 1) }
+                                            Text("${d.sets}", Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = D.ink, textAlign = TextAlign.Center)
+                                            Step("+") { if (d.sets < 20) vm.items[i] = d.copy(sets = d.sets + 1) }
+                                        }
+                                    }
+                                    NumTile(tr("Ponav.", "Reps"), d.repsMin, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMin = it) }
+                                    NumTile(tr("do", "to"), d.repsMax, Modifier.weight(1f)) { vm.items[i] = d.copy(repsMax = it) }
+                                    NumTile("kg", d.kg, Modifier.weight(1f), decimal = true) { vm.items[i] = d.copy(kg = it) }
+                                }
+                                Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(tr("Drži i prevuci za pomeranje", "Hold and drag to move"), Modifier.weight(1f), fontSize = 13.sp, color = D.faint)
+                                    Text(tr("Ukloni", "Remove"), Modifier.clip(RoundedCornerShape(8.dp)).clickable { open = -1; vm.items.removeAt(i) }.padding(horizontal = 4.dp, vertical = 6.dp),
+                                        fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = D.danger)
+                                }
+                            }
+                        }
                     }
                 }
             }
-            item {
-                com.vukos.trening.ui.common.OutlinePill(tr("Dodaj vežbe", "Add exercises"), onPickExercises, Modifier.fillMaxWidth(), Icons.Filled.Add)
+        }
+        item {
+            Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(D.s1).clickable(onClick = onPickExercises), contentAlignment = Alignment.Center) {
+                Text(tr("+ Dodaj vežbe", "+ Add exercises"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = D.aText)
             }
+        }
+        if (routineId != null) item {
+            Text(tr("Obriši plan", "Delete plan"), Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(8.dp)).clickable { confirmDelete = true }.padding(8.dp),
+                fontSize = 15.sp, color = D.danger, textAlign = TextAlign.Center)
         }
     }
 
@@ -210,19 +300,40 @@ fun RoutineEditScreen(
         onDismissRequest = { confirmDelete = false },
         title = { Text(tr("Obrisati plan?", "Delete plan?")) },
         text = { Text(tr("Odrađeni treninzi po ovom planu ostaju sačuvani.", "Completed workouts from this plan are kept.")) },
-        confirmButton = { TextButton(onClick = { scope.launch { vm.delete(); confirmDelete = false; onDone() } }) { Text(tr("Obriši", "Delete")) } },
+        confirmButton = { TextButton(onClick = { scope.launch { vm.delete(); confirmDelete = false; onDone() } }) { Text(tr("Obriši", "Delete"), color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Otkaži", "Cancel")) } },
     )
 }
 
+/** "3 × 8–12 sa 80 kg" / "3 × 8–12 at 80 kg" */
+private fun summary(d: DraftItem): String {
+    val reps = when {
+        d.repsMin.isNotBlank() && d.repsMax.isNotBlank() && d.repsMin != d.repsMax -> "${d.repsMin}–${d.repsMax}"
+        else -> d.repsMin.ifBlank { d.repsMax }.ifBlank { "—" }
+    }
+    return "${d.sets} × $reps" + (d.kg.takeIf { it.isNotBlank() }?.let { tr(" sa $it kg", " at $it kg") } ?: "")
+}
+
 @Composable
-private fun SmallNum(label: String, value: String, modifier: Modifier, decimal: Boolean = false, onChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = { v -> onChange(v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(5)) },
-        label = { Text(label, maxLines = 1) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
-        modifier = modifier,
-    )
+private fun Step(text: String, onClick: () -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    Box(Modifier.size(22.dp).clip(CircleShape).background(D.s3).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(text, fontSize = 14.sp, color = D.ink)
+    }
+}
+
+@Composable
+private fun NumTile(label: String, value: String, modifier: Modifier, decimal: Boolean = false, onChange: (String) -> Unit) {
+    val D = com.vukos.trening.ui.theme.Ds
+    val style = TextStyle(fontFamily = com.vukos.trening.ui.theme.Manrope, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp, color = D.ink)
+    Column(modifier.clip(RoundedCornerShape(14.dp)).background(D.bg).padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Text(label, fontSize = 12.sp, color = D.sub, maxLines = 1)
+        BasicTextField(
+            value, { v -> onChange(v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(5)) },
+            Modifier.fillMaxWidth().padding(top = 4.dp), singleLine = true, textStyle = style,
+            keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
+            cursorBrush = SolidColor(com.vukos.trening.ui.theme.Accent),
+            decorationBox = { inner -> Box { if (value.isEmpty()) Text("—", style = style.copy(color = D.faint)); inner() } },
+        )
+    }
 }
