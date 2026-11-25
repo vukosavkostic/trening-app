@@ -121,7 +121,7 @@ fun StatsScreen(onBack: () -> Unit) {
 
     val (from, to, title) = when (period) {
         Period.WEEK -> TrainingStats.weekStart(today).plusWeeks(offset.toLong()).let {
-            Triple(it, it.plusDays(6), "${it.srDate()} – ${it.plusDays(6).srDate()}")
+            Triple(it, it.plusDays(6), (if (offset == 0) tr("Ova nedelja, ", "This week, ") else "") + shortRange(it, it.plusDays(6)))
         }
         Period.MONTH -> YearMonth.from(today).plusMonths(offset.toLong()).let {
             Triple(it.atDay(1), it.atEndOfMonth(), "${MONTHS[it.monthValue - 1]} ${it.year}")
@@ -149,10 +149,7 @@ fun StatsScreen(onBack: () -> Unit) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
                     Text(tr("Statistika", "Statistics"), fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.68).sp, color = D.ink)
-                    Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        if (period == Period.WEEK && offset == 0) Text(tr("Ova nedelja", "This week"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = D.ink, maxLines = 1)
-                        Text(title, fontSize = 15.sp, color = D.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                    Text(title, Modifier.padding(top = 2.dp), fontSize = 15.sp, color = D.sub, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Row(Modifier.padding(bottom = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SmallRound(Icons.Filled.ChevronLeft, tr("Prethodni", "Previous"), true) { offset-- }
@@ -396,6 +393,22 @@ private val WEEKDAY_SHORT: List<String> get() = if (com.vukos.trening.i18n.Lang.
 
 private val MONTH_INITIAL: List<String> get() = if (com.vukos.trening.i18n.Lang.en)
     listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D") else listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
+
+/** Kratak opseg nedelje: "23–29. nov" / "23–29 Nov", a preko meseca "30. nov – 6. dec" / "30 Nov – 6 Dec". */
+private fun shortRange(a: LocalDate, b: LocalDate): String {
+    val m = { d: LocalDate -> MONTH_SHORT[d.monthValue - 1] }
+    val en = com.vukos.trening.i18n.Lang.en
+    return when {
+        a.month == b.month && en -> "${a.dayOfMonth}–${b.dayOfMonth} ${m(b)}"
+        a.month == b.month -> "${a.dayOfMonth}–${b.dayOfMonth}. ${m(b)}"
+        en -> "${a.dayOfMonth} ${m(a)} – ${b.dayOfMonth} ${m(b)}"
+        else -> "${a.dayOfMonth}. ${m(a)} – ${b.dayOfMonth}. ${m(b)}"
+    }
+}
+
+private val MONTH_SHORT: List<String> get() = if (com.vukos.trening.i18n.Lang.en)
+    listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+else listOf("jan", "feb", "mar", "apr", "maj", "jun", "jul", "avg", "sep", "okt", "nov", "dec")
 
 /** "1 trening" / "3 treninga" (ili engleski). */
 private fun workoutsText(n: Int) = if (n == 1) tr("1 trening", "1 workout") else tr("$n treninga", "$n workouts")
