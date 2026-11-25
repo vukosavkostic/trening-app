@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.help
 
+import androidx.compose.material.icons.filled.Schedule
+
 import com.vukos.trening.i18n.tr
 
 import androidx.compose.animation.animateColorAsState
@@ -318,10 +320,13 @@ private fun StepHeader(page: Int, done: Boolean) {
     val s = STEPS[page]
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                if (page == 0) tr("Vodič", "Guide") else tr("Korak $page od ${STEPS.size - 2}", "Step $page of ${STEPS.size - 2}") + if (s.minutes.isNotEmpty()) " (${s.minutes})" else "",
-                fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText, modifier = Modifier.weight(1f),
-            )
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    if (page == 0) tr("Vodič", "Guide") else tr("Korak $page od ${STEPS.size - 2}", "Step $page of ${STEPS.size - 2}"),
+                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText,
+                )
+                if (s.minutes.isNotEmpty()) com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, s.minutes, com.vukos.trening.ui.theme.Ds.sub, fontSize = 13.sp, iconSize = 13.dp)
+            }
             if (done) {
                 Icon(Icons.Filled.CheckCircle, null, Modifier.size(16.dp), tint = Success)
                 Text(tr("  Završeno", "  Done"), style = HelpSmall, color = Success)

@@ -133,19 +133,7 @@ fun RoutinesScreen(
             item {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(tr("Nedelja $week", "Week $week"), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
-                            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                repeat(goal.coerceAtLeast(1)) { i ->
-                                    Box(Modifier.size(14.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(if (i < thisWeek) Accent else Ds.s3))
-                                }
-                            }
-                            Row {
-                                Text("$thisWeek", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
-                                Text(tr("/$goal urađeno", "/$goal done"), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
-                            }
-                        }
-                        Text(tr("Trening", "Train"), Modifier.padding(top = 2.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                        Text(tr("Trening", "Train"), fontSize = 34.sp, fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.68).sp, color = Ds.ink)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -253,16 +241,17 @@ private fun UpNextCard(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                com.vukos.trening.ui.common.Kicker(tr("Sledeći", "Up next"), Ds.aText, Modifier.weight(1f))
-                last?.let {
-                    com.vukos.trening.ui.common.IconText(Icons.Filled.Repeat, tr("posle: ${it.name}", "after ${it.name}"), Ds.sub, Modifier.weight(1f, fill = false), 13.sp, 13.dp)
-                }
-            }
+            com.vukos.trening.ui.common.Kicker(tr("Sledeći", "Up next"), Ds.aText)
             val fs = com.vukos.trening.ui.common.titleSize(next.name, 40)
             Text(next.name, Modifier.padding(top = 10.dp), fontSize = fs, fontWeight = FontWeight.Bold, letterSpacing = (fs.value * -0.03f).sp,
                 lineHeight = (fs.value * 1.08f).sp, style = androidx.compose.ui.text.TextStyle(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading),
                 color = Ds.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            last?.let {
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Filled.Repeat, null, Modifier.padding(top = 2.dp).size(13.dp), tint = Ds.sub)
+                    Text(tr("Posle: ${it.name}", "Follows ${it.name}"), fontSize = 13.sp, lineHeight = 18.sp, color = Ds.sub)
+                }
+            }
             androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 com.vukos.trening.ui.common.IconText(Icons.AutoMirrored.Filled.List, tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"), Ds.sub)
                 if (ex.isNotEmpty()) com.vukos.trening.ui.common.IconText(Icons.Filled.Layers, tr("${ex.sumOf { it.targetSets }} setova", "${ex.sumOf { it.targetSets }} sets"), Ds.sub)

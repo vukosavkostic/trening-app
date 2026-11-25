@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -131,7 +133,7 @@ fun AddSupplementSheet(
     day: LocalDate,
     dayEntries: List<FoodEntry>,
     history: List<FoodEntry>,
-    onLog: (text: String, kcal: Int?, protein: Int?) -> Unit,
+    onLog: (text: String, kcal: Int?, protein: Int?, at: LocalTime?) -> Unit,
 ) {
     val ctx = LocalContext.current
     var query by remember { mutableStateOf("") }
@@ -140,14 +142,14 @@ fun AddSupplementSheet(
     var hiddenTick by remember { mutableStateOf(0) }
     val p = picked
     if (p != null) {
-        DoseStep(p, day, onBack = { picked = null }) { text, k, pr, remind, time ->
+        DoseStep(p, day, onBack = { picked = null }) { text, k, pr, remind, time, at ->
             if (remind) {
                 val d = parseDose(Supplements.doseOf(text))
                 SupplementReminders.save(ctx, SupplementReminders.load(ctx) + SuppReminder(
                     name = Supplements.nameOf(text), dose = doseText(d.value, d.unit), hour = time.hour, minute = time.minute, kcal = k, proteinG = pr,
                 ))
             }
-            onLog(text, k, pr)
+            onLog(text, k, pr, at)
         }
         return
     }
@@ -204,7 +206,7 @@ fun AddSupplementSheet(
                                 val lt = Instant.ofEpochMilli(t.createdAt).atZone(zone).toLocalTime()
                                 Text("%02d:%02d".format(lt.hour, lt.minute), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ds.green)
                             } else Box(
-                                Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(Ds.aSoft).clickable { onLog(e.text, e.kcal, e.proteinG) }.padding(horizontal = 14.dp),
+                                Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(Ds.aSoft).clickable { onLog(e.text, e.kcal, e.proteinG, null) }.padding(horizontal = 14.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(if (dose.isBlank()) tr("Unesi", "Log") else tr("Unesi $dose", "Log $dose"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText, maxLines = 1)
@@ -271,7 +273,7 @@ private fun DoseStep(
     def: SupplementDef,
     day: LocalDate,
     onBack: () -> Unit,
-    onLog: (text: String, kcal: Int?, protein: Int?, remind: Boolean, time: LocalTime) -> Unit,
+    onLog: (text: String, kcal: Int?, protein: Int?, remind: Boolean, time: LocalTime, at: LocalTime) -> Unit,
 ) {
     val base = remember(def) { parseDose(def.dose) }
     val srName = remember(def) { def.aliases.split(' ').plus(def.name).joinToString(" ") }
@@ -281,7 +283,13 @@ private fun DoseStep(
     var editing by remember { mutableStateOf(false) }
     var remind by remember { mutableStateOf(false) }
     val now = remember { LocalTime.now() }
-    val remindAt = remember(now) { val m = ((now.hour * 60 + now.minute + 4) / 5 * 5) % (24 * 60); LocalTime.of(m / 60, m % 60) }
+    // Vreme unosa u minutima dana; danas ne moze kasnije od sada.
+    val nowMin = if (day == LocalDate.now()) now.hour * 60 + now.minute else 23 * 60 + 59
+    var tm by remember { mutableStateOf(nowMin) }
+    var timeOpen by remember { mutableStateOf(false) }
+    fun setTm(t: Int) { tm = t.coerceIn(0, nowMin) }
+    val at = LocalTime.of(tm / 60, tm % 60)
+    val remindAt = run { val m = minOf(23 * 60 + 55, (tm + 2) / 5 * 5); LocalTime.of(m / 60, m % 60) }
     val value = raw?.let { it.replace(',', '.').toDoubleOrNull() ?: 0.0 } ?: dose
     val ok = value > 0
     val text = Supplements.entryText(def.name, doseText(value, base.unit))
@@ -346,12 +354,45 @@ private fun DoseStep(
             }
         }
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Ds.s1)) {
-            Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                Modifier.fillMaxWidth().height(52.dp).clickable { timeOpen = !timeOpen }.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 Text(tr("Vreme", "Time"), Modifier.weight(1f), fontSize = 16.sp, color = Ds.ink)
+                val isNow = tm == nowMin && day == LocalDate.now()
                 Text(
-                    (if (day == LocalDate.now()) tr("Sada, ", "Now, ") else "") + "%02d:%02d".format(now.hour, now.minute),
-                    fontSize = 15.sp, color = Ds.sub,
+                    (if (isNow) tr("Sada, ", "Now, ") else if (day == LocalDate.now()) tr("Danas, ", "Today, ") else "") + "%02d:%02d".format(tm / 60, tm % 60),
+                    fontSize = 15.sp, fontWeight = if (isNow) FontWeight.Normal else FontWeight.SemiBold, color = if (isNow) Ds.sub else Ds.aText,
                 )
+                Icon(if (timeOpen) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null, Modifier.size(16.dp), tint = Ds.faint)
+            }
+            if (timeOpen) {
+                HorizontalDivider(thickness = 1.dp, color = Ds.line)
+                Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (day == LocalDate.now()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(listOf(0, 15, 30, 60, 120)) { d ->
+                            val on = nowMin - tm == d
+                            Box(
+                                Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) Ds.aSoft else Ds.s3).clickable { setTm(nowMin - d) }.padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    when (d) { 0 -> tr("Sada", "Now"); 60 -> tr("pre 1 h", "1 h ago"); 120 -> tr("pre 2 h", "2 h ago"); else -> tr("pre $d min", "$d min ago") },
+                                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (on) Ds.aText else Ds.ink,
+                                )
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+                        TimePart("%02d".format(tm / 60), tr("Sat", "Hour"), { setTm(tm + 60) }, { setTm(tm - 60) }) { v -> setTm(minOf(23, v) * 60 + tm % 60) }
+                        Text(":", Modifier.padding(bottom = 4.dp), fontSize = 40.sp, fontWeight = FontWeight.Light, color = Ds.faint)
+                        TimePart("%02d".format(tm % 60), tr("Minut", "Minute"), { setTm(tm + 5) }, { setTm(tm - 5) }) { v -> setTm(tm / 60 * 60 + minOf(59, v)) }
+                    }
+                    Text(
+                        if (day == LocalDate.now()) tr("Ne može kasnije od sada", "It can't be later than now") else tr("Vreme unosa za izabrani dan", "Time of the entry on the selected day"),
+                        Modifier.fillMaxWidth(), fontSize = 13.sp, color = Ds.sub, textAlign = TextAlign.Center,
+                    )
+                }
             }
             HorizontalDivider(thickness = 1.dp, color = Ds.line)
             Row(
@@ -370,11 +411,33 @@ private fun DoseStep(
         }
         Box(
             Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(if (ok) Accent else Ds.s3)
-                .clickable(enabled = ok) { onLog(text, kcal, prot, remind, remindAt) },
+                .clickable(enabled = ok) { onLog(text, kcal, prot, remind, remindAt, at) },
             contentAlignment = Alignment.Center,
         ) {
             Text(if (ok) tr("Unesi ${doseText(value, base.unit)}", "Log ${doseText(value, base.unit)}") else tr("Unesi", "Log"),
                 fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = if (ok) Color.White else Ds.faint)
+        }
+    }
+}
+
+/** Sat ili minut: strelice gore/dole i broj koji moze da se upise. */
+@Composable
+private fun TimePart(value: String, desc: String, onUp: () -> Unit, onDown: () -> Unit, onType: (Int) -> Unit) {
+    val style = TextStyle(fontFamily = Manrope, fontSize = 44.sp, fontWeight = FontWeight.Light, letterSpacing = (-1.32).sp, color = Ds.ink, textAlign = TextAlign.Center)
+    var raw by remember { mutableStateOf<String?>(null) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(56.dp, 30.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onUp), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.KeyboardArrowUp, "$desc +", Modifier.size(20.dp), tint = Ds.sub)
+        }
+        BasicTextField(
+            raw ?: value,
+            { v -> val d = v.filter(Char::isDigit).takeLast(2); raw = d; d.toIntOrNull()?.let(onType) },
+            Modifier.widthIn(min = 56.dp, max = 64.dp).onFocusChanged { if (!it.isFocused) raw = null }.dashedUnderline(Ds.s3),
+            singleLine = true, textStyle = style, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            cursorBrush = SolidColor(Accent),
+        )
+        Box(Modifier.size(56.dp, 30.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onDown), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.KeyboardArrowDown, "$desc −", Modifier.size(20.dp), tint = Ds.sub)
         }
     }
 }

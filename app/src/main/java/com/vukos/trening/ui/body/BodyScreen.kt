@@ -105,8 +105,7 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
             item {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
-                        Text(tr("Merenje svake nedelje", "Check-in every Sunday"), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = D.sub)
-                        Text(tr("Profil", "Profile"), Modifier.padding(top = 2.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.68).sp, color = D.ink)
+                        Text(tr("Profil", "Profile"), fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.68).sp, color = D.ink)
                     }
                     com.vukos.trening.ui.journal.RoundButton(Icons.Filled.Settings, tr("Podešavanja", "Settings"), D.s1, D.ink, 40.dp, onSettings)
                 }
@@ -118,13 +117,6 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                 }
             } else {
                 item { CurrentWeightCard(stats, entries, onOpenChart) }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        SmallTile(stats.change30.signed().removeSuffix(" kg"), tr("kg, 30 dana", "kg, 30 days"), Modifier.weight(1f))
-                        SmallTile(stats.totalChange.signed().removeSuffix(" kg"), tr("kg ukupno", "kg total"), Modifier.weight(1f))
-                        SmallTile("${stats.count}", if (stats.photoDays > 0) tr("merenja, ${stats.photoDays} sa slikama", "check-ins, ${stats.photoDays} with photos") else tr("merenja", "check-ins"), Modifier.weight(1f))
-                    }
-                }
             }
             item { NextCheckInCard(due, onNew) }
             // Mere tela: poslednja vrednost i promena od prve.
@@ -160,36 +152,6 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                     Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = D.faint)
                 }
             }
-            if (entries.isNotEmpty()) {
-                item {
-                    Text(tr("Istorija merenja", "Check-in history"), Modifier.padding(top = 6.dp), fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.44).sp, color = D.ink)
-                }
-                item {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(D.s1)) {
-                        entries.forEachIndexed { i, e ->
-                            val day = LocalDate.ofEpochDay(e.epochDay)
-                            Row(
-                                Modifier.fillMaxWidth().clickable { onOpenDay(day) }.padding(horizontal = 20.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(day.srLong().replaceFirstChar { it.uppercase() }, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = D.ink)
-                                    Text(day.srRelative(), fontSize = 13.sp, color = D.sub)
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        if ((photoCount[e.id] ?: 0) > 0) Icon(Icons.Filled.PhotoCamera, tr("Ima slike", "Has photos"), Modifier.size(15.dp), tint = D.sub)
-                                        Text(e.weightKg?.kg() ?: "—", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = D.ink)
-                                    }
-                                    deltas[e.id]?.let { Text(it.signed(), fontSize = 12.sp, color = D.sub) }
-                                }
-                            }
-                            if (i < entries.lastIndex) androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = D.line)
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -207,7 +169,7 @@ private fun SmallTile(value: String, label: String, modifier: Modifier) {
 @Composable
 private fun CurrentWeightCard(s: BodyStats, entries: List<com.vukos.trening.data.BodyEntry>, onOpenChart: () -> Unit) {
     val D = com.vukos.trening.ui.theme.Ds
-    var range by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(com.vukos.trening.data.ChartRange.M3) }
+    val range = com.vukos.trening.data.ChartRange.M3
     val today = LocalDate.now()
     val pts = remember(entries, range) { range.filter(entries, today).filter { it.weightKg != null && !it.deleted }.sortedBy { it.epochDay } }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 18.dp)) {
@@ -241,15 +203,6 @@ private fun CurrentWeightCard(s: BodyStats, entries: List<com.vukos.trening.data
                 pointLabel = { "${LocalDate.ofEpochDay(pts[it].epochDay).srLong()}, ${pts[it].weightKg!!.kg()}" },
                 selected = sel, onSelect = { sel = it }, chartHeight = 150.dp, modifier = Modifier.padding(top = 20.dp),
             )
-        }
-        Row(Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(D.bg).padding(3.dp)) {
-            com.vukos.trening.data.ChartRange.entries.forEach { r ->
-                val sel = r == range
-                Box(Modifier.weight(1f).height(28.dp).clip(RoundedCornerShape(9.dp)).background(if (sel) D.s3 else Color.Transparent).clickable { range = r },
-                    contentAlignment = Alignment.Center) {
-                    Text(r.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (sel) D.ink else D.sub)
-                }
-            }
         }
     }
 }

@@ -69,7 +69,7 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
     ) {
         CardHeader(
             tr("Suplementi", "Supplements"),
-            if (entries.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else tr("${entries.size} uneto", "${entries.size} taken"),
+            if (entries.isEmpty()) tr("Još ništa nije uneto", "Nothing logged yet") else "",
         ) {
             RoundButton(Icons.Filled.Add, tr("Dodaj suplement", "Add supplement"), com.vukos.trening.ui.theme.Ds.s3, com.vukos.trening.ui.theme.Ds.ink, 36.dp, onAdd)
         }

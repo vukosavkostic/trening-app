@@ -257,7 +257,9 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 )
             }
             composable("stats") { com.vukos.trening.ui.stats.StatsScreen(onBack = { nav.popBackStack() }) }
-            composable("body_compare") { com.vukos.trening.ui.body.BodyCompareScreen(onBack = { nav.popBackStack() }) }
+            composable("body_compare?after={after}", arguments = listOf(androidx.navigation.navArgument("after") { defaultValue = "" })) { e ->
+                com.vukos.trening.ui.body.BodyCompareScreen(onBack = { nav.popBackStack() }, afterId = e.arguments?.getString("after")?.takeIf { it.isNotEmpty() })
+            }
             composable("body_day/{day}") { e ->
                 val day = LocalDate.ofEpochDay(e.arguments!!.getString("day")!!.toLong())
                 BodyDayScreen(day, onBack = { nav.popBackStack() }, onEdit = { openCheckIn(day) })
@@ -266,6 +268,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                 WeightChartScreen(
                     onBack = { nav.popBackStack() },
                     onOpenDay = { nav.navigate("body_day/${it.toEpochDay()}") },
+                    onCompare = { nav.navigate("body_compare?after=$it") },
                 )
             }
             composable("checkin/{day}") { e ->

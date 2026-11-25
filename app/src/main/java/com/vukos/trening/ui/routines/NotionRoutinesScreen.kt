@@ -80,12 +80,13 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
     var reload by remember { mutableIntStateOf(0) }
     var importing by remember { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf<Pair<String, ImportResult>?>(null) }
+    var loadedAt by remember { mutableStateOf(0L) }
 
     LaunchedEffect(reload) {
         if (!app.settings.notionConfigured) { error = "notoken"; return@LaunchedEffect }
         error = null; items = null
         runCatching { NotionRoutines.list(app.settings) }
-            .onSuccess { items = it }
+            .onSuccess { items = it; loadedAt = System.currentTimeMillis() }
             .onFailure { error = it.message ?: tr("Greška pri učitavanju.", "Loading failed.") }
     }
 
@@ -113,7 +114,7 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                     when {
                         notConnected -> tr("Planovi koje napišeš u Notionu se pojavljuju ovde", "Plans you write in Notion appear here")
                         items == null && error == null -> tr("Osvežavam…", "Refreshing…")
-                        else -> tr("Iz baze Routines", "From the Routines database")
+                        else -> tr("Baza Routines, osveženo ", "Routines database, updated ") + updatedText(loadedAt)
                     },
                     Modifier.padding(top = 2.dp), fontSize = 15.sp, color = D.sub,
                 )
@@ -210,7 +211,7 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                         Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(l.name, Modifier.weight(1f), fontSize = 14.sp, color = D.ink)
                             Text(
-                                "${l.sets} × ${l.repsMin ?: ""}${if (l.repsMax != null && l.repsMax != l.repsMin) "–${l.repsMax}" else ""}" + (l.kg?.let { " @ $it kg" } ?: ""),
+                                "${l.sets} × ${l.repsMin ?: ""}${if (l.repsMax != null && l.repsMax != l.repsMin) "–${l.repsMax}" else ""}" + (l.kg?.let { tr(" sa $it kg", " at $it kg") } ?: ""),
                                 fontSize = 14.sp, color = D.sub, maxLines = 1,
                             )
                         }
@@ -257,6 +258,17 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                 }
             }
         }
+    }
+}
+
+/** "sada" / "pre 5 min" / "u 14:05" */
+private fun updatedText(at: Long): String {
+    val min = ((System.currentTimeMillis() - at) / 60_000).toInt()
+    val t = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    return when {
+        min < 1 -> tr("sada", "just now")
+        min < 60 -> tr("pre $min min", "$min min ago")
+        else -> tr("u %02d:%02d".format(t.hour, t.minute), "at %02d:%02d".format(t.hour, t.minute))
     }
 }
 

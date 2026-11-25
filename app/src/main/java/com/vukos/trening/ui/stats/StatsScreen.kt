@@ -212,7 +212,8 @@ fun StatsScreen(onBack: () -> Unit) {
                         hero = "$total" to tr("treninga", "workouts"),
                         values = values, labels = WEEKDAY_SHORT, captions = days.map { it.srLong().replaceFirstChar { c -> c.uppercase() } },
                         highlight = days.indexOf(today),
-                        pair = ("${values.count { it > 0 }}" to tr("aktivnih dana", "active days")) to ("$total/$goal" to tr("nedeljni cilj", "weekly goal")),
+                        pair = ("${values.count { it > 0 }}" to tr("aktivnih dana", "active days")) to
+                            ((if (summary.workouts > 0) (summary.minutes / summary.workouts).let { if (it < 60) "$it min" else JournalStats.fmtMinutes(it) } else "—") to tr("prosečan trening", "avg session")),
                     )
                 }
                 Period.MONTH -> {
@@ -248,26 +249,6 @@ fun StatsScreen(onBack: () -> Unit) {
                         pair = (fmt1(if (elapsed.isEmpty()) 0.0 else elapsed.average()) to tr("mesečni prosek", "monthly avg")) to
                             ("${values.maxOrNull() ?: 0}" to tr("najbolji mesec", "best month")),
                     )
-                }
-            }
-        }
-        item {
-            // Aktivnost: uvek poslednjih 12 nedelja (zavrsene nedelje za "sa ciljem").
-            val start = TrainingStats.weekStart(today).minusWeeks(11)
-            val weekly = (0 until 12).map { i -> val w = start.plusWeeks(i.toLong()); dates.count { !it.isBefore(w) && !it.isAfter(w.plusDays(6)) } }
-            val closed = weekly.dropLast(1)
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(22.dp)) {
-                CardLabel(tr("Aktivnost", "Activity"), tr("Poslednjih 12 nedelja", "Last 12 weeks"), D.sub)
-                Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MiniStat(fmt1(weekly.average()), tr("nedeljni prosek", "weekly avg"), Modifier.weight(1f))
-                    MiniStat("${weekly.maxOrNull() ?: 0}", tr("najbolja nedelja", "best week"), Modifier.weight(1f), Alignment.CenterHorizontally)
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("${closed.count { it >= goal }}", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.44).sp, color = D.ink, maxLines = 1)
-                            Text("/${closed.size}", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.44).sp, color = D.faint, maxLines = 1)
-                        }
-                        Text(tr("nedelja sa ciljem", "weeks on goal"), Modifier.padding(top = 2.dp), fontSize = 13.sp, color = D.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
                 }
             }
         }
@@ -313,11 +294,7 @@ private fun MusclesCard(muscles: List<Pair<String, Double>>, total: Int, bandWee
     val scale = (if (hasBand) maxOf(hi * 1.2, maxV * 1.05) else maxV * 1.1).coerceAtLeast(1.0)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(22.dp)) {
         CardLabel(tr("Setovi po mišićima", "Sets per muscle"), if (hasBand) tr("Cilj $lo–$hi", "Target $lo–$hi") else tr("Ova godina", "This year"), D.sub)
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("$total", fontSize = 44.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-1.76).sp, lineHeight = 44.sp, color = D.ink)
-            Text(tr("radnih setova", "working sets"), Modifier.padding(bottom = 4.dp), fontSize = 15.sp, color = D.sub)
-        }
-        if (muscles.isEmpty()) Text(tr("Nema treninga u ovom periodu.", "No workouts in this period."), Modifier.padding(top = 14.dp), fontSize = 14.sp, color = D.sub)
+        if (muscles.isEmpty()) Text(tr("Nema treninga u ovom periodu.", "No workouts in this period."), Modifier.padding(top = 18.dp), fontSize = 14.sp, color = D.sub)
         Column(Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             muscles.forEach { (m, n) ->
                 val below = hasBand && n < lo
@@ -337,7 +314,7 @@ private fun MusclesCard(muscles: List<Pair<String, Double>>, total: Int, bandWee
             }
         }
         if (hasBand && muscles.isNotEmpty()) Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Legend(D.s3, tr("Cilj $lo–$hi setova", "Target $lo–$hi sets"))
+            Legend(D.s3, tr("Ciljni opseg", "Target range"))
             Legend(muted, tr("Ispod cilja", "Below target"))
         }
     }
@@ -366,10 +343,6 @@ private fun WorkoutsCard(
     val gap = if (values.size > 7) 6.dp else 10.dp
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(22.dp)) {
         CardLabel(title, badge, D.aText)
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(hero.first, fontSize = 44.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-1.76).sp, lineHeight = 44.sp, color = D.ink)
-            Text(hero.second, Modifier.padding(bottom = 4.dp), fontSize = 15.sp, color = D.sub)
-        }
         Row(Modifier.padding(top = 22.dp).fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.Bottom) {
             values.forEachIndexed { i, v ->
                 val sel = i == selected

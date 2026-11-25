@@ -395,9 +395,7 @@ fun SettingsScreen(
             DsRow(tr("Jezik", "Language"), com.vukos.trening.i18n.Lang.label) { sheet = "lang" }
             DsRow(tr("Izgled", "Appearance"), com.vukos.trening.ui.theme.Appearance.label()) { sheet = "theme" }
             DsRow(tr("Ciljevi", "Goals"), goals, onClick = onGoals)
-            DsRow(tr("Podrazumevani odmor", "Default rest"), com.vukos.trening.ui.workout.RestTimer.mmss(restDefault)) { sheet = "rest" }
-            DsRow(tr("Podsetnici", "Reminders"), if (reminders == 0) tr("Isključeno", "Off") else tr("aktivno: $reminders", "$reminders active"),
-                divider = false, onClick = onReminders)
+            DsRow(tr("Podrazumevani odmor", "Default rest"), com.vukos.trening.ui.workout.RestTimer.mmss(restDefault), divider = false) { sheet = "rest" }
         }
         DsGroup(tr("Podaci", "Data")) {
             DsRow("Notion", if (settings.notionConfigured) tr("Povezano", "Connected") else tr("Nije povezano", "Not connected"), onClick = onNotion)
@@ -406,9 +404,6 @@ fun SettingsScreen(
                 if (backupAt == 0L) tr("Nikad", "Never") else java.time.Instant.ofEpochMilli(backupAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative(),
                 divider = false, onClick = onBackup,
             )
-        }
-        DsGroup(tr("Pomoć", "Help")) {
-            DsRow(tr("Uputstvo za Notion", "Notion guide"), "", divider = false, onClick = onHelp)
         }
         // Verzija aplikacije na dnu.
         Text(

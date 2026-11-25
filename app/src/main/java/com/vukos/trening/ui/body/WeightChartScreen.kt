@@ -57,7 +57,7 @@ import java.time.LocalDate
 /** Kilaza (dizajn v2.1): grafikon sa izborom merenja, detalj izabranog, slike tog dana i istorija. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
+fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit, onCompare: (String) -> Unit = {}) {
     val dao = TreningApp.instance.db.body()
     val entries by remember { dao.observeAll() }.collectAsStateWithLifecycle(emptyList())
     val photos by remember { dao.observeAllPhotos() }.collectAsStateWithLifecycle(emptyList())
@@ -85,12 +85,10 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
         item {
             Column {
                 Text(tr("Kilaža", "Weight"), fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.68).sp, color = Ds.ink)
-                shown.firstOrNull()?.let { f ->
-                    Text(
-                        tr("Merenja: ${shown.size}, od ${LocalDate.ofEpochDay(f.epochDay).srDate()}", "${shown.size} check-ins since ${LocalDate.ofEpochDay(f.epochDay).srDate()}"),
-                        Modifier.padding(top = 2.dp), fontSize = 15.sp, color = Ds.sub,
-                    )
-                }
+                if (shown.isNotEmpty()) Text(
+                    tr("Merenja: ${shown.size}", "${shown.size} check-in${if (shown.size == 1) "" else "s"}"),
+                    Modifier.padding(top = 2.dp), fontSize = 15.sp, color = Ds.sub,
+                )
             }
         }
         item {
@@ -122,13 +120,13 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
                     val prev = shown.getOrNull(selIdx - 1)
                     Row(
                         Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Ds.s2)
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                            .clickable { onOpenDay(LocalDate.ofEpochDay(e.epochDay)) }.padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text("${fmt(e.weightKg!!)} kg", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+                        Text(LocalDate.ofEpochDay(e.epochDay).srLong().replaceFirstChar { it.uppercase() }, Modifier.weight(1f), fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold, color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(prev?.let { "${sgn(e.weightKg!! - it.weightKg!!)} kg" } ?: tr("prvo merenje", "first check-in"), fontSize = 14.sp, color = Ds.sub)
-                        Text(LocalDate.ofEpochDay(e.epochDay).srLong().replaceFirstChar { it.uppercase() }, Modifier.weight(1f), fontSize = 14.sp, color = Ds.sub,
-                            textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Filled.ChevronRight, tr("Otvori merenje", "Open check-in"), Modifier.size(16.dp), tint = Ds.faint)
                     }
                     val dayPhotos = byEntry[e.id].orEmpty()
                     if (dayPhotos.isNotEmpty()) Row(
@@ -197,13 +195,13 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
         containerColor = Ds.sheet,
     ) {
         SecureWindow()
-        PhotosSheet(LocalDate.ofEpochDay(e.epochDay), e.weightKg!!, byEntry[e.id].orEmpty()) { photosOpen = false }
+        PhotosSheet(LocalDate.ofEpochDay(e.epochDay), e.weightKg!!, byEntry[e.id].orEmpty(), onCompare = { photosOpen = false; onCompare(e.id) }) { photosOpen = false }
     }
 }
 
 /** Slike izabranog merenja (sifrovane; ekran je zasticen od screenshota dok je list otvoren). */
 @Composable
-private fun PhotosSheet(day: LocalDate, kg: Double, photos: List<BodyPhoto>, onClose: () -> Unit) {
+private fun PhotosSheet(day: LocalDate, kg: Double, photos: List<BodyPhoto>, onCompare: () -> Unit, onClose: () -> Unit) {
     Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 34.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column {
             Text(day.srLong().replaceFirstChar { it.uppercase() }, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.44).sp, color = Ds.ink)
@@ -223,8 +221,11 @@ private fun PhotosSheet(day: LocalDate, kg: Double, photos: List<BodyPhoto>, onC
             Icon(Icons.Filled.Lock, null, Modifier.size(12.dp), tint = Ds.sub)
             Text(tr("Slike ostaju šifrovane na ovom telefonu", "Photos stay encrypted on this phone"), fontSize = 12.sp, color = Ds.sub, maxLines = 1)
         }
-        Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(Ds.s1).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
-            Text(tr("Zatvori", "Close"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+        Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(Ds.s1).clickable(onClick = onCompare), contentAlignment = Alignment.Center) {
+            Text(tr("Uporedi sa drugim merenjem", "Compare with another check-in"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
+        }
+        Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+            Text(tr("Zatvori", "Close"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
         }
     }
 }

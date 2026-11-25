@@ -1,6 +1,7 @@
 package com.vukos.trening.ui.workout
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.automirrored.outlined.Assignment
@@ -458,12 +459,6 @@ private fun ExerciseHeader(
                     }
                 }
             }
-            val lastWorking = previous.filter { it.setType != SetType.WARMUP && !it.deleted && it.reps != null }
-            if (lastWorking.isNotEmpty()) Text(
-                tr("Prošli put ", "Last time ") + (lastWorking.first().weightKg?.let { "${WorkoutMath.fmtKg(it)} kg × " } ?: "") +
-                    lastWorking.joinToString(", ") { "${it.reps}" },
-                Modifier.padding(top = 4.dp), fontSize = 14.sp, color = Ds.sub,
-            )
             target?.let { t ->
                 val reps = "${t.repsMin ?: ""}${if (t.repsMax != null && t.repsMax != t.repsMin) "–${t.repsMax}" else ""}"
                 Text(
@@ -665,13 +660,13 @@ private fun RestBar(now: Long, upNextValue: String, onOpen: () -> Unit, modifier
                 Modifier.weight(1f).fillMaxHeight().clickable(remember { MutableInteractionSource() }, indication = null, onClick = onOpen),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(if (resting) tr("Odmor", "Rest") else tr("Sledeće", "Next"), fontSize = 13.sp, color = Ds.sub)
-                Text(if (resting) RestTimer.mmss(rem) else upNextValue, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
+                Text(tr("Odmor", "Rest"), fontSize = 13.sp, color = Ds.sub)
+                Text(RestTimer.mmss(if (resting) rem else RestTimer.defaultSec), fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Pill("+15s", Ds.s3, Ds.ink) { RestTimer.add(15) }
-                Pill(if (resting) tr("Preskoči", "Skip") else tr("Odmor", "Rest"), Ds.ink, Ds.bg) {
+                Pill(if (resting) tr("Preskoči", "Skip") else tr("Kreni", "Start"), Ds.ink, Ds.bg) {
                     if (resting) RestTimer.skip() else RestTimer.start()
                 }
             }
@@ -719,10 +714,10 @@ private fun RestFullScreen(now: Long, title: String, elapsedSec: Long, upNext: P
                     Text(tr("od ${RestTimer.mmss(total)}", "of ${RestTimer.mmss(total)}"), fontSize = 15.sp, color = Ds.faint)
                     Row(
                         Modifier.padding(top = 10.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onDefault).padding(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(tr("Podrazumevano ${RestTimer.mmss(RestTimer.defaultSec)}", "Default ${RestTimer.mmss(RestTimer.defaultSec)}"), fontSize = 13.sp, color = Ds.sub)
-                        Text(tr("Promeni", "Change"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
+                        Text(tr("Podrazumevano ${RestTimer.mmss(RestTimer.defaultSec)}", "Default ${RestTimer.mmss(RestTimer.defaultSec)}"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
+                        Icon(Icons.Outlined.Edit, tr("Promeni", "Change"), Modifier.size(13.dp), tint = Ds.aText)
                     }
                 }
             }
@@ -741,9 +736,9 @@ private fun RestFullScreen(now: Long, title: String, elapsedSec: Long, upNext: P
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    com.vukos.trening.ui.common.Kicker(tr("Sledeće", "Up next"), Ds.sub)
-                    Text(upNext.first, fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(tr("Sledeće", "Up next"), fontSize = 13.sp, color = Ds.sub, maxLines = 1)
+                    Text(upNext.first, fontSize = 13.sp, color = Ds.faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Text(upNext.second, Modifier.padding(top = 4.dp), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -823,7 +818,7 @@ private fun SummaryContent(
                 )
                 Column(Modifier.statusBarsPadding().padding(top = 4.dp)) {
                     Box(
-                        Modifier.align(Alignment.End).size(40.dp).clip(CircleShape).background(Color(0x29808080)).clickable(onClick = onClose),
+                        Modifier.align(Alignment.End).offset(x = 8.dp).size(40.dp).clip(CircleShape).background(Color(0x29808080)).clickable(onClick = onClose),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Filled.Close, tr("Nazad na trening", "Back to workout"), Modifier.size(18.dp), tint = Ds.ink) }
                     Spacer(Modifier.height(20.dp))
