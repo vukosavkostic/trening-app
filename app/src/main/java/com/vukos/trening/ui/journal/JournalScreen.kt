@@ -214,7 +214,7 @@ fun JournalScreen(onOpenWorkout: (String) -> Unit, onOpenBodyDay: (LocalDate) ->
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Ds.sheet,
     ) {
-        AddSupplementSheet(selected, food, recentFood) { text, k, p, at ->
+        AddSupplementSheet(selected, food, recentFood, reminderCount, onReminders = { suppAdding = false; onOpenSuppReminders() }) { text, k, p, at ->
             // Izabrano vreme unosa (podrazumevano sada).
             val created = at?.let { selected.atTime(it).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() } ?: System.currentTimeMillis()
             scope.launch {
@@ -327,24 +327,6 @@ private fun JournalWorkoutCard(w: Workout, sets: List<WorkoutSet>, names: Map<St
                 }
             }
             Icon(Icons.Filled.ChevronRight, null, Modifier.padding(top = 4.dp).size(18.dp), tint = Ds.faint)
-        }
-        val groups = sets.groupBy { it.exercisePosition }.toSortedMap().values
-        if (groups.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
-            HorizontalDivider(thickness = 1.dp, color = Ds.line)
-        }
-        groups.forEach { g ->
-            val best = g.maxWithOrNull(compareBy<WorkoutSet>({ it.weightKg ?: 0.0 }, { it.reps ?: 0 }))
-            Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(names[g.first().exerciseId] ?: "?", Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                best?.let {
-                    Text(
-                        (WorkoutMath.fmtKg(it.weightKg).takeIf { k -> k.isNotEmpty() }?.let { k -> "$k kg × " } ?: "") + "${it.reps ?: 0}",
-                        Modifier.padding(start = 12.dp), fontSize = 15.sp, color = Ds.sub,
-                    )
-                }
-            }
-            HorizontalDivider(thickness = 1.dp, color = Ds.line)
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.vukos.trening.ui.routines
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Schedule
@@ -86,6 +88,7 @@ private val PlanRowH = 76.dp
  * Tab Trening (dizajn v2): "Sledeći" po rotaciji, ova nedelja / niz, slobodan trening,
  * pa "Moji planovi" - drzi i prevuci da promenis redosled (redosled je rotacija).
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun RoutinesScreen(
     onOpen: (String) -> Unit,
@@ -94,8 +97,10 @@ fun RoutinesScreen(
     onSettings: () -> Unit,
     onStart: (String?) -> Unit,
     onOpenStats: () -> Unit,
+    onNotionGuide: () -> Unit = onNotion,
 ) {
     val db = TreningApp.instance.db
+    var newPlanSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val routines by remember { db.routines().observeAll() }.collectAsStateWithLifecycle(emptyList())
     val links by remember { db.routines().observeAllExercises() }.collectAsStateWithLifecycle(emptyList())
@@ -136,10 +141,6 @@ fun RoutinesScreen(
                         Text(tr("Trening", "Train"), fontSize = 34.sp, fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.68).sp, color = Ds.ink)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        RoundButton(Icons.Filled.CloudDownload, tr("Planovi iz Notiona", "Plans from Notion"), Ds.s1, Ds.ink, 40.dp, onNotion)
-                        RoundButton(Icons.Filled.Settings, tr("Podešavanja", "Settings"), Ds.s1, Ds.ink, 40.dp, onSettings)
-                    }
                 }
             }
             rotation.next?.let { next ->
@@ -151,35 +152,23 @@ fun RoutinesScreen(
                 }
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(Ds.s1).clickable(onClick = onOpenStats).padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(tr("Ova nedelja", "This week"), fontSize = 13.sp, color = Ds.sub)
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("$thisWeek", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink)
-                            Text("/$goal", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.faint)
-                        }
-                        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            repeat(goal.coerceAtLeast(1)) { i ->
-                                Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(if (i < thisWeek) Accent else Ds.s3))
-                            }
+                // Jedna plocica: ova nedelja + niz nedelja sa ispunjenim ciljem.
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1).clickable(onClick = onOpenStats).padding(horizontal = 20.dp, vertical = 18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(tr("Ova nedelja", "This week"), Modifier.weight(1f), fontSize = 13.sp, color = Ds.sub)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Icon(Icons.Filled.LocalFireDepartment, null, Modifier.size(13.dp), tint = Ds.aText)
+                            Text(tr("nedelja sa ciljem: $streak", "$streak ${if (streak == 1) "week" else "weeks"} on goal"), fontSize = 13.sp, color = Ds.sub, maxLines = 1)
                         }
                     }
-                    Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(Ds.s1).padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(tr("Niz", "Streak"), fontSize = 13.sp, color = Ds.sub)
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("$streak", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink)
-                            Text(
-                                tr(" nedelja", " ${if (streak == 1) "week" else "weeks"}"),
-                                Modifier.padding(bottom = 3.dp), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Ds.sub,
-                            )
+                    Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.Bottom) {
+                        Text("$thisWeek", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink)
+                        Text("/$goal", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.faint)
+                    }
+                    Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        repeat(goal.coerceAtLeast(1)) { i ->
+                            Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(if (i < thisWeek) Accent else Ds.s3))
                         }
-                        Text(tr("zaredom sa ispunjenim ciljem", "on goal in a row"), fontSize = 13.sp, color = Ds.sub)
                     }
                 }
             }
@@ -201,7 +190,7 @@ fun RoutinesScreen(
                     Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
                         Text(tr("Moji planovi", "My plans"), Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.44).sp, color = Ds.ink)
-                        Text(tr("Novi plan", "New plan"), Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onNew).padding(4.dp),
+                        Text(tr("Novi plan", "New plan"), Modifier.clip(RoundedCornerShape(8.dp)).clickable { newPlanSheet = true }.padding(4.dp),
                             fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
                     }
                     if (routines.size > 1) Text(
@@ -229,6 +218,41 @@ fun RoutinesScreen(
             }
         }
     }
+    if (newPlanSheet) androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { newPlanSheet = false },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Ds.sheet,
+    ) {
+        val connected = remember { TreningApp.instance.settings.notionConfigured }
+        Column(Modifier.padding(bottom = 34.dp)) {
+            Text(tr("Novi plan", "New plan"), Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 16.dp), fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold, color = Ds.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Column(Modifier.padding(horizontal = 16.dp).clip(RoundedCornerShape(20.dp)).background(Ds.s1)) {
+                NewPlanOption(Icons.Filled.NoteAdd, tr("Prazan plan", "Blank plan"), tr("Dodaješ vežbe jednu po jednu", "Add exercises one by one")) { newPlanSheet = false; onNew() }
+                HorizontalDivider(thickness = 1.dp, color = Ds.line)
+                NewPlanOption(
+                    Icons.Filled.CloudDownload, tr("Iz Notiona", "From Notion"),
+                    if (connected) tr("Izaberi plan iz baze Routines", "Pick a plan from your Routines database") else tr("Prvo poveži Notion", "Connect Notion first"),
+                ) { newPlanSheet = false; if (connected) onNotion() else onNotionGuide() }
+            }
+        }
+    }
+
+}
+
+@Composable
+private fun NewPlanOption(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, sub: String, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Ds.aSoft), contentAlignment = Alignment.Center) {
+            Icon(icon, null, Modifier.size(19.dp), tint = Ds.aText)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+            Text(sub, Modifier.padding(top = 1.dp), fontSize = 13.sp, color = Ds.sub)
+        }
+        Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = Ds.faint)
+    }
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -246,28 +270,11 @@ private fun UpNextCard(
             Text(next.name, Modifier.padding(top = 10.dp), fontSize = fs, fontWeight = FontWeight.Bold, letterSpacing = (fs.value * -0.03f).sp,
                 lineHeight = (fs.value * 1.08f).sp, style = androidx.compose.ui.text.TextStyle(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading),
                 color = Ds.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            last?.let {
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Filled.Repeat, null, Modifier.padding(top = 2.dp).size(13.dp), tint = Ds.sub)
-                    Text(tr("Posle: ${it.name}", "Follows ${it.name}"), fontSize = 13.sp, lineHeight = 18.sp, color = Ds.sub)
-                }
-            }
             androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 com.vukos.trening.ui.common.IconText(Icons.AutoMirrored.Filled.List, tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"), Ds.sub)
                 if (ex.isNotEmpty()) com.vukos.trening.ui.common.IconText(Icons.Filled.Layers, tr("${ex.sumOf { it.targetSets }} setova", "${ex.sumOf { it.targetSets }} sets"), Ds.sub)
                 avgMin?.let { com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, "~$it min", Ds.sub) }
             }
-        }
-        if (ex.isNotEmpty()) Column {
-            HorizontalDivider(thickness = 1.dp, color = Ds.line)
-            ex.take(3).forEach { e ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 11.dp)) {
-                    Text(names[e.exerciseId] ?: "?", Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("${e.targetSets} × ${repsText(e)}", Modifier.padding(start = 12.dp), fontSize = 15.sp, color = Ds.sub)
-                }
-                HorizontalDivider(thickness = 1.dp, color = Ds.line)
-            }
-            if (ex.size > 3) Text(tr("+ još ${ex.size - 3}", "+ ${ex.size - 3} more"), Modifier.padding(top = 11.dp), fontSize = 15.sp, color = Ds.sub)
         }
         Box(
             Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(Accent).clickable(onClick = onStart),

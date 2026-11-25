@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -158,6 +159,27 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit, onComp
                 }
             }
         }
+            // Mere tela: poslednja vrednost i promena od prve.
+            val measured = entries.filter { !com.vukos.trening.data.Measurements.of(it).isEmpty }.sortedBy { it.epochDay }
+            if (measured.isNotEmpty()) item {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ds.s1).padding(horizontal = 20.dp, vertical = 6.dp)) {
+                    Text(tr("Mere", "Measurements"), Modifier.padding(top = 12.dp, bottom = 6.dp), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+                    com.vukos.trening.data.Measurements.FIELDS.forEach { (label, unit, get) ->
+                        val vals = measured.mapNotNull { get(com.vukos.trening.data.Measurements.of(it)) }
+                        val last = vals.lastOrNull() ?: return@forEach
+                        androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = Ds.line)
+                        Row(Modifier.padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text(label, Modifier.weight(1f), fontSize = 15.sp, color = Ds.ink)
+                            if (vals.size >= 2) {
+                                val d = last - vals.first()
+                                Text((if (d > 0.04) "+" else if (d < -0.04) "−" else "") + fmtNum(kotlin.math.abs(d)) + " $unit", fontSize = 13.sp, color = Ds.sub)
+                            }
+                            Text("${fmtNum(last)} $unit", Modifier.widthIn(min = 64.dp), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
+                                textAlign = TextAlign.End)
+                        }
+                    }
+                }
+            }
         if (shown.isNotEmpty()) {
             item { Text(tr("Istorija", "History"), Modifier.padding(top = 6.dp), fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.44).sp, color = Ds.ink) }
             item {
@@ -216,10 +238,6 @@ private fun PhotosSheet(day: LocalDate, kg: Double, photos: List<BodyPhoto>, onC
                     Text(p.label, Modifier.fillMaxWidth(), fontSize = 13.sp, color = Ds.sub, textAlign = TextAlign.Center)
                 }
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Lock, null, Modifier.size(12.dp), tint = Ds.sub)
-            Text(tr("Slike ostaju šifrovane na ovom telefonu", "Photos stay encrypted on this phone"), fontSize = 12.sp, color = Ds.sub, maxLines = 1)
         }
         Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(Ds.s1).clickable(onClick = onCompare), contentAlignment = Alignment.Center) {
             Text(tr("Uporedi sa drugim merenjem", "Compare with another check-in"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)

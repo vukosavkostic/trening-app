@@ -119,27 +119,6 @@ fun BodyScreen(onOpenDay: (LocalDate) -> Unit, onNew: () -> Unit, onOpenChart: (
                 item { CurrentWeightCard(stats, entries, onOpenChart) }
             }
             item { NextCheckInCard(due, onNew) }
-            // Mere tela: poslednja vrednost i promena od prve.
-            val measured = entries.filter { !Measurements.of(it).isEmpty }.sortedBy { it.epochDay }
-            if (measured.isNotEmpty()) item {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(D.s1).padding(horizontal = 20.dp, vertical = 6.dp)) {
-                    Text(tr("Mere", "Measurements"), Modifier.padding(top = 12.dp, bottom = 6.dp), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = D.ink)
-                    Measurements.FIELDS.forEach { (label, unit, get) ->
-                        val vals = measured.mapNotNull { get(Measurements.of(it)) }
-                        val last = vals.lastOrNull() ?: return@forEach
-                        androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = D.line)
-                        Row(Modifier.padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text(label, Modifier.weight(1f), fontSize = 15.sp, color = D.ink)
-                            if (vals.size >= 2) {
-                                val d = last - vals.first()
-                                Text((if (d > 0.04) "+" else if (d < -0.04) "−" else "") + fmtNum(kotlin.math.abs(d)) + " $unit", fontSize = 13.sp, color = D.sub)
-                            }
-                            Text("${fmtNum(last)} $unit", Modifier.widthIn(min = 64.dp), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = D.ink,
-                                textAlign = TextAlign.End)
-                        }
-                    }
-                }
-            }
             if (stats.photoDays >= 2) item {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(D.s1).clickable(onClick = onCompare).padding(horizontal = 20.dp, vertical = 16.dp),
@@ -221,7 +200,7 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
         else -> tr("Sledeće merenje", "Next check-in")
     }
     val what = if (pending != null) pending.whatMissing().replaceFirstChar { it.uppercase() }
-        else if (photos) tr("Kilaža i 3 slike (spreda, bok, leđa)", "Weight and 3 photos (front, side, back)") else tr("Kilaža", "Weight")
+        else if (photos) tr("Kilaža, mere i 3 slike", "Weight, measurements and 3 photos") else tr("Kilaža i mere", "Weight and measurements")
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -242,11 +221,6 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
         val ink = if (pending != null) Color.White else D.bg
         Box(Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp)).background(bg).clickable(onClick = onNew), contentAlignment = Alignment.Center) {
             Text(tr("Unesi merenje", "Log check-in"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = ink)
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 0.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-            Icon(Icons.Filled.Lock, null, Modifier.size(12.dp), tint = D.sub)
-            Text(tr("Slike ostaju šifrovane na ovom telefonu", "Photos stay encrypted on this phone"), fontSize = 12.sp, color = D.sub, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }

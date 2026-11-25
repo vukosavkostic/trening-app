@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -133,6 +134,8 @@ fun AddSupplementSheet(
     day: LocalDate,
     dayEntries: List<FoodEntry>,
     history: List<FoodEntry>,
+    reminders: Int,
+    onReminders: () -> Unit,
     onLog: (text: String, kcal: Int?, protein: Int?, at: LocalTime?) -> Unit,
 ) {
     val ctx = LocalContext.current
@@ -246,6 +249,17 @@ fun AddSupplementSheet(
                         picked = SupplementDef(q, "1 g", "")
                     }
                 }
+            }
+        }
+        item {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Ds.s1).clickable(onClick = onReminders).padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(Icons.Filled.Alarm, null, Modifier.size(18.dp), tint = Ds.aText)
+                Text(tr("Podsetnici", "Reminders"), Modifier.weight(1f), fontSize = 16.sp, color = Ds.ink)
+                if (reminders > 0) Text(tr("aktivno: $reminders", "$reminders active"), fontSize = 14.sp, color = Ds.sub)
+                Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = Ds.faint)
             }
         }
     }

@@ -83,14 +83,6 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
             }
         }
         if (copyCount > 0) OutlinePill(tr("Isto kao juče ($copyCount)", "Same as yesterday ($copyCount)"), onCopy, Modifier.fillMaxWidth().padding(top = 12.dp), Icons.Filled.ContentCopy)
-        Row(
-            Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onReminders).padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(tr("Podsetnici", "Reminders"), Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText)
-            if (reminders > 0) Text(tr("aktivno: $reminders", "$reminders active"), Modifier.padding(end = 6.dp), fontSize = 15.sp, color = com.vukos.trening.ui.theme.Ds.sub)
-            Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = com.vukos.trening.ui.theme.Ds.aText)
-        }
     }
 }
 

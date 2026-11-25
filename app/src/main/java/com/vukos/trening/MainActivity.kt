@@ -213,6 +213,7 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onSettings = { nav.navigate("settings") },
                     onStart = { startWorkout(it) },
                     onOpenStats = { nav.navigate("stats") },
+                    onNotionGuide = { nav.navigate("notion_help") },
                 )
             }
             composable("routine/{id}") { e ->

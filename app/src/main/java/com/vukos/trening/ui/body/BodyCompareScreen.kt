@@ -269,10 +269,6 @@ fun BodyCompareScreen(onBack: () -> Unit, afterId: String? = null) {
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Lock, null, Modifier.size(12.dp), tint = D.sub)
-            Text(tr("Slike ostaju šifrovane na ovom telefonu", "Photos stay encrypted on this phone"), fontSize = 12.sp, color = D.sub, maxLines = 1)
-        }
     }
 }
 
