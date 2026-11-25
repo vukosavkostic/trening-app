@@ -1,6 +1,11 @@
 package com.vukos.trening.ui.routines
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Repeat
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -128,10 +133,18 @@ fun RoutinesScreen(
             item {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            tr("Nedelja $week · urađeno $thisWeek od $goal", "Week $week · $thisWeek of $goal done"),
-                            fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(tr("Nedelja $week", "Week $week"), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
+                            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                repeat(goal.coerceAtLeast(1)) { i ->
+                                    Box(Modifier.size(14.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(if (i < thisWeek) Accent else Ds.s3))
+                                }
+                            }
+                            Row {
+                                Text("$thisWeek", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+                                Text(tr("/$goal urađeno", "/$goal done"), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Ds.sub)
+                            }
+                        }
                         Text(tr("Trening", "Train"), Modifier.padding(top = 2.dp), fontSize = 34.sp, fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.68).sp, color = Ds.ink)
                     }
@@ -230,6 +243,7 @@ fun RoutinesScreen(
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun UpNextCard(
     next: Routine, last: Routine?, ex: List<RoutineExercise>, names: Map<String, String>, avgMin: Int?, onStart: () -> Unit,
@@ -239,20 +253,21 @@ private fun UpNextCard(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Column {
-            Text(
-                last?.let { tr("Sledeći · rotacija posle: ${it.name}", "Up next · rotation after ${it.name}") } ?: tr("Sledeći", "Up next"),
-                fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText,
-            )
-            Text(next.name, Modifier.padding(top = 6.dp), fontSize = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.2).sp,
-                color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                listOfNotNull(
-                    tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"),
-                    tr("${ex.sumOf { it.targetSets }} setova", "${ex.sumOf { it.targetSets }} sets").takeIf { ex.isNotEmpty() },
-                    avgMin?.let { "~$it min" },
-                ).joinToString(" · "),
-                Modifier.padding(top = 2.dp), fontSize = 15.sp, color = Ds.sub,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                com.vukos.trening.ui.common.Kicker(tr("Sledeći", "Up next"), Ds.aText, Modifier.weight(1f))
+                last?.let {
+                    com.vukos.trening.ui.common.IconText(Icons.Filled.Repeat, tr("posle: ${it.name}", "after ${it.name}"), Ds.sub, Modifier.weight(1f, fill = false), 13.sp, 13.dp)
+                }
+            }
+            val fs = com.vukos.trening.ui.common.titleSize(next.name, 40)
+            Text(next.name, Modifier.padding(top = 10.dp), fontSize = fs, fontWeight = FontWeight.Bold, letterSpacing = (fs.value * -0.03f).sp,
+                lineHeight = (fs.value * 1.08f).sp, style = androidx.compose.ui.text.TextStyle(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading),
+                color = Ds.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                com.vukos.trening.ui.common.IconText(Icons.AutoMirrored.Filled.List, tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"), Ds.sub)
+                if (ex.isNotEmpty()) com.vukos.trening.ui.common.IconText(Icons.Filled.Layers, tr("${ex.sumOf { it.targetSets }} setova", "${ex.sumOf { it.targetSets }} sets"), Ds.sub)
+                avgMin?.let { com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, "~$it min", Ds.sub) }
+            }
         }
         if (ex.isNotEmpty()) Column {
             HorizontalDivider(thickness = 1.dp, color = Ds.line)
@@ -317,12 +332,9 @@ private fun PlanList(
             val animShift by animateDpAsState(shift, tween(220), label = "shift")
             val lift by animateFloatAsState(if (me) 1f else 0f, tween(200), label = "lift")
             val ex = byRoutine[r.id].orEmpty()
-            val meta = listOf(
-                tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"),
-                lastDone[r.id]?.let {
-                    tr("poslednji put ", "last done ") + java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative()
-                } ?: tr("još nije rađen", "not done yet"),
-            ).joinToString(" · ")
+            val exText = tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}")
+            val lastText = lastDone[r.id]?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate().srRelative() }
+                ?: tr("još nije rađen", "not done yet")
             Box(
                 Modifier.fillMaxWidth().height(PlanRowH).zIndex(if (me) 2f else 1f)
                     .offset(y = if (me) 0.dp else animShift)
@@ -361,15 +373,15 @@ private fun PlanList(
                 ) {
                     Icon(Icons.Filled.DragIndicator, null, Modifier.size(16.dp), tint = Ds.faint)
                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(r.name, Modifier.weight(1f, fill = false), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(r.name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (r.notionPageId != null) Text(
-                                "Notion", Modifier.padding(start = 8.dp).clip(RoundedCornerShape(6.dp)).background(Ds.s3).padding(horizontal = 7.dp, vertical = 2.dp),
-                                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Ds.sub,
+                                "Notion", Modifier.clip(RoundedCornerShape(5.dp)).background(Ds.s3).padding(horizontal = 6.dp),
+                                fontSize = 11.sp, fontWeight = FontWeight.SemiBold, lineHeight = 18.sp, color = Ds.sub,
                             )
+                            Text(exText, fontSize = 13.sp, color = Ds.sub, maxLines = 1)
+                            com.vukos.trening.ui.common.IconText(Icons.Filled.History, lastText, Ds.sub, Modifier.weight(1f, fill = false), 13.sp, 12.dp)
                         }
-                        Text(meta, Modifier.padding(top = 2.dp), fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Row(
                         Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(Ds.aSoft).clickable { onStart(r) }.padding(horizontal = 16.dp),

@@ -281,15 +281,37 @@ private fun AppRoot(openRequest: String?, onOpenHandled: () -> Unit) {
                     onOpenWorkout = { nav.navigate("workout_detail/$it") },
                 )
             }
-            composable("exercise_new") {
-                NewExerciseScreen(onDone = { nav.popBackStack() })
+            composable(
+                "exercise_new?name={name}&group={group}&num={num}",
+                arguments = listOf(
+                    androidx.navigation.navArgument("name") { defaultValue = "" },
+                    androidx.navigation.navArgument("group") { defaultValue = "" },
+                    androidx.navigation.navArgument("num") { defaultValue = 0; type = androidx.navigation.NavType.IntType },
+                ),
+            ) { e ->
+                val args = e.arguments!!
+                // Iz izbora vezbi: nova (ili postojeca "Izaberi") vezba se vraca izboru i odmah je izabrana.
+                fun back(id: String?) {
+                    if (id != null) nav.previousBackStackEntry?.savedStateHandle?.set("created", id)
+                    nav.popBackStack()
+                }
+                NewExerciseScreen(
+                    initialName = args.getString("name").orEmpty(),
+                    muscleHint = args.getString("group")?.takeIf { it.isNotEmpty() }?.let { com.vukos.trening.data.MuscleGroup.valueOf(it) },
+                    selectionNumber = args.getInt("num").takeIf { it > 0 },
+                    onUse = { back(it) },
+                    onDone = { back(it) },
+                )
             }
             // Picker: vraca izabrane ID-jeve prethodnom ekranu preko savedStateHandle["picked"].
-            composable("picker") {
-                ExerciseListScreen(
-                    selectionMode = true,
-                    onOpen = {},
-                    onNew = { nav.navigate("exercise_new") },
+            composable("picker") { e ->
+                val created by e.savedStateHandle.getStateFlow<String?>("created", null).collectAsStateWithLifecycle()
+                com.vukos.trening.ui.exercises.ChooseExercisesScreen(
+                    created = created,
+                    onCreatedHandled = { e.savedStateHandle["created"] = null },
+                    onNew = { name, group, num ->
+                        nav.navigate("exercise_new?name=${android.net.Uri.encode(name)}&group=${group?.name ?: ""}&num=$num")
+                    },
                     onConfirm = { ids ->
                         nav.previousBackStackEntry?.savedStateHandle?.set("picked", ArrayList(ids))
                         nav.popBackStack()

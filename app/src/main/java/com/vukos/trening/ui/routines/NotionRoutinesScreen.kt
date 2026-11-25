@@ -168,8 +168,10 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Column(Modifier.weight(1f)) {
                             Text(nr.name, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.19).sp, color = D.ink)
-                            Text(tr("${nr.lines.size} vežbi", "${nr.lines.size} exercises") + (if (added) tr(" · u Mojim planovima", " · in My plans") else ""),
-                                Modifier.padding(top = 2.dp), fontSize = 13.sp, color = D.sub)
+                            Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Text(tr("${nr.lines.size} vežbi", "${nr.lines.size} exercises"), fontSize = 13.sp, color = D.sub, maxLines = 1)
+                                if (added) Text(tr("u Mojim planovima", "in My plans"), fontSize = 13.sp, color = D.sub, maxLines = 1)
+                            }
                         }
                         when {
                             added -> Row(
@@ -208,7 +210,7 @@ fun NotionRoutinesScreen(onHelp: () -> Unit, onBack: () -> Unit, onSettings: () 
                         Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(l.name, Modifier.weight(1f), fontSize = 14.sp, color = D.ink)
                             Text(
-                                "${l.sets} × ${l.repsMin ?: ""}${if (l.repsMax != null && l.repsMax != l.repsMin) "–${l.repsMax}" else ""}" + (l.kg?.let { " · $it kg" } ?: ""),
+                                "${l.sets} × ${l.repsMin ?: ""}${if (l.repsMax != null && l.repsMax != l.repsMin) "–${l.repsMax}" else ""}" + (l.kg?.let { " @ $it kg" } ?: ""),
                                 fontSize = 14.sp, color = D.sub, maxLines = 1,
                             )
                         }

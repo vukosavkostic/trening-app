@@ -1,6 +1,9 @@
 package com.vukos.trening.ui.workout
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
@@ -306,7 +309,7 @@ fun ActiveWorkoutScreen(
                     }
                     item(key = "sets-$curPos") {
                         SetTable(
-                            curSets, curPrev, curTarget,
+                            curSets, curPrev, curTarget, curEx?.trackType ?: com.vukos.trening.data.TrackType.WEIGHT,
                             onUpdate = { s -> scope.launch { WorkoutRepo.updateSet(s) } },
                             onDelete = { s -> scope.launch { WorkoutRepo.deleteSet(s) } },
                             onChecked = { RestTimer.start() },
@@ -431,11 +434,19 @@ private fun ExerciseHeader(
     val progression = WorkoutMath.progression(previous, target)
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column {
-            Text(tr("Vežba ${idx + 1} od $count · $planName", "Exercise ${idx + 1} of $count · $planName"), fontSize = 13.sp, color = Ds.sub,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(exercise?.name ?: "?", Modifier.weight(1f).clickable(onClick = onOpen), fontSize = 28.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.56).sp, lineHeight = 32.sp, color = Ds.ink)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                com.vukos.trening.ui.common.IconText(Icons.AutoMirrored.Outlined.Assignment, planName, Ds.sub, Modifier.weight(1f), 13.sp, 13.dp)
+                Row {
+                    Text("${idx + 1}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+                    Text(tr(" od $count", " of $count"), fontSize = 13.sp, color = Ds.sub)
+                }
+            }
+            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                val name = exercise?.name ?: "?"
+                val fs = if (name.length > 22) 23 else 28
+                Text(name, Modifier.weight(1f).clickable(onClick = onOpen), fontSize = fs.sp, fontWeight = FontWeight.Bold,
+                    letterSpacing = (fs * -0.02f).sp, lineHeight = (fs * 1.12f).sp,
+                    style = TextStyle(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading), color = Ds.ink)
                 Box {
                     Icon(Icons.Filled.MoreHoriz, tr("Opcije vežbe", "Exercise options"),
                         Modifier.padding(start = 8.dp).size(32.dp).clip(CircleShape).clickable { menu = true }.padding(6.dp), tint = Ds.sub)
@@ -492,9 +503,10 @@ private val ColCheck = 44.dp
 
 @Composable
 private fun SetTable(
-    sets: List<WorkoutSet>, previous: List<WorkoutSet>, target: RoutineExercise?,
+    sets: List<WorkoutSet>, previous: List<WorkoutSet>, target: RoutineExercise?, track: String,
     onUpdate: (WorkoutSet) -> Unit, onDelete: (WorkoutSet) -> Unit, onChecked: () -> Unit, onAddSet: () -> Unit,
 ) {
+    val withKg = track == com.vukos.trening.data.TrackType.WEIGHT
     // Oznaka seta: W za zagrevanje, inace redni broj medju radnim setovima.
     val labels = remember(sets) {
         var n = 0
@@ -503,14 +515,16 @@ private fun SetTable(
     val firstOpen = sets.firstOrNull { !it.done }?.id
     Column {
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 6.dp)) {
-            listOf(
+            listOfNotNull(
                 tr("SET", "SET") to Modifier.width(ColSet), tr("PRETHODNO", "PREVIOUS") to Modifier.weight(1f),
-                "KG" to Modifier.width(ColKg), tr("PONAV.", "REPS") to Modifier.width(ColReps), "" to Modifier.width(ColCheck),
+                ("KG" to Modifier.width(ColKg)).takeIf { withKg },
+                (if (track == com.vukos.trening.data.TrackType.TIME) tr("SEK.", "SEC") else tr("PONAV.", "REPS")) to Modifier.width(ColReps),
+                "" to Modifier.width(ColCheck),
             ).forEach { (t, m) -> Text(t, m, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.24.sp, color = Ds.faint) }
         }
         sets.forEach { s ->
             androidx.compose.runtime.key(s.id) {
-                SetRow(s, labels[s.id] ?: "${s.setIndex}", s.id == firstOpen, previous, target, sets, onUpdate, onDelete, onChecked)
+                SetRow(s, labels[s.id] ?: "${s.setIndex}", s.id == firstOpen, previous, target, sets, track, onUpdate, onDelete, onChecked)
             }
         }
         Text(tr("+ Dodaj set", "+ Add set"), Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onAddSet).padding(12.dp),
@@ -526,10 +540,13 @@ private fun SetRow(
     previous: List<WorkoutSet>,
     target: RoutineExercise?,
     siblings: List<WorkoutSet>,
+    track: String,
     onUpdate: (WorkoutSet) -> Unit,
     onDelete: (WorkoutSet) -> Unit,
     onChecked: () -> Unit,
 ) {
+    val withKg = track == com.vukos.trening.data.TrackType.WEIGHT
+    val unit = if (track == com.vukos.trening.data.TrackType.TIME) " s" else ""
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     // Tekst polja zivi lokalno (bez skakanja kursora); baza se azurira na svaku promenu.
     var kg by remember(set.id) { mutableStateOf(WorkoutMath.fmtKg(set.weightKg)) }
@@ -571,10 +588,10 @@ private fun SetRow(
             }
         }
         Text(
-            prev?.let { "${WorkoutMath.fmtKg(it.weightKg)} × ${it.reps ?: "-"}" } ?: "—",
+            prev?.let { if (withKg) "${WorkoutMath.fmtKg(it.weightKg)} × ${it.reps ?: "-"}" else "${it.reps ?: "-"}$unit" } ?: "—",
             Modifier.weight(1f), fontSize = 15.sp, color = Ds.faint, maxLines = 1,
         )
-        NumField(kg, WorkoutMath.fmtKg(hintKg), true, ink, Modifier.width(ColKg), next = true) {
+        if (withKg) NumField(kg, WorkoutMath.fmtKg(hintKg), true, ink, Modifier.width(ColKg), next = true) {
             kg = it; onUpdate(set.copy(weightKg = WorkoutMath.parseKg(it), reps = WorkoutMath.parseReps(reps)))
         }
         NumField(reps, hintReps?.toString() ?: "", false, ink, Modifier.width(ColReps)) {
@@ -590,7 +607,7 @@ private fun SetRow(
                         if (set.done) onUpdate(set.copy(weightKg = WorkoutMath.parseKg(kg), reps = WorkoutMath.parseReps(reps), done = false))
                         else {
                             // Prazno polje = prihvata se predlog (prethodno / cilj).
-                            val k = WorkoutMath.parseKg(kg) ?: hintKg
+                            val k = if (withKg) WorkoutMath.parseKg(kg) ?: hintKg else null
                             val r = WorkoutMath.parseReps(reps) ?: hintReps
                             if (r != null) {
                                 kg = WorkoutMath.fmtKg(k); reps = r.toString()
@@ -700,11 +717,13 @@ private fun RestFullScreen(now: Long, title: String, elapsedSec: Long, upNext: P
                     Text(tr("ODMOR", "REST"), fontSize = 13.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.78.sp, color = Ds.sub)
                     Text(RestTimer.mmss(rem), fontSize = 84.sp, fontWeight = FontWeight.Light, letterSpacing = (-3.36).sp, lineHeight = 88.sp, color = Ds.ink)
                     Text(tr("od ${RestTimer.mmss(total)}", "of ${RestTimer.mmss(total)}"), fontSize = 15.sp, color = Ds.faint)
-                    Text(
-                        tr("Podrazumevano ${RestTimer.mmss(RestTimer.defaultSec)} · Promeni", "Default ${RestTimer.mmss(RestTimer.defaultSec)} · Change"),
+                    Row(
                         Modifier.padding(top = 10.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onDefault).padding(4.dp),
-                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText,
-                    )
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Text(tr("Podrazumevano ${RestTimer.mmss(RestTimer.defaultSec)}", "Default ${RestTimer.mmss(RestTimer.defaultSec)}"), fontSize = 13.sp, color = Ds.sub)
+                        Text(tr("Promeni", "Change"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
+                    }
                 }
             }
             Row(Modifier.padding(top = 44.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -722,7 +741,10 @@ private fun RestFullScreen(now: Long, title: String, elapsedSec: Long, upNext: P
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(tr("Sledeće · ${upNext.first}", "Up next · ${upNext.first}"), fontSize = 13.sp, color = Ds.sub)
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    com.vukos.trening.ui.common.Kicker(tr("Sledeće", "Up next"), Ds.sub)
+                    Text(upNext.first, fontSize = 13.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 Text(upNext.second, Modifier.padding(top = 4.dp), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -805,11 +827,14 @@ private fun SummaryContent(
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Filled.Close, tr("Nazad na trening", "Back to workout"), Modifier.size(18.dp), tint = Ds.ink) }
                     Spacer(Modifier.height(20.dp))
-                    Text(tr("Trening završen", "Session complete"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
-                    Text(name, Modifier.padding(top = 6.dp), fontSize = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.2).sp, color = Ds.ink,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text("${today.srLong().replaceFirstChar { it.uppercase() }} · ${(elapsedSec / 60).coerceAtLeast(1)} min",
-                        Modifier.padding(top = 2.dp), fontSize = 15.sp, color = Ds.sub)
+                    com.vukos.trening.ui.common.Kicker(tr("Trening završen", "Session complete"), Ds.aText)
+                    val fs = com.vukos.trening.ui.common.titleSize(name, 40)
+                    Text(name, Modifier.padding(top = 8.dp), fontSize = fs, fontWeight = FontWeight.Bold, letterSpacing = (fs.value * -0.03f).sp,
+                        lineHeight = (fs.value * 1.08f).sp, style = TextStyle(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading), color = Ds.ink)
+                    FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        com.vukos.trening.ui.common.IconText(Icons.Outlined.CalendarToday, today.srLong().replaceFirstChar { it.uppercase() }, Ds.sub, fontSize = 15.sp)
+                        com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, "${(elapsedSec / 60).coerceAtLeast(1)} min", Ds.sub, fontSize = 15.sp)
+                    }
                 }
             }
         }
@@ -866,7 +891,8 @@ private fun SummaryContent(
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(tr("Ažuriraj plan „$name“", "Update plan “$name”"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
+                    Text(tr("Ažuriraj plan „$name“", "Update plan “$name”"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     planChanges(planUpdate, byId).forEach {
                         Text(it, Modifier.padding(top = 2.dp), fontSize = 13.sp, lineHeight = 18.sp, color = Ds.sub)
                     }

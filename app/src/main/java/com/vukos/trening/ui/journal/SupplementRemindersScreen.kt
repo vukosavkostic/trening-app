@@ -1,6 +1,7 @@
 package com.vukos.trening.ui.journal
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -179,8 +180,11 @@ fun SupplementRemindersScreen(onBack: () -> Unit) {
                         Column(Modifier.weight(1f).clickable { editing = r }) {
                             Text("%02d:%02d".format(r.hour, r.minute), fontSize = 34.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.68).sp,
                                 lineHeight = 38.sp, color = D.ink)
-                            Text(listOf(r.name, r.dose.takeIf { it.isNotBlank() }, tr("Svaki dan", "Every day")).filterNotNull().joinToString(" · "),
-                                Modifier.padding(top = 2.dp), fontSize = 14.sp, color = D.sub)
+                            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Text(r.name, Modifier.weight(1f, fill = false), fontSize = 14.sp, color = D.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                if (r.dose.isNotBlank()) Text(r.dose, fontSize = 14.sp, color = D.sub, maxLines = 1)
+                                com.vukos.trening.ui.common.IconText(Icons.Filled.Repeat, tr("Svaki dan", "Every day"), D.sub, fontSize = 14.sp, iconSize = 13.dp)
+                            }
                             if (taken) Text(tr("Danas uneto. Sledeći put sutra.", "Logged today. Next reminder tomorrow."),
                                 Modifier.padding(top = 2.dp), fontSize = 12.sp, color = D.green)
                         }
@@ -344,7 +348,7 @@ private fun ReminderEditScreen(initial: SuppReminder?, onCancel: () -> Unit, onS
                     shown.forEachIndexed { i, d ->
                         val sel = picked?.let { ExerciseSearch.normalize(it.name) == ExerciseSearch.normalize(d.name) } == true
                         OptionRow(d.name,
-                            listOfNotNull(if (d.category == "Skoro korišćeno") tr("Skoro korišćeno", "Recent") else null, d.dose.takeIf { it.isNotBlank() }).joinToString(" · "),
+                            listOfNotNull(if (d.category == "Skoro korišćeno") tr("Skoro korišćeno", "Recent") else null, d.dose.takeIf { it.isNotBlank() }).joinToString("   "),
                             sel, divider = i < shown.size - 1 || query.isNotBlank()) { picked = d; dose = d.dose; query = "" }
                     }
                     val q = query.trim()

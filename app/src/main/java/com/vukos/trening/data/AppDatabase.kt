@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Exercise::class, Routine::class, RoutineExercise::class, Workout::class, WorkoutSet::class,
         BodyEntry::class, BodyPhoto::class, FoodEntry::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,9 +25,16 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, NAME).addMigrations(MIGRATION_1_2).build()
+            Room.databaseBuilder(context, AppDatabase::class.java, NAME).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
 
         const val NAME = "trening.db"
+
+        /** v3: nacin logovanja setova uz vezbu. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercise ADD COLUMN trackType TEXT NOT NULL DEFAULT 'weight'")
+            }
+        }
 
         /** v2: tip seta, beleska uz vezbu, obimi tela i % masti. */
         val MIGRATION_1_2 = object : Migration(1, 2) {

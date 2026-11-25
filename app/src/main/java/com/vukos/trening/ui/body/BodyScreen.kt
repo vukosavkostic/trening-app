@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import androidx.compose.material.icons.outlined.Timer
+
 import androidx.compose.runtime.setValue
 
 import androidx.compose.foundation.layout.Box
@@ -209,7 +211,13 @@ private fun CurrentWeightCard(s: BodyStats, entries: List<com.vukos.trening.data
     val today = LocalDate.now()
     val pts = remember(entries, range) { range.filter(entries, today).filter { it.weightKg != null && !it.deleted }.sortedBy { it.epochDay } }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 18.dp)) {
-        Text(tr("Trenutna kilaža", "Current weight"), fontSize = 14.sp, color = D.sub)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Trenutna kilaža", "Current weight"), Modifier.weight(1f), fontSize = 14.sp, color = D.sub)
+            Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onOpenChart).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Sva merenja", "All check-ins"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = D.aText)
+                Icon(Icons.Filled.ChevronRight, null, Modifier.size(15.dp), tint = D.aText)
+            }
+        }
         Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(s.current!!.kg().removeSuffix(" kg"), fontSize = 60.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-2.4).sp, lineHeight = 60.sp, color = D.ink)
@@ -225,30 +233,14 @@ private fun CurrentWeightCard(s: BodyStats, entries: List<com.vukos.trening.data
         s.currentDay?.let {
             Text(tr("Izmereno ${it.srRelative()}, ${it.srDate()}", "Measured ${it.srRelative()}, ${it.srDate()}"), Modifier.padding(top = 8.dp), fontSize = 14.sp, color = D.sub)
         }
-        if (pts.size >= 2) {
-            val line = com.vukos.trening.ui.theme.Accent
-            val grid = D.line
-            val dotFill = D.s1
-            val min = pts.minOf { it.weightKg!! }
-            val span = (pts.maxOf { it.weightKg!! } - min).coerceAtLeast(1.0)
-            androidx.compose.foundation.Canvas(Modifier.padding(top = 18.dp).fillMaxWidth().height(130.dp).clickable(onClick = onOpenChart)) {
-                val top = 10.dp.toPx(); val bottom = size.height - 10.dp.toPx()
-                listOf(top, (top + bottom) / 2, bottom).forEach { y -> drawLine(grid, Offset(0f, y), Offset(size.width, y)) }
-                val d0 = pts.first().epochDay
-                val dSpan = (pts.last().epochDay - d0).coerceAtLeast(1)
-                fun p(i: Int) = Offset(size.width * (pts[i].epochDay - d0) / dSpan, (bottom - (bottom - top) * ((pts[i].weightKg!! - min) / span)).toFloat())
-                val path = Path().apply { moveTo(p(0).x, p(0).y); for (i in 1 until pts.size) lineTo(p(i).x, p(i).y) }
-                val area = Path().apply { addPath(path); lineTo(p(pts.size - 1).x, size.height); lineTo(p(0).x, size.height); close() }
-                drawPath(area, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(line.copy(alpha = 0.28f), Color.Transparent)))
-                drawPath(path, line, style = Stroke(2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
-                val end = p(pts.size - 1)
-                drawCircle(dotFill, 5.dp.toPx(), end)
-                drawCircle(line, 5.dp.toPx(), end, style = Stroke(2.5.dp.toPx()))
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Text(LocalDate.ofEpochDay(pts.first().epochDay).srDate(), Modifier.weight(1f), fontSize = 12.sp, color = D.faint)
-                Text(LocalDate.ofEpochDay(pts.last().epochDay).srDate(), fontSize = 12.sp, color = D.faint)
-            }
+        if (pts.isNotEmpty()) {
+            var sel by androidx.compose.runtime.saveable.rememberSaveable(range) { androidx.compose.runtime.mutableStateOf<Int?>(null) }
+            WeightTrendChart(
+                values = pts.map { it.weightKg!! },
+                xLabel = { LocalDate.ofEpochDay(pts[it].epochDay).srDate() },
+                pointLabel = { "${LocalDate.ofEpochDay(pts[it].epochDay).srLong()}, ${pts[it].weightKg!!.kg()}" },
+                selected = sel, onSelect = { sel = it }, chartHeight = 150.dp, modifier = Modifier.padding(top = 20.dp),
+            )
         }
         Row(Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(D.bg).padding(3.dp)) {
             com.vukos.trening.data.ChartRange.entries.forEach { r ->
@@ -273,14 +265,23 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
     val label = when {
         pending?.overdue == true -> tr("Propušteno merenje", "Missed check-in")
         pending != null -> tr("Danas je merenje", "Check-in today")
-        else -> tr("Sledeće merenje · ${day.srRelative(today)}", "Next check-in · ${day.srRelative(today)}")
+        else -> tr("Sledeće merenje", "Next check-in")
     }
     val what = if (pending != null) pending.whatMissing().replaceFirstChar { it.uppercase() }
         else if (photos) tr("Kilaža i 3 slike (spreda, bok, leđa)", "Weight and 3 photos (front, side, back)") else tr("Kilaža", "Weight")
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column {
-            Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (pending?.overdue == true) D.danger else D.aText)
-            Text(day.srLong().replaceFirstChar { it.uppercase() }, Modifier.padding(top = 6.dp), fontSize = 26.sp, fontWeight = FontWeight.Bold,
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                com.vukos.trening.ui.common.Kicker(label, if (pending?.overdue == true) D.danger else D.aText, Modifier.weight(1f))
+                if (pending == null) Row(
+                    Modifier.height(26.dp).clip(RoundedCornerShape(13.dp)).background(D.aSoft).padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Icon(Icons.Outlined.Timer, null, Modifier.size(13.dp), tint = D.aText)
+                    Text(day.srRelative(today), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = D.aText, maxLines = 1)
+                }
+            }
+            Text(day.srLong().replaceFirstChar { it.uppercase() }, Modifier.padding(top = 10.dp), fontSize = 26.sp, fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.52).sp, color = D.ink)
             Text(what, Modifier.padding(top = 2.dp), fontSize = 15.sp, color = D.sub)
         }
@@ -289,9 +290,10 @@ private fun NextCheckInCard(due: CheckInSchedule.Due?, onNew: () -> Unit) {
         Box(Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp)).background(bg).clickable(onClick = onNew), contentAlignment = Alignment.Center) {
             Text(tr("Unesi merenje", "Log check-in"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = ink)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 0.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
             Icon(Icons.Filled.Lock, null, Modifier.size(12.dp), tint = D.sub)
-            Text(tr("Slike su šifrovane i vidi ih samo ova aplikacija", "Photos are encrypted and only this app can see them"), fontSize = 12.sp, color = D.sub)
+            Text(tr("Slike ostaju šifrovane na ovom telefonu", "Photos stay encrypted on this phone"), fontSize = 12.sp, color = D.sub, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }

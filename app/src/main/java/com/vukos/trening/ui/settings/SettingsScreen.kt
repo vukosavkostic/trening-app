@@ -376,7 +376,7 @@ fun SettingsScreen(
         settings.kcalGoal.takeIf { it > 0 }?.let { "$it kcal" },
         settings.proteinGoal.takeIf { it > 0 }?.let { "$it g" },
         tr("${settings.weeklyGoal}× ned.", "${settings.weeklyGoal}× week"),
-    ).joinToString(" · ")
+    ).joinToString(", ")
     val reminders = remember { com.vukos.trening.reminders.SupplementReminders.load(ctx).count { it.enabled } }
     val backupAt = settings.lastBackupAt
     val D = com.vukos.trening.ui.theme.Ds

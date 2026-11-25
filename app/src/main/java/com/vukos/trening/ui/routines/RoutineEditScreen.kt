@@ -1,6 +1,8 @@
 package com.vukos.trening.ui.routines
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
@@ -206,11 +208,11 @@ fun RoutineEditScreen(
                     cursorBrush = SolidColor(com.vukos.trening.ui.theme.Accent),
                     decorationBox = { inner -> Box { if (vm.name.isEmpty()) Text(tr("Naziv plana", "Plan name"), style = style.copy(color = D.faint)); inner() } },
                 )
-                Text(
-                    tr("${vm.items.size} vežbi · ${vm.items.sumOf { it.sets }} setova", "${vm.items.size} exercises · ${vm.items.sumOf { it.sets }} sets") +
-                        if (vm.items.isNotEmpty()) tr(" · dodirni za izmenu, drži za pomeranje", " · tap to edit, hold to move") else "",
-                    Modifier.padding(top = 2.dp), fontSize = 15.sp, color = D.sub,
-                )
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    com.vukos.trening.ui.common.IconText(Icons.AutoMirrored.Filled.List, tr("${vm.items.size} vežbi", "${vm.items.size} exercises"), D.sub, fontSize = 15.sp)
+                    com.vukos.trening.ui.common.IconText(Icons.Filled.Layers, tr("${vm.items.sumOf { it.sets }} setova", "${vm.items.sumOf { it.sets }} sets"), D.sub, fontSize = 15.sp)
+                }
+                if (vm.items.isNotEmpty()) Text(tr("Dodirni za izmenu, drži za pomeranje", "Tap to edit, hold to move"), Modifier.padding(top = 2.dp), fontSize = 13.sp, color = D.faint)
             }
         }
         item {
@@ -304,13 +306,13 @@ fun RoutineEditScreen(
     )
 }
 
-/** "3 × 8–12 · 80 kg" */
+/** "3 × 8–12 @ 80 kg" */
 private fun summary(d: DraftItem): String {
     val reps = when {
         d.repsMin.isNotBlank() && d.repsMax.isNotBlank() && d.repsMin != d.repsMax -> "${d.repsMin}–${d.repsMax}"
         else -> d.repsMin.ifBlank { d.repsMax }.ifBlank { "—" }
     }
-    return "${d.sets} × $reps" + (d.kg.takeIf { it.isNotBlank() }?.let { " · $it kg" } ?: "")
+    return "${d.sets} × $reps" + (d.kg.takeIf { it.isNotBlank() }?.let { " @ $it kg" } ?: "")
 }
 
 @Composable

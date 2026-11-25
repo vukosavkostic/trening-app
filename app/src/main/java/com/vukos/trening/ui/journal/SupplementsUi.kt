@@ -78,7 +78,7 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
                 val meta = listOfNotNull(
                     Supplements.doseOf(e.text).takeIf { it.isNotBlank() },
                     e.kcal?.let { "$it kcal" }, e.proteinG?.let { "$it g" },
-                ).joinToString(" · ")
+                )
                 EntryRow(Supplements.nameOf(e.text), meta) { onEdit(e) }
             }
         }
@@ -87,10 +87,8 @@ fun SupplementsCard(entries: List<FoodEntry>, copyCount: Int, reminders: Int, on
             Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onReminders).padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                if (reminders > 0) tr("Podsetnici · aktivno: $reminders", "Reminders · $reminders active") else tr("Podsetnici", "Reminders"),
-                Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText,
-            )
+            Text(tr("Podsetnici", "Reminders"), Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = com.vukos.trening.ui.theme.Ds.aText)
+            if (reminders > 0) Text(tr("aktivno: $reminders", "$reminders active"), Modifier.padding(end = 6.dp), fontSize = 15.sp, color = com.vukos.trening.ui.theme.Ds.sub)
             Icon(Icons.Filled.ChevronRight, null, Modifier.size(16.dp), tint = com.vukos.trening.ui.theme.Ds.aText)
         }
     }
