@@ -107,7 +107,7 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
                         }
                         Box(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).background(Ds.aSoft).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                             Text(
-                                tr("${sgn(last.weightKg - first.weightKg!!)} kg od ${LocalDate.ofEpochDay(first.epochDay).srDate()}", "${sgn(last.weightKg - first.weightKg!!)} kg since ${LocalDate.ofEpochDay(first.epochDay).srDate()}"),
+                                tr("${sgn(last.weightKg!! - first.weightKg!!)} kg od ${LocalDate.ofEpochDay(first.epochDay).srDate()}", "${sgn(last.weightKg!! - first.weightKg!!)} kg since ${LocalDate.ofEpochDay(first.epochDay).srDate()}"),
                                 fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText, maxLines = 1,
                             )
                         }
@@ -126,7 +126,7 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text("${fmt(e.weightKg!!)} kg", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
-                        Text(prev?.let { "${sgn(e.weightKg - it.weightKg!!)} kg" } ?: tr("prvo merenje", "first check-in"), fontSize = 14.sp, color = Ds.sub)
+                        Text(prev?.let { "${sgn(e.weightKg!! - it.weightKg!!)} kg" } ?: tr("prvo merenje", "first check-in"), fontSize = 14.sp, color = Ds.sub)
                         Text(LocalDate.ofEpochDay(e.epochDay).srLong().replaceFirstChar { it.uppercase() }, Modifier.weight(1f), fontSize = 14.sp, color = Ds.sub,
                             textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
@@ -180,7 +180,7 @@ fun WeightChartScreen(onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
                                     if (byEntry[e.id].orEmpty().isNotEmpty()) Icon(Icons.Filled.PhotoCamera, tr("Ima slike", "Has photos"), Modifier.size(15.dp), tint = Ds.sub)
                                     Text("${fmt(e.weightKg!!)} kg", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ds.ink)
                                 }
-                                Text(shown.getOrNull(i - 1)?.let { "${sgn(e.weightKg - it.weightKg!!)} kg" } ?: tr("prvo", "first"), fontSize = 12.sp, color = Ds.sub)
+                                Text(shown.getOrNull(i - 1)?.let { "${sgn(e.weightKg!! - it.weightKg!!)} kg" } ?: tr("prvo", "first"), fontSize = 12.sp, color = Ds.sub)
                             }
                         }
                         if (i > 0) HorizontalDivider(thickness = 1.dp, color = Ds.line)
