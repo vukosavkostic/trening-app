@@ -5,6 +5,7 @@ import com.vukos.trening.i18n.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import com.vukos.trening.ui.body.srRelative
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
@@ -381,8 +382,10 @@ fun SettingsScreen(
     val backupAt = settings.lastBackupAt
     val D = com.vukos.trening.ui.theme.Ds
 
+    // Sadrzaj popunjava visinu ekrana, pa verzija stoji na dnu.
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(D.bg).statusBarsPadding()) {
     Column(
-        Modifier.fillMaxSize().background(D.bg).statusBarsPadding().verticalScroll(rememberScrollState())
+        Modifier.verticalScroll(rememberScrollState()).heightIn(min = maxHeight)
             .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -406,11 +409,13 @@ fun SettingsScreen(
             )
         }
         // Verzija aplikacije na dnu.
+        Spacer(Modifier.weight(1f))
         Text(
             "Trening ${tr("verzija", "version")} ${com.vukos.trening.BuildConfig.VERSION_NAME}",
             Modifier.fillMaxWidth().padding(top = 24.dp), fontSize = 13.sp, color = D.faint,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
+    }
     }
 
     sheet?.let { which ->

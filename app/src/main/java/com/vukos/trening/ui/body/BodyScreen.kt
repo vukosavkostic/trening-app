@@ -1,5 +1,7 @@
 package com.vukos.trening.ui.body
 
+import androidx.compose.foundation.layout.offset
+
 import androidx.compose.material.icons.outlined.Timer
 
 import androidx.compose.runtime.setValue
@@ -152,9 +154,9 @@ private fun CurrentWeightCard(s: BodyStats, entries: List<com.vukos.trening.data
     val today = LocalDate.now()
     val pts = remember(entries, range) { range.filter(entries, today).filter { it.weightKg != null && !it.deleted }.sortedBy { it.epochDay } }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(D.s1).padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 18.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Trenutna kilaža", "Current weight"), Modifier.weight(1f), fontSize = 14.sp, color = D.sub)
-            Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onOpenChart).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Trenutna kilaža", "Current weight"), Modifier.weight(1f), fontSize = 14.sp, lineHeight = 20.sp, color = D.sub)
+            Row(Modifier.offset(x = 3.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onOpenChart), verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Sva merenja", "All check-ins"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = D.aText)
                 Icon(Icons.Filled.ChevronRight, null, Modifier.size(15.dp), tint = D.aText)
             }
@@ -163,12 +165,6 @@ private fun CurrentWeightCard(s: BodyStats, entries: List<com.vukos.trening.data
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(s.current!!.kg().removeSuffix(" kg"), fontSize = 60.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-2.4).sp, lineHeight = 60.sp, color = D.ink)
                 Text("kg", Modifier.padding(bottom = 8.dp), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = D.sub)
-            }
-            Spacer(Modifier.weight(1f))
-            s.lastChange?.let {
-                Box(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).background(D.aSoft).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text(it.signed().removeSuffix(" kg") + tr(" od prošlog", " since last"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = D.aText)
-                }
             }
         }
         s.currentDay?.let {
