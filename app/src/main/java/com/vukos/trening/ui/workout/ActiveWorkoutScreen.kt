@@ -1,6 +1,10 @@
 package com.vukos.trening.ui.workout
 
 import com.vukos.trening.i18n.tr
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.CalendarToday
@@ -804,37 +808,35 @@ private fun SummaryContent(
     val muscles = logged.mapNotNull { byId[it.exerciseId]?.primaryMuscle?.takeIf { m -> m.isNotBlank() } }.distinct()
         .map { m -> (muscleLabels[m] ?: m).replaceFirstChar { it.uppercase() } }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier.fillMaxSize().drawBehind {
+            // Narandzasti sjaj iza naslova (samo se crta, ne zauzima mesto).
+            drawCircle(Brush.radialGradient(listOf(Accent.copy(alpha = 0.22f), Color.Transparent), center = Offset(size.width / 2, 30.dp.toPx()), radius = 260.dp.toPx()),
+                radius = 260.dp.toPx(), center = Offset(size.width / 2, 30.dp.toPx()))
+        }.statusBarsPadding().navigationBarsPadding(),
     ) {
-        item {
-            Box(Modifier.fillMaxWidth()) {
-                // Narandzasti sjaj iza naslova.
+    Column(
+        Modifier.verticalScroll(rememberScrollState()).heightIn(min = maxHeight).padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            Box(Modifier.height(40.dp).fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 Box(
-                    Modifier.offset(y = (-180).dp).fillMaxWidth().height(420.dp)
-                        .background(Brush.radialGradient(listOf(Accent.copy(alpha = 0.22f), Color.Transparent)))
-                )
-                Column(Modifier.statusBarsPadding().padding(top = 4.dp)) {
-                    Box(
-                        Modifier.align(Alignment.End).offset(x = 8.dp).size(40.dp).clip(CircleShape).background(Color(0x29808080)).clickable(onClick = onClose),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Filled.Close, tr("Nazad na trening", "Back to workout"), Modifier.size(18.dp), tint = Ds.ink) }
-                    Spacer(Modifier.height(20.dp))
-                    com.vukos.trening.ui.common.Kicker(tr("Trening završen", "Session complete"), Ds.aText)
-                    val fs = com.vukos.trening.ui.common.titleSize(name, 40)
-                    Text(name, Modifier.padding(top = 8.dp), fontSize = fs, fontWeight = FontWeight.Bold, letterSpacing = (fs.value * -0.03f).sp,
-                        lineHeight = (fs.value * 1.08f).sp, style = TextStyle(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading), color = Ds.ink)
-                    FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        com.vukos.trening.ui.common.IconText(Icons.Outlined.CalendarToday, today.srLong().replaceFirstChar { it.uppercase() }, Ds.sub, fontSize = 15.sp)
-                        com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, "${(elapsedSec / 60).coerceAtLeast(1)} min", Ds.sub, fontSize = 15.sp)
-                    }
-                }
+                    Modifier.offset(x = 8.dp).size(40.dp).clip(CircleShape).background(Color(0x29808080)).clickable(onClick = onClose),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Filled.Close, tr("Nazad na trening", "Back to workout"), Modifier.size(18.dp), tint = Ds.ink) }
+            }
+            com.vukos.trening.ui.common.Kicker(tr("Trening završen", "Session complete"), Ds.aText, Modifier.padding(top = 12.dp))
+            val fs = com.vukos.trening.ui.common.titleSize(name, 40)
+            Text(name, Modifier.padding(top = 8.dp), fontSize = fs, fontWeight = FontWeight.Bold, letterSpacing = (fs.value * -0.03f).sp,
+                lineHeight = (fs.value * 1.08f).sp, style = TextStyle(lineBreak = androidx.compose.ui.text.style.LineBreak.Heading), color = Ds.ink)
+            FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                com.vukos.trening.ui.common.IconText(Icons.Outlined.CalendarToday, today.srLong().replaceFirstChar { it.uppercase() }, Ds.sub, fontSize = 15.sp)
+                com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, "${(elapsedSec / 60).coerceAtLeast(1)} min", Ds.sub, fontSize = 15.sp)
             }
         }
         pr?.let { hit ->
-            item {
+            run {
                 val best = logged.filter { it.exerciseId == hit.exerciseId && it.setType != SetType.WARMUP }.maxByOrNull { it.weightKg ?: 0.0 }
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(Ds.s1)
@@ -851,7 +853,7 @@ private fun SummaryContent(
                 }
             }
         }
-        item {
+        run {
             val tiles = listOf(
                 (if (vol >= 1000) "${WorkoutMath.fmtKg(Math.round(vol / 100.0) / 10.0)} t" else "${WorkoutMath.fmtKg(vol)} kg") to tr("volumen", "volume"),
                 "${working.size}" to tr("radnih setova", "working sets"),
@@ -862,7 +864,7 @@ private fun SummaryContent(
                 tiles.chunked(2).forEach { rowTiles ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         rowTiles.forEach { (v, l) ->
-                            Column(Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(Ds.s1).padding(18.dp)) {
+                            Column(Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(Ds.s1).padding(horizontal = 18.dp, vertical = 14.dp)) {
                                 Text(v, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.52).sp, color = Ds.ink, maxLines = 1)
                                 Text(l, Modifier.padding(top = 2.dp), fontSize = 14.sp, color = Ds.sub)
                             }
@@ -871,7 +873,7 @@ private fun SummaryContent(
                 }
             }
         }
-        if (muscles.isNotEmpty()) item {
+        if (muscles.isNotEmpty()) run {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 muscles.forEach { m ->
                     Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(Ds.s1).padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
@@ -880,7 +882,7 @@ private fun SummaryContent(
                 }
             }
         }
-        if (done > 0 && planUpdate != null) item {
+        if (done > 0 && planUpdate != null) run {
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Ds.s1).clickable(onClick = onTogglePlan).padding(horizontal = 18.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -900,12 +902,15 @@ private fun SummaryContent(
             empty > 0 -> tr("Prazni setovi ($empty) se ne čuvaju.", "Empty sets ($empty) are not saved.")
             else -> null
         }
-        note?.let { item { Text(it, Modifier.padding(horizontal = 4.dp), fontSize = 13.sp, lineHeight = 18.sp, color = Ds.sub) } }
-        item {
+        note?.let { Text(it, Modifier.padding(horizontal = 4.dp), fontSize = 13.sp, lineHeight = 18.sp, color = Ds.sub) }
+        // Dugme je uvek na dnu ekrana; skrol samo ako sadrzaj ne stane.
+        Spacer(Modifier.weight(1f))
+        run {
             if (done == 0) BigButton(tr("Odbaci trening", "Discard workout"), Ds.danger, Color.White, onDiscard)
             else BigButton(tr("Sačuvaj u dnevnik", "Save to journal"), Accent, Color.White, onSave)
         }
     }
+}
 }
 
 /** Prekidac u stilu dizajna (51×31). */
