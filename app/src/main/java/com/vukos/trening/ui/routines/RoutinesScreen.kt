@@ -194,8 +194,8 @@ fun RoutinesScreen(
                             fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ds.aText)
                     }
                     if (routines.size > 1) Text(
-                        tr("Drži plan i prevuci da promeniš redosled. Redosled je tvoja rotacija.", "Hold a plan and drag to reorder. The order sets your rotation."),
-                        Modifier.padding(top = 8.dp), fontSize = 13.sp, color = Ds.sub,
+                        tr("Drži i prevuci za novi redosled. Redosled je tvoja rotacija.", "Hold and drag to reorder. The order sets your rotation."),
+                        Modifier.padding(top = 8.dp), fontSize = 12.sp, color = Ds.sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
                     )
                 }
             }
@@ -273,7 +273,7 @@ private fun UpNextCard(
             androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 com.vukos.trening.ui.common.IconText(Icons.AutoMirrored.Filled.List, tr("${ex.size} ${if (ex.size == 1) "vežba" else "vežbi"}", "${ex.size} ${if (ex.size == 1) "exercise" else "exercises"}"), Ds.sub)
                 if (ex.isNotEmpty()) com.vukos.trening.ui.common.IconText(Icons.Filled.Layers, tr("${ex.sumOf { it.targetSets }} setova", "${ex.sumOf { it.targetSets }} sets"), Ds.sub)
-                avgMin?.let { com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, "~$it min", Ds.sub) }
+                avgMin?.let { com.vukos.trening.ui.common.IconText(Icons.Filled.Schedule, "$it min", Ds.sub) }
             }
         }
         Box(
